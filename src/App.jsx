@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { supabase } from "./lib/supabase";
 
 // ============================================================
 // AFRICA TOURISM SOLUTIONS — Platform Preview v5 (full programs, one-line vehicle selectors, ATS Logistics quick-book)
@@ -14,7 +15,7 @@ import { useState, useMemo, useEffect } from "react";
 // Century Gothic (web substitute: Poppins), dotted-map brand motif.
 const T = {
   ink: "#0B2E1B", paper: "#FFFFFF", paperDark: "#EAF4EC",
-  gold: "#F8D815", indigo: "#006B33", laterite: "#8F7500",
+  gold: "#F8D815", indigo: "#006B33", laterite: "#006B33",
   green: "#009245", line: "rgba(11,46,27,0.14)",
 };
 const XOF_USD = 590;
@@ -41,7 +42,7 @@ const COUNTRIES = [
   { id: "sn", name: "Senegal", live: true, x: 14.6, y: 29.9, count: "35+ experiences" },
   { id: "rw", name: "Rwanda", live: true, x: 71.2, y: 50.8, count: "Packages available" },
   { id: "cv", name: "Cape Verde", live: false, x: 3.1, y: 28.6 },
-  { id: "gm", name: "Gambia", live: false, x: 13.4, y: 31.3 },
+  { id: "gm", name: "Gambia", live: false, x: 13.4, y: 35.4 },
   { id: "gn", name: "Guinea", live: false, x: 19.1, y: 35.0 },
   { id: "ma", name: "Morocco", live: false, x: 24.5, y: 7.6 },
   { id: "ci", name: "Ivory Coast", live: false, x: 26.1, y: 38.9 },
@@ -68,8 +69,14 @@ const btnGreen = { ...btnGold, background: T.green, color: "#fff" };
 const input = { width: "100%", boxSizing: "border-box", padding: "11px 13px", borderRadius: 10, border: `1px solid ${T.line}`, background: "#fff", fontSize: 14.5, fontFamily: "inherit", color: T.ink };
 const label = { fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".07em", color: T.laterite, display: "block", marginBottom: 5 };
 const Eyebrow = ({ children }) => <p style={{ color: T.laterite, fontWeight: 600, letterSpacing: ".14em", fontSize: 12, textTransform: "uppercase", margin: 0 }}>{children}</p>;
-const H2 = ({ children }) => <h2 className="disp" style={{ fontSize: "clamp(26px,4vw,38px)", fontWeight: 800, letterSpacing: "-0.02em", margin: "8px 0 14px" }}>{children}</h2>;
+const H2 = ({ children }) => <h2 className="disp" style={{ fontSize: "clamp(22px,3.2vw,30px)", fontWeight: 700, letterSpacing: "-0.01em", margin: "8px 0 14px" }}>{children}</h2>;
 const Wrap = ({ children, style }) => <div style={{ maxWidth: 1200, margin: "0 auto", padding: "48px 20px", ...style }}>{children}</div>;
+const Section = ({ title, children }) => (
+  <section style={{ marginTop: 30 }}>
+    <h2 className="disp" style={{ fontSize: 18, fontWeight: 700, margin: "0 0 12px", letterSpacing: "-0.01em" }}>{title}</h2>
+    {children}
+  </section>
+);
 function Row({ l, v }) { return <div style={{ display: "flex", padding: "4px 0" }}><span style={{ opacity: 0.75 }}>{l}</span><span style={{ marginLeft: "auto", fontWeight: 600 }}>{v}</span></div>; }
 
 // ============================================================
@@ -86,14 +93,75 @@ export default function ATSPlatformPreview() {
   const notify = (msg) => { setToast(msg); };
   useEffect(() => { if (!toast) return; const t = setTimeout(() => setToast(null), 3200); return () => clearTimeout(t); }, [toast]);
 
+  // ---- Supabase auth session ----
+  const mapUser = (sUser) => {
+    if (!sUser) return null;
+    const m = sUser.user_metadata || {};
+    const name = [m.first_name, m.last_name].filter(Boolean).join(" ") || m.full_name || m.name || (sUser.email ? sUser.email.split("@")[0] : "Traveler");
+    return { id: sUser.id, email: sUser.email, name };
+  };
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setUser(mapUser(data.session?.user)));
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => setUser(mapUser(session?.user)));
+    return () => sub.subscription.unsubscribe();
+  }, []);
+
+  // ---- Load this user's bookings from the database (and save any made before sign-in) ----
+  const [pending, setPending] = useState([]);
+  const mapRow = (r) => ({ ...r.data, _id: r.id, _status: r.status || "pending", _created: r.created_at });
+  const reloadBookings = async (uid) => {
+    const { data, error } = await supabase.from("bookings").select("id, data, status, created_at").eq("user_id", uid).order("created_at", { ascending: false });
+    if (!error && data) setBookings(data.map(mapRow));
+  };
+  useEffect(() => {
+    if (!user) { setBookings([]); return; }
+    const sync = async () => {
+      if (pending.length) {
+        await supabase.from("bookings").insert(pending.map((b) => ({ user_id: user.id, data: b })));
+        setPending([]);
+      }
+      await reloadBookings(user.id);
+    };
+    sync();
+  }, [user?.id]);
+
+  const signOut = async () => { await supabase.auth.signOut(); setUser(null); setBookings([]); go("home"); notify("Signed out"); };
+
+  // ---- Persist a record (booking / quote / itinerary request) ----
+  const saveRecord = async (b) => {
+    if (user) {
+      const { data, error } = await supabase.from("bookings").insert({ user_id: user.id, data: b, status: b.status || "pending" }).select("id, data, status, created_at").single();
+      if (error) { console.error("Save failed:", error.message); return; }
+      setBookings((x) => [mapRow(data), ...x]);
+    } else {
+      setBookings((x) => [{ ...b, _status: b.status || "pending" }, ...x]);
+      setPending((p) => [...p, b]);
+    }
+  };
+
+  // ---- Update / cancel a record ----
+  const patchBooking = async (rec, changes) => {
+    const merged = { ...rec, ...changes };
+    setBookings((list) => list.map((x) => (x === rec ? merged : x)));
+    if (user && rec._id) {
+      const { _id, _status, _created, ...data } = merged;
+      await supabase.from("bookings").update({ data, status: changes._status || rec._status }).eq("id", rec._id);
+    }
+  };
+  const cancelBooking = async (rec) => {
+    await patchBooking(rec, { _status: "cancelled" });
+    notify("Request cancelled.");
+  };
+
   const go = (name, params = {}) => { setPage({ name, ...params }); window.scrollTo({ top: 0 }); };
   const confirmBooking = (b) => {
-    setBookings((x) => [...x, b]); setBooking(null);
+    setBooking(null);
+    saveRecord(b);
     notify(b.plan === "quote" ? "Quote request sent — an ATS advisor will reply with a personalised price (demo)" : `Booking reserved — ${b.plan === "deposit" ? "deposit " + fmtXOF(b.deposit) + " due" : "ready for payment"} (demo)`);
     if (!user) setSignin(true); else go("account");
   };
 
-  const ctx = { go, notify, setBooking, user, setUser, bookings, filters, setFilters, setSignin, setChat };
+  const ctx = { go, notify, setBooking, user, setUser, bookings, filters, setFilters, setSignin, setChat, signOut, saveRecord, patchBooking, cancelBooking };
 
   return (
     <div style={{ background: T.paper, color: T.ink, fontFamily: "'Century Gothic','Poppins',system-ui,sans-serif", minHeight: "100vh" }}>
@@ -123,8 +191,8 @@ export default function ATSPlatformPreview() {
       {page.name === "account" && <AccountPage {...ctx} />}
       <Footer {...ctx} />
 
-      {booking && <BookingModal tour={booking} onClose={() => setBooking(null)} onConfirm={confirmBooking} />}
-      {signin && <SignInModal onClose={() => setSignin(false)} onLogin={(n) => { setUser({ name: n }); setSignin(false); notify(`Welcome, ${n} (demo account)`); }} />}
+      {booking && <BookingModal tour={booking} user={user} onClose={() => setBooking(null)} onConfirm={confirmBooking} />}
+      {signin && <SignInModal onClose={() => setSignin(false)} notify={notify} onDone={(msg) => { setSignin(false); if (msg) notify(msg); }} />}
       {chat && <AIChat onClose={() => setChat(false)} go={go} />}
 
       {/* Floating WhatsApp + AI */}
@@ -144,29 +212,63 @@ export default function ATSPlatformPreview() {
 
 // ---------------- NAV ----------------
 function Nav({ go, page, user, setSignin, bookings }) {
+  const [open, setOpen] = useState(false);
   const links = [
     ["home", "Home"], ["tours", "Tours"], ["builder", "Trip Builder"], ["transport", "Transfers"], ["flights", "Flights"],
     ["events", "Events & MICE"], ["corporate", "Corporate"], ["agents", "Agents"], ["about", "About Us"],
   ];
+  const nav = (k) => { go(k); setOpen(false); };
+  const accountBtn = (full) => user ? (
+    <button onClick={() => nav("account")} style={{ color: "#fff", background: T.green, padding: full ? "11px 14px" : "7px 14px", borderRadius: full ? 12 : 999, border: "none", cursor: "pointer", fontWeight: 700, width: full ? "100%" : "auto", textAlign: "left" }}>
+      {user.name.split(" ")[0]} {bookings.length > 0 && `· ${bookings.length}`}
+    </button>
+  ) : (
+    <button onClick={() => { setSignin(true); setOpen(false); }} style={{ color: "#fff", background: T.green, padding: full ? "11px 14px" : "7px 14px", borderRadius: full ? 12 : 999, border: "none", cursor: "pointer", fontWeight: 700, width: full ? "100%" : "auto", textAlign: "left" }}>Sign in</button>
+  );
+
   return (
     <nav style={{ position: "sticky", top: 0, zIndex: 40, background: "rgba(255,255,255,.94)", backdropFilter: "blur(8px)", borderBottom: `1px solid ${T.line}` }}>
-      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "12px 20px", display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
-        <button onClick={() => go("home")} className="disp" style={{ fontWeight: 800, fontSize: 19, letterSpacing: "-0.02em", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-          <span style={{ color: T.green }}>Africa</span> Tourism <span style={{ color: "#C9A902" }}>Solutions</span>
+      <style>{`
+        .nav-desktop{display:flex}
+        .nav-burger{display:none}
+        .nav-drawer{display:none}
+        @media(max-width:860px){
+          .nav-desktop{display:none}
+          .nav-burger{display:flex}
+          .nav-drawer{display:block}
+        }
+      `}</style>
+      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "12px 20px", display: "flex", alignItems: "center", gap: 14 }}>
+        <button onClick={() => nav("home")} className="disp" style={{ fontWeight: 800, fontSize: 19, letterSpacing: "-0.02em", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+          <span style={{ color: T.green }}>Africa</span> Tourism <span style={{ color: T.green }}>Solutions</span>
         </button>
-        <div style={{ marginLeft: "auto", display: "flex", gap: 4, fontSize: 13.5, fontWeight: 600, flexWrap: "wrap", alignItems: "center" }}>
+
+        {/* Desktop links */}
+        <div className="nav-desktop" style={{ marginLeft: "auto", gap: 4, fontSize: 13.5, fontWeight: 600, flexWrap: "wrap", alignItems: "center" }}>
           {links.map(([k, l]) => (
-            <button key={k} onClick={() => go(k)} style={{ background: page.name === k ? T.paperDark : "none", border: "none", cursor: "pointer", color: T.ink, padding: "7px 10px", borderRadius: 8, fontWeight: page.name === k ? 700 : 500 }}>{l}</button>
+            <button key={k} onClick={() => nav(k)} style={{ background: page.name === k ? T.paperDark : "none", border: "none", cursor: "pointer", color: T.ink, padding: "7px 10px", borderRadius: 8, fontWeight: page.name === k ? 700 : 500 }}>{l}</button>
           ))}
-          {user ? (
-            <button onClick={() => go("account")} style={{ color: "#fff", background: T.green, padding: "7px 14px", borderRadius: 999, border: "none", cursor: "pointer", fontWeight: 700 }}>
-              {user.name.split(" ")[0]} {bookings.length > 0 && `· ${bookings.length}`}
-            </button>
-          ) : (
-            <button onClick={() => setSignin(true)} style={{ color: "#fff", background: T.green, padding: "7px 14px", borderRadius: 999, border: "none", cursor: "pointer", fontWeight: 700 }}>Sign in</button>
-          )}
+          {accountBtn(false)}
         </div>
+
+        {/* Mobile hamburger */}
+        <button className="nav-burger" aria-label={open ? "Close menu" : "Open menu"} aria-expanded={open} onClick={() => setOpen((o) => !o)}
+          style={{ marginLeft: "auto", width: 42, height: 42, alignItems: "center", justifyContent: "center", background: open ? T.paperDark : "none", border: `1px solid ${T.line}`, borderRadius: 10, cursor: "pointer", color: T.ink, fontSize: 20 }}>
+          {open ? "✕" : "☰"}
+        </button>
       </div>
+
+      {/* Mobile drawer */}
+      {open && (
+        <div className="nav-drawer" style={{ borderTop: `1px solid ${T.line}`, background: "#fff", padding: "10px 14px 16px" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            {links.map(([k, l]) => (
+              <button key={k} onClick={() => nav(k)} style={{ background: page.name === k ? T.paperDark : "none", border: "none", cursor: "pointer", color: T.ink, padding: "12px 12px", borderRadius: 8, fontWeight: page.name === k ? 700 : 500, fontSize: 15, textAlign: "left" }}>{l}</button>
+            ))}
+          </div>
+          <div style={{ marginTop: 10 }}>{accountBtn(true)}</div>
+        </div>
+      )}
     </nav>
   );
 }
@@ -185,7 +287,7 @@ function Home({ go, notify, setBooking, filters, setFilters, setChat, addBooking
         </svg>
         <div style={{ maxWidth: 1200, margin: "0 auto", padding: "64px 20px 76px", position: "relative" }}>
           <Eyebrow><span style={{ color: T.gold }}>Stop wondering, start discovering</span></Eyebrow>
-          <h1 className="disp" style={{ fontSize: "clamp(36px,6vw,64px)", lineHeight: 1.02, fontWeight: 800, margin: "14px 0 16px", maxWidth: 780, letterSpacing: "-0.02em" }}>
+          <h1 className="disp" style={{ fontSize: "clamp(30px,5vw,50px)", lineHeight: 1.05, fontWeight: 700, margin: "14px 0 16px", maxWidth: 780, letterSpacing: "-0.02em" }}>
             Africa, organised by the people who live it.
           </h1>
           <p style={{ maxWidth: 560, fontSize: 17, opacity: 0.9, lineHeight: 1.55 }}>
@@ -251,9 +353,9 @@ function Home({ go, notify, setBooking, filters, setFilters, setChat, addBooking
             {DOTS.map(([x, y], i) => <circle key={i} cx={x} cy={y} r="0.62" fill={T.green} opacity="0.55" />)}
             {COUNTRIES.map((c) => (
               <g key={c.id} style={{ cursor: "pointer" }} onClick={() => setCountry(c)}>
-                <circle cx={c.x} cy={c.y} r={c.live ? 2.6 : 1.8} fill={c.live ? T.gold : T.indigo} stroke="#fff" strokeWidth="0.5" className={c.live ? "pulse" : ""} />
-                <circle cx={c.x} cy={c.y} r="5.5" fill="transparent" />
-                {country.id === c.id && <circle cx={c.x} cy={c.y} r="4.4" fill="none" stroke={T.gold} strokeWidth="0.9" />}
+                <circle cx={c.x} cy={c.y} r={c.live ? 1.6 : 1.4} fill={c.live ? T.gold : T.indigo} stroke="#fff" strokeWidth="0.4" className={c.live ? "pulse" : ""} />
+                <circle cx={c.x} cy={c.y} r="2.2" fill="transparent" />
+                {country.id === c.id && <circle cx={c.x} cy={c.y} r="2.3" fill="none" stroke={T.gold} strokeWidth="0.6" />}
               </g>
             ))}
             <text x="50" y="98" textAnchor="middle" fontSize="2.8" fill={T.ink} opacity="0.55">Tap a marker — Cape Verde, Zanzibar, Comoros & Madagascar included</text>
@@ -377,34 +479,66 @@ function PortalTabs({ go }) {
 }
 
 // ---------------- TOURS LISTING ----------------
+// ---- Tour photos (Supabase Storage bucket "tour-photos") ----
+// Convention: one folder per tour id. Cover file must be named cover.jpg.
+// e.g. tour-photos/goree/cover.jpg, tour-photos/goree/2.jpg, ...
+const PHOTO_BUCKET = "tour-photos";
+const coverUrl = (id) => supabase.storage.from(PHOTO_BUCKET).getPublicUrl(`${id}/cover.jpg`).data.publicUrl;
+
+function Cover({ id, emoji, ratio, radius = 0, fontSize = 58 }) {
+  const [ok, setOk] = useState(true);
+  return (
+    <div style={{ aspectRatio: ratio, width: "100%", borderRadius: radius, overflow: "hidden", background: `linear-gradient(140deg, ${T.green}, ${T.indigo})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize }}>
+      {ok ? <img src={coverUrl(id)} alt="" onError={() => setOk(false)} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} /> : emoji}
+    </div>
+  );
+}
+
+function useTourPhotos(tourId) {
+  const [photos, setPhotos] = useState([]);
+  useEffect(() => {
+    let alive = true;
+    supabase.storage.from(PHOTO_BUCKET).list(tourId, { limit: 20, sortBy: { column: "name", order: "asc" } })
+      .then(({ data }) => {
+        if (!alive || !data) return;
+        const urls = data
+          .filter((f) => f.name && !f.name.startsWith("."))
+          .map((f) => supabase.storage.from(PHOTO_BUCKET).getPublicUrl(`${tourId}/${f.name}`).data.publicUrl);
+        urls.sort((a, b) => (a.includes("/cover.") ? -1 : b.includes("/cover.") ? 1 : 0));
+        setPhotos(urls);
+      });
+    return () => { alive = false; };
+  }, [tourId]);
+  return photos;
+}
+
 function TourGrid({ tours, go, setBooking }) {
   return (
     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 18, marginTop: 18 }}>
       {tours.map((t) => (
-        <article key={t.id} className="card-hover" style={{ background: T.paper, border: `1px solid ${T.line}`, borderRadius: 16, overflow: "hidden", display: "flex", flexDirection: "column" }}>
-          <button onClick={() => go("tour", { id: t.id })} style={{ height: 120, border: "none", cursor: "pointer", background: `linear-gradient(140deg, ${T.green}, ${T.indigo})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 46 }} aria-label={`Open ${t.name}`}>{t.emoji}</button>
-          <div style={{ padding: 16, display: "flex", flexDirection: "column", flex: 1 }}>
-            <div style={{ display: "flex", gap: 6, marginBottom: 8, flexWrap: "wrap" }}>
+        <article key={t.id} className="card-hover" onClick={() => go("tour", { id: t.id })} style={{ background: T.paper, border: `1px solid ${T.line}`, borderRadius: 16, overflow: "hidden", display: "flex", flexDirection: "column", cursor: "pointer" }}>
+          <Cover id={t.id} emoji={t.emoji} ratio="4 / 3" fontSize={58} />
+
+          <div style={{ padding: 14, display: "flex", flexDirection: "column", flex: 1 }}>
+            <div style={{ display: "flex", gap: 5, marginBottom: 7, flexWrap: "nowrap", overflow: "hidden" }}>
               <span style={pill(T.laterite)}>{t.pole}</span><span style={pill(T.indigo)}>{t.tag}</span>
               {!t.quote && <span style={pill(T.green)}>Group discounts</span>}
             </div>
-            <button onClick={() => go("tour", { id: t.id })} style={{ background: "none", border: "none", padding: 0, textAlign: "left", cursor: "pointer" }}>
-              <h3 className="disp" style={{ fontSize: 17, fontWeight: 700, lineHeight: 1.25, margin: 0, color: T.ink }}>{t.name}</h3>
-            </button>
-            <p style={{ fontSize: 13.5, lineHeight: 1.5, opacity: 0.8, flex: 1, marginTop: 6 }}>{t.desc}</p>
-            <div style={{ fontSize: 12.5, opacity: 0.65, margin: "10px 0 4px" }}>{t.dur}</div>
+            <h3 className="disp" style={{ fontSize: 14.5, fontWeight: 700, lineHeight: 1.2, margin: 0, color: T.ink }}>{t.name}</h3>
+            <p style={{ fontSize: 12.5, lineHeight: 1.45, opacity: 0.8, flex: 1, marginTop: 5, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{t.desc}</p>
+            <div style={{ fontSize: 11.5, opacity: 0.65, margin: "8px 0 4px" }}>{t.dur}</div>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <div>
+              <div style={{ minWidth: 0 }}>
                 {t.quote ? (
-                  <div style={{ fontWeight: 700, fontSize: 15, color: T.indigo }}>Price on request</div>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: T.indigo }}>Price on request</div>
                 ) : (
                   <>
-                    <div style={{ fontWeight: 700, fontSize: 15 }}>from {fmtXOF(fromPrice(t))} <span style={{ fontWeight: 500, fontSize: 12, opacity: 0.6 }}>pp</span></div>
-                    <div style={{ fontSize: 12, opacity: 0.6 }}>group rate · {fmtUSD(fromPrice(t))} · 1–2 pax: {fmtXOF(t.grid.p12.a)}</div>
+                    <div style={{ fontWeight: 700, fontSize: 14 }}>from {fmtXOF(fromPrice(t))} <span style={{ fontWeight: 500, fontSize: 11.5, opacity: 0.6 }}>pp</span></div>
+                    <div style={{ fontSize: 11, opacity: 0.6 }}>group rate · {fmtUSD(fromPrice(t))} · 1–2 pax: {fmtXOF(t.grid.p12.a)}</div>
                   </>
                 )}
               </div>
-              <button onClick={() => setBooking(t)} style={{ marginLeft: "auto", background: t.quote ? T.indigo : T.gold, color: t.quote ? "#fff" : T.ink, border: "none", borderRadius: 10, padding: "9px 16px", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>{t.quote ? "Get quote" : "Book"}</button>
+              <button onClick={(e) => { e.stopPropagation(); setBooking(t); }} style={{ marginLeft: "auto", background: t.quote ? T.indigo : T.gold, color: t.quote ? "#fff" : T.ink, border: "none", borderRadius: 10, padding: "8px 15px", fontWeight: 700, fontSize: 13.5, cursor: "pointer", flexShrink: 0 }}>{t.quote ? "Get quote" : "Book"}</button>
             </div>
           </div>
         </article>
@@ -412,7 +546,7 @@ function TourGrid({ tours, go, setBooking }) {
     </div>
   );
 }
-const pill = (c) => ({ fontSize: 11, fontWeight: 700, color: c, background: "#fff", border: `1px solid ${T.line}`, padding: "3px 9px", borderRadius: 999 });
+const pill = (c) => ({ fontSize: 9.5, fontWeight: 600, color: c, background: "#fff", border: `1px solid ${T.line}`, padding: "2px 7px", borderRadius: 999, whiteSpace: "nowrap", flexShrink: 0 });
 
 function ToursPage({ go, setBooking, filters, setFilters }) {
   const tags = ["All", ...new Set(TOURS.map((t) => t.tag))];
@@ -465,94 +599,343 @@ function PriceGrid({ t }) {
   );
 }
 
-function TourDetail({ tourId, go, setBooking, notify }) {
+const REVIEWS = [
+  { who: "Awa M.", txt: "Guide exceptionnel, organisation sans faille. À refaire les yeux fermés." },
+  { who: "Jean D.", txt: "Parfait pour un premier séjour au Sénégal — rythme idéal et logistique impeccable." },
+  { who: "Caroline", txt: "Merci pour ce moment mémorable, tout était fluide du début à la fin." },
+];
+
+function TourDetail({ tourId, go, setBooking }) {
   const t = TOURS.find((x) => x.id === tourId) || TOURS[0];
-  const [tab, setTab] = useState("program");
   const [fav, setFav] = useState(false);
+  const [pax, setPax] = useState(2);
+  const [extras, setExtras] = useState([]);
+  const [vehicle, setVehicle] = useState(-1);      // -1 = no transport
+  const [preview, setPreview] = useState(null);   // gallery lightbox index
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const [date, setDate] = useState("");
+  const daysUntil = date ? Math.ceil((new Date(date + "T00:00:00") - new Date(todayStr + "T00:00:00")) / 86400000) : null;
+  const dateOk = daysUntil != null && daysUntil >= 0;
+  const tontinePossible = daysUntil != null && daysUntil >= 15;
+  const openBooking = (plan) => setBooking({ ...t, initialPlan: plan, initialPax: pax, initialExtras: extras, initialDate: date, initialVehicle: vehicle });
+
+  const imgs = useTourPhotos(t.id);
+  const galleryCount = Math.max(5, imgs.length);
+  const tile = (i) => imgs[i] || null;
+
+  // Highlights derived from the program steps (first clause before the distance/time note)
+  const highlights = (t.steps || []).slice(0, 6).map((s) => s.split("  ·  ")[0].split("|")[0].trim()).filter(Boolean);
+
+  // Per-person price by group size (auto): 1–2 → p12, 3–4 → p34, 5+ → group rate
+  const tier = tierOf(pax);
+  const ppUnit = t.quote ? null : (t.grid[tier]?.a ?? fromPrice(t));
+  const rates = t.zone ? RATES[t.zone] : null;
+  const transportCost = vehicle >= 0 && rates ? rates[vehicle] : 0;
+  const extrasTotal = t.addons.filter((a) => extras.includes(a.name) && a.price).reduce((s, a) => s + (a.per === "person" ? a.price * pax : a.price), 0);
+  const estTotal = ppUnit != null ? ppUnit * pax + extrasTotal + transportCost : null;
+  const toggleExtra = (name) => setExtras((x) => x.includes(name) ? x.filter((n) => n !== name) : [...x, name]);
+
   return (
     <>
-      <div style={{ background: `linear-gradient(140deg, ${T.green}, ${T.indigo})`, color: T.paper }}>
-        <Wrap style={{ padding: "40px 20px" }}>
-          <button onClick={() => go("tours")} style={{ background: "none", border: "none", color: T.paper, cursor: "pointer", fontWeight: 600, opacity: 0.85, padding: 0 }}>← All tours</button>
-          <div style={{ display: "flex", gap: 16, alignItems: "center", marginTop: 12, flexWrap: "wrap" }}>
-            <div style={{ fontSize: 64 }}>{t.emoji}</div>
-            <div style={{ flex: 1, minWidth: 240 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".1em", color: T.gold }}>{t.pole} · {t.dur}</div>
-              <h1 className="disp" style={{ fontSize: "clamp(24px,4.5vw,40px)", fontWeight: 800, margin: "6px 0", letterSpacing: "-0.02em" }}>{t.name}</h1>
-              <p style={{ opacity: 0.9, maxWidth: 640, margin: 0, fontSize: 14.5 }}>{t.sub}</p>
-            </div>
-          </div>
-        </Wrap>
-      </div>
-      <Wrap style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(290px, 1fr))", gap: 28 }}>
-        <div style={{ minWidth: 0 }}>
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-            {[["program", "Program"], ["prices", "Prices"], ["addons", `Add-ons (${t.addons.length})`], ["faq", "FAQ"]].map(([k, l]) => (
-              <button key={k} onClick={() => setTab(k)} style={{ border: `1px solid ${tab === k ? T.green : T.line}`, background: tab === k ? T.green : "#fff", color: tab === k ? "#fff" : T.ink, borderRadius: 999, padding: "8px 16px", fontWeight: 600, cursor: "pointer", fontSize: 13.5 }}>{l}</button>
-            ))}
-          </div>
-          <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 16, padding: 22, marginTop: 14, lineHeight: 1.65, fontSize: 15 }}>
-            {tab === "program" && (
-              t.steps.length ? (
-                <ol style={{ margin: 0, paddingLeft: 20 }}>{t.steps.map((s, i) => <li key={i} style={{ padding: "6px 0" }}>{s}</li>)}</ol>
-              ) : <p style={{ margin: 0 }}>{t.desc}</p>
-            )}
-            {tab === "prices" && (
-              <>
-                <PriceGrid t={t} />
-                <p style={{ fontSize: 13, opacity: 0.7, marginBottom: 0 }}>
-                  Per-person tour price by group size — the more you are, the less you pay. Children 3–12; under 3 free. *Child rate confirmed at booking where marked. Transport not included: choose your vehicle category at booking.
-                </p>
-              </>
-            )}
-            {tab === "addons" && (
-              t.addons.length ? t.addons.map((a) => (
-                <div key={a.name} style={{ display: "flex", gap: 10, padding: "9px 0", borderBottom: `1px solid ${T.line}`, fontSize: 14.5 }}>
-                  <span style={{ flex: 1 }}>{a.name}</span>
-                  <strong style={{ whiteSpace: "nowrap" }}>{a.price ? fmtXOF(a.price) + (a.per === "person" ? " /pp" : "") : "On request"}</strong>
-                </div>
-              )) : <p style={{ margin: 0 }}>No add-ons listed for this product.</p>
-            )}
-            {tab === "faq" && (
-              <>
-                <p><strong>Why do prices change with group size?</strong><br />ATS prices per person by basis — Private 1–2, Private 3–4, or Group 5+ — so bigger groups automatically pay less per person.</p>
-                <p><strong>Is transport included?</strong><br />No. Choose your vehicle category at booking (Sedan, SUV, Minivan or coach — Standard to Luxury), priced per vehicle from the ATS Logistics rate card.</p>
-                <p style={{ margin: 0 }}><strong>Can I pay in instalments?</strong><br />Yes — Ma Tontine Voyage: 20% deposit confirms your booking, balance in scheduled instalments before departure.</p>
-              </>
-            )}
-          </div>
+      <Wrap style={{ paddingBottom: 20 }}>
+        {/* Breadcrumb */}
+        <div style={{ fontSize: 13, opacity: 0.7, marginBottom: 12 }}>
+          <button onClick={() => go("home")} style={{ background: "none", border: "none", cursor: "pointer", color: T.ink, opacity: 0.8, padding: 0 }}>Home</button>
+          {" › "}
+          <button onClick={() => go("tours")} style={{ background: "none", border: "none", cursor: "pointer", color: T.ink, opacity: 0.8, padding: 0 }}>Senegal</button>
+          {" › "}<span style={{ fontWeight: 600 }}>{t.name}</span>
         </div>
-        <aside>
+
+        <div style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".12em", color: T.green }}>{t.tag} · {t.pole}</div>
+        <h1 className="disp" style={{ fontSize: "clamp(22px,3.6vw,32px)", fontWeight: 700, margin: "6px 0 10px", letterSpacing: "-0.01em" }}>{t.name}</h1>
+        <div style={{ display: "flex", gap: 14, flexWrap: "wrap", fontSize: 13.5, opacity: 0.8 }}>
+          <span>⏱ {t.dur}</span>
+          <span>📍 {t.pole}, Senegal</span>
+          <span>🗣️ Français, English</span>
+        </div>
+
+        {/* Gallery — grid on desktop, swipeable slider on mobile */}
+        <style>{`
+          .tour-gallery{display:grid;grid-template-columns:2fr 1fr 1fr;grid-template-rows:1fr 1fr;gap:10px;margin-top:18px;height:340px}
+          .tour-gallery .gtile{border:none;cursor:pointer;border-radius:14px;overflow:hidden;display:flex;align-items:center;justify-content:center;position:relative;padding:0}
+          .tour-gallery .gtile:first-child{grid-column:1 / 2;grid-row:1 / 3}
+          @media(max-width:700px){
+            .tour-gallery{display:flex;grid-template-columns:none;grid-template-rows:none;overflow-x:auto;scroll-snap-type:x mandatory;height:230px;-webkit-overflow-scrolling:touch}
+            .tour-gallery .gtile{flex:0 0 88%;scroll-snap-align:center}
+            .tour-gallery .gtile:first-child{grid-column:auto;grid-row:auto}
+          }
+        `}</style>
+        <div className="tour-gallery">
+          {Array.from({ length: galleryCount }).slice(0, 5).map((_, i) => (
+            <button key={i} className="gtile" onClick={() => setPreview(i)} aria-label={`View photo ${i + 1}`}
+              style={{ background: tile(i) ? `center/cover no-repeat url(${tile(i)})` : `linear-gradient(140deg, ${T.green}, ${T.indigo})`, fontSize: i === 0 ? 72 : 40 }}>
+              {!tile(i) && t.emoji}
+              {i === 4 && galleryCount > 5 && <span style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.45)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 700 }}>+{galleryCount - 5} photos</span>}
+            </button>
+          ))}
+        </div>
+        <div style={{ fontSize: 12, opacity: 0.55, marginTop: 6 }}>Photos coming soon — tap any tile to preview (swipe on mobile). Real imagery will replace these placeholders.</div>
+      </Wrap>
+
+      <Wrap style={{ paddingTop: 0, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 32 }}>
+        <div style={{ minWidth: 0 }}>
+          {highlights.length > 0 && (
+            <Section title="Highlights">
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "8px 20px" }}>
+                {highlights.map((h, i) => (
+                  <div key={i} style={{ display: "flex", gap: 8, fontSize: 14.5, lineHeight: 1.4 }}><span style={{ color: T.green, fontWeight: 800 }}>✓</span><span>{h}</span></div>
+                ))}
+              </div>
+            </Section>
+          )}
+
+          <Section title="Description">
+            <p style={{ fontSize: 15, lineHeight: 1.75, margin: 0, color: "#3B4A42", maxWidth: 640 }}>{t.desc}</p>
+            {t.sub && <p style={{ fontSize: 13, lineHeight: 1.65, color: "#6B7A72", marginTop: 10, maxWidth: 640 }}>{t.sub}</p>}
+          </Section>
+
+          {t.steps.length > 0 && (
+            <Section title="Itinerary">
+              <div style={{ borderLeft: `2px solid ${T.line}`, paddingLeft: 18, display: "flex", flexDirection: "column", gap: 16 }}>
+                {t.steps.map((s, i) => (
+                  <div key={i} style={{ position: "relative" }}>
+                    <span style={{ position: "absolute", left: -27, top: 0, width: 18, height: 18, borderRadius: "50%", background: T.green, color: "#fff", fontSize: 10, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{i + 1}</span>
+                    <div style={{ fontSize: 14.5, lineHeight: 1.55 }}>{s}</div>
+                  </div>
+                ))}
+              </div>
+            </Section>
+          )}
+
+          {t.addons.length > 0 && (
+            <Section title="Options & extras">
+              <p style={{ fontSize: 13.5, color: "#6B7A72", margin: "0 0 12px" }}>Add options to your experience — they update the estimate on the right. Final selection is confirmed at booking.</p>
+              {t.addons.map((a) => {
+                const on = extras.includes(a.name);
+                const selectable = !!a.price;
+                return (
+                  <div key={a.name} role="button" tabIndex={0}
+                    onClick={() => selectable && toggleExtra(a.name)}
+                    onKeyDown={(e) => { if (selectable && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); toggleExtra(a.name); } }}
+                    style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", border: `1.5px solid ${on ? T.green : T.line}`, borderRadius: 12, marginBottom: 8, cursor: selectable ? "pointer" : "default", background: on ? "#F3FAF5" : "#fff", opacity: selectable ? 1 : 0.7 }}>
+                    <span style={{ width: 20, height: 20, borderRadius: 6, border: `1.5px solid ${on ? T.green : T.line}`, background: on ? T.green : "#fff", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, flexShrink: 0 }}>{on ? "✓" : ""}</span>
+                    <span style={{ flex: 1, fontSize: 14.5 }}>{a.name}</span>
+                    <strong style={{ whiteSpace: "nowrap", color: T.green }}>{a.price ? "+ " + fmtXOF(a.price) + (a.per === "person" ? " /pp" : "") : "On request"}</strong>
+                  </div>
+                );
+              })}
+            </Section>
+          )}
+
+          {!t.quote && (
+            <Section title="Prices">
+              <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 14, padding: 18 }}>
+                <PriceGrid t={t} />
+                <p style={{ fontSize: 12.5, color: "#6B7A72", margin: "10px 0 0" }}>Per-person price by group size — larger groups pay less per person. Children 3–12; under 3 free. Transport not included (chosen at booking).</p>
+              </div>
+            </Section>
+          )}
+
+          <Section title="FAQ">
+            <div style={{ display: "flex", flexDirection: "column", gap: 12, fontSize: 14.5, lineHeight: 1.6 }}>
+              <div><strong>Why do prices change with group size?</strong><br />ATS prices per person by basis — Private 1–2, Private 3–4, or Group 5+ — so bigger groups pay less per person.</div>
+              <div><strong>Is transport included?</strong><br />No. Choose your vehicle category at booking (Sedan, SUV, Minivan or coach), priced per vehicle from the ATS Logistics rate card.</div>
+              <div><strong>Can I pay in instalments?</strong><br />Yes — Ma Tontine Voyage: 20% deposit confirms your booking, balance in scheduled instalments before departure.</div>
+            </div>
+          </Section>
+
+          <Section title="Traveler reviews">
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              {REVIEWS.map((r, i) => (
+                <div key={i} style={{ borderBottom: `1px solid ${T.line}`, paddingBottom: 12 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ width: 30, height: 30, borderRadius: "50%", background: T.green, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800 }}>{r.who.split(" ").map((w) => w[0]).join("")}</span>
+                    <strong style={{ fontSize: 14 }}>{r.who}</strong>
+                    <span style={{ color: T.gold, fontSize: 13, letterSpacing: 1 }}>★★★★★</span>
+                  </div>
+                  <p style={{ margin: "6px 0 0", fontSize: 14, opacity: 0.85 }}>{r.txt}</p>
+                </div>
+              ))}
+            </div>
+          </Section>
+        </div>
+
+        {/* Sticky booking sidebar (desktop) */}
+        <aside className="tour-aside">
           <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 16, padding: 22, position: "sticky", top: 80 }}>
             {t.quote ? (
               <div className="disp" style={{ fontWeight: 800, fontSize: 22, color: T.indigo }}>Price on request</div>
             ) : (
               <>
-                <div style={{ fontWeight: 800, fontSize: 24 }} className="disp">from {fmtXOF(fromPrice(t))}</div>
-                <div style={{ fontSize: 13, opacity: 0.65 }}>per person · group 5+ rate · {fmtUSD(fromPrice(t))}</div>
-                <div style={{ marginTop: 8, fontSize: 13, background: T.paperDark, borderRadius: 8, padding: "8px 10px" }}>
-                  1–2 pax: <strong>{fmtXOF(t.grid.p12.a)}</strong> · 3–4 pax: <strong>{fmtXOF(t.grid.p34.a)}</strong> pp
+                <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                  <span className="disp" style={{ fontWeight: 800, fontSize: 26, color: T.green }}>{fmtXOF(ppUnit)}</span>
+                  <span style={{ fontSize: 13, opacity: 0.6 }}>/ person</span>
+                </div>
+                <div style={{ fontSize: 12.5, opacity: 0.6 }}>{fmtUSD(ppUnit)} · {tierLabel[tier]}</div>
+
+                <div style={{ marginTop: 14 }}>
+                  <label style={label}>Travelers</label>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <button onClick={() => setPax(Math.max(1, pax - 1))} style={btnCircle} aria-label="Fewer">−</button>
+                    <span style={{ fontWeight: 700, minWidth: 20, textAlign: "center" }}>{pax}</span>
+                    <button onClick={() => setPax(pax + 1)} style={btnCircle} aria-label="More">+</button>
+                  </div>
+                  <div style={{ fontSize: 11.5, opacity: 0.6, marginTop: 4 }}>Price adjusts automatically with group size.</div>
+                </div>
+
+                <div style={{ marginTop: 12 }}>
+                  <label style={label}>Travel date</label>
+                  <input type="date" min={todayStr} value={date} onChange={(e) => setDate(e.target.value)} style={input} />
+                  {date && (
+                    <div style={{ fontSize: 12, marginTop: 5, color: dateOk ? T.green : "#B3261E", fontWeight: 600 }}>
+                      {dateOk ? `✓ Available on ${date}${tontinePossible ? " · Ma Tontine eligible" : " · full payment only (under 15 days)"}` : "Please choose a future date"}
+                    </div>
+                  )}
+                </div>
+
+                {rates && (
+                  <div style={{ marginTop: 12 }}>
+                    <label style={label}>Transport (optional)</label>
+                    <select value={vehicle} onChange={(e) => setVehicle(+e.target.value)} style={{ ...input, fontWeight: 600 }}>
+                      <option value={-1}>No transport — I'll arrange my own</option>
+                      {VEHICLES.map((v, i) => (
+                        <option key={v.name} value={i} disabled={v.cap < pax}>{v.name} · up to {v.cap} — {fmtXOF(rates[i])}{v.cap < pax ? " (too small)" : ""}</option>
+                      ))}
+                    </select>
+                    <div style={{ fontSize: 11.5, opacity: 0.6, marginTop: 4 }}>Per vehicle, for the day — chosen by group size.</div>
+                  </div>
+                )}
+
+                <div style={{ borderTop: `1px solid ${T.line}`, marginTop: 14, paddingTop: 12, display: "flex", fontSize: 15 }}>
+                  <span style={{ opacity: 0.7 }}>Estimated total</span>
+                  <strong style={{ marginLeft: "auto" }}>{fmtXOF(estTotal)}</strong>
+                </div>
+                <div style={{ background: T.paperDark, borderRadius: 10, padding: "10px 12px", fontSize: 12.5, lineHeight: 1.6, marginTop: 10 }}>
+                  <strong style={{ color: T.laterite }}>Ma Tontine Voyage:</strong> reserve with {fmtXOF(estTotal * 0.2)} (20%), balance in instalments before departure.
                 </div>
               </>
             )}
-            <button style={{ ...btnGold, width: "100%", marginTop: 14, borderRadius: 12, background: t.quote ? T.indigo : T.gold, color: t.quote ? "#fff" : T.ink }} onClick={() => setBooking(t)}>
-              {t.quote ? "Request a quote" : "Check availability & book"}
+
+            {t.quote ? (
+              <button style={{ ...btnGold, width: "100%", marginTop: 14, borderRadius: 12, background: T.indigo, color: "#fff" }} onClick={() => openBooking("quote")}>Request a quote</button>
+            ) : (
+              <>
+                <button style={{ ...btnGold, width: "100%", marginTop: 14, borderRadius: 12 }} onClick={() => openBooking("full")}>Pay in full</button>
+                <button style={{ width: "100%", marginTop: 8, background: T.laterite, color: "#fff", border: "none", borderRadius: 12, padding: "12px 14px", fontWeight: 800, cursor: "pointer", fontSize: 15 }} onClick={() => openBooking("deposit")}>Pay with Ma Tontine (20%)</button>
+              </>
+            )}
+            <button style={{ width: "100%", marginTop: 8, background: "#fff", color: T.green, border: `1.5px solid ${T.green}`, borderRadius: 12, padding: "11px 14px", fontWeight: 700, cursor: "pointer", fontSize: 14 }} onClick={() => go("builder")}>
+              ✦ Build a 100% custom trip
             </button>
-            <button style={{ background: "none", border: "none", cursor: "pointer", marginTop: 10, fontWeight: 600, color: fav ? T.laterite : T.ink, fontSize: 14 }} onClick={() => setFav(!fav)}>
+            <button style={{ background: "none", border: "none", cursor: "pointer", marginTop: 10, fontWeight: 600, color: fav ? T.laterite : T.ink, fontSize: 14, width: "100%" }} onClick={() => setFav(!fav)}>
               {fav ? "♥ Saved to favorites" : "♡ Save to favorites"}
             </button>
-            <div style={{ fontSize: 12.5, opacity: 0.65, marginTop: 10, lineHeight: 1.5 }}>Transport quoted per vehicle at booking · Ma Tontine Voyage available</div>
+            <div style={{ fontSize: 12, opacity: 0.6, marginTop: 10, lineHeight: 1.5, textAlign: "center" }}>🛡 Instalments available · free cancellation 48h</div>
           </div>
         </aside>
       </Wrap>
+
+      {/* Fixed booking bar (mobile only) */}
+      <style>{`
+        .tour-bottombar{display:none}
+        @media(max-width:900px){
+          .tour-aside{display:none}
+          .tour-bottombar{display:block}
+        }
+      `}</style>
+      <div className="tour-bottombar" style={{ position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 60, background: "#fff", borderTop: `1px solid ${T.line}`, boxShadow: "0 -8px 24px rgba(0,0,0,.12)", padding: "10px 14px calc(10px + env(safe-area-inset-bottom))" }}>
+        {t.quote ? (
+          <button style={{ ...btnGold, width: "100%", borderRadius: 12, background: T.indigo, color: "#fff" }} onClick={() => openBooking("quote")}>Request a quote</button>
+        ) : (
+          <>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontWeight: 800, fontSize: 18, color: T.green }} className="disp">{fmtXOF(estTotal)}</div>
+                <div style={{ fontSize: 11.5, opacity: 0.6 }}>{fmtXOF(ppUnit)} /pers · {pax} pax</div>
+              </div>
+              <input type="date" min={todayStr} value={date} onChange={(e) => setDate(e.target.value)} style={{ ...input, padding: "7px 8px", fontSize: 12.5, width: "auto", flex: 1, minWidth: 0 }} />
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <button onClick={() => setPax(Math.max(1, pax - 1))} style={btnCircle} aria-label="Fewer">−</button>
+                <span style={{ fontWeight: 700, minWidth: 16, textAlign: "center" }}>{pax}</span>
+                <button onClick={() => setPax(pax + 1)} style={btnCircle} aria-label="More">+</button>
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button style={{ ...btnGold, flex: 1, borderRadius: 12, fontSize: 14, padding: "12px 8px" }} onClick={() => openBooking("full")}>Pay in full</button>
+              <button style={{ flex: 1, background: T.laterite, color: "#fff", border: "none", borderRadius: 12, padding: "12px 8px", fontWeight: 800, cursor: "pointer", fontSize: 14 }} onClick={() => openBooking("deposit")}>Ma Tontine</button>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Gallery lightbox */}
+      {preview !== null && (
+        <div role="dialog" aria-modal="true" onClick={() => setPreview(null)} style={{ position: "fixed", inset: 0, zIndex: 80, background: "rgba(0,0,0,.8)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <button onClick={() => setPreview(null)} aria-label="Close" style={{ position: "absolute", top: 18, right: 18, background: "rgba(255,255,255,.15)", border: "none", color: "#fff", width: 42, height: 42, borderRadius: "50%", cursor: "pointer", fontSize: 18 }}>✕</button>
+          <div onClick={(e) => e.stopPropagation()} style={{ width: "min(900px, 92vw)", aspectRatio: "16 / 10", borderRadius: 16, overflow: "hidden", background: tile(preview) ? `center/cover no-repeat url(${tile(preview)})` : `linear-gradient(140deg, ${T.green}, ${T.indigo})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 120 }}>
+            {!tile(preview) && t.emoji}
+          </div>
+        </div>
+      )}
     </>
   );
 }
 
 // ---------------- TRIP BUILDER ----------------
-function TripBuilder({ notify, go }) {
+const WEB3FORMS_KEY = import.meta.env.VITE_WEB3FORMS_KEY || "ebabe71e-99df-4752-b59a-bb901b6ce4fb";
+
+function TripBuilder({ notify, go, user, saveRecord }) {
   const [step, setStep] = useState(0);
   const [trip, setTrip] = useState({ dest: "Senegal", days: 7, pax: 2, hotel: "3★ Standard hotel", tours: [], transport: "Standard SUV (≤4)" });
+  const [contact, setContact] = useState({ name: "", email: "", phone: "", notes: "" });
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+  useEffect(() => { if (user) setContact((c) => ({ ...c, name: c.name || user.name || "", email: c.email || user.email || "" })); }, [user]);
+
+  const requestItinerary = async () => {
+    if (!contact.name || !contact.email) { notify("Please add your name and email so ATS can reply."); return; }
+    setSending(true);
+    const tourNames = trip.tours.map((id) => TOURS.find((t) => t.id === id)?.name).filter(Boolean).join(" | ") || "none selected";
+    const payload = {
+      access_key: WEB3FORMS_KEY,
+      subject: `New itinerary request — ${trip.days}-day ${trip.dest} trip (${trip.pax} pax)`,
+      from_name: "ATS Trip Builder",
+      name: contact.name,
+      email: contact.email,
+      phone: contact.phone,
+      Destination: trip.dest,
+      Duration: `${trip.days} days`,
+      Travelers: trip.pax,
+      Hotel_category: trip.hotel,
+      Transport: trip.transport,
+      Experiences: tourNames,
+      Estimated_budget_XOF: total,
+      Customer_notes: contact.notes || "—",
+      Account: user ? `Signed in (${user.email})` : "Guest",
+    };
+    try {
+      const res = await fetch("https://api.web3forms.com/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSent(true);
+        notify("Itinerary request sent — an ATS advisor will reply by email shortly.");
+        saveRecord({
+          tour: { emoji: "🗺️", name: `Custom ${trip.days}-day ${trip.dest} itinerary`, pole: "Trip Builder", dur: `${trip.days} days` },
+          date: "", adults: trip.pax, children: 0, infants: 0,
+          plan: "itinerary", months: 0, total, deposit: 0,
+          itinerary: { dest: trip.dest, days: trip.days, pax: trip.pax, hotel: trip.hotel, transport: trip.transport, tours: tourNames, notes: contact.notes },
+          contact,
+        });
+      }
+      else notify("Could not send the request. Please try again or contact us on WhatsApp.");
+    } catch {
+      notify("Network error — please try again or contact us on WhatsApp.");
+    } finally { setSending(false); }
+  };
   const HOTEL = { "2★ Eco-lodge / guesthouse": 35000, "3★ Standard hotel": 55000, "4★ Boutique / charme": 90000, "5★ Luxury / resort": 160000 };
   const TRANSPORT = { "No transport": 0, "Standard Sedan (≤3)": 85000, "Premium Sedan (≤3)": 100000, "Standard SUV (≤4)": 95000, "Premium SUV (≤4)": 150000, "Luxury SUV (≤4)": 350000, "Standard Minivan (≤14)": 150000, "Coaster coach (≤22)": 115000 };
   const toursCost = trip.tours.reduce((s, id) => s + (fromPrice(TOURS.find((t) => t.id === id)) || 0), 0) * trip.pax;
@@ -588,9 +971,9 @@ function TripBuilder({ notify, go }) {
           )}
           {step === 1 && (
             <>
-              <label style={label}>Hotel category (per room / night)</label>
+              <label style={label}>Hotel category</label>
               <select style={{ ...input, fontWeight: 600 }} value={trip.hotel} onChange={(e) => setTrip({ ...trip, hotel: e.target.value })}>
-                {Object.entries(HOTEL).map(([k, v]) => <option key={k} value={k}>{k} — {fmtXOF(v)} / room / night</option>)}
+                {Object.keys(HOTEL).map((k) => <option key={k} value={k}>{k}</option>)}
               </select>
               <div style={{ fontSize: 12.5, opacity: 0.65, marginTop: 6 }}>ATS confirms the exact property from its contracted inventory at your chosen star level.</div>
               <button style={{ ...btnGold, marginTop: 16 }} onClick={() => setStep(2)}>Next: experiences →</button>
@@ -628,8 +1011,25 @@ function TripBuilder({ notify, go }) {
               <p style={{ fontSize: 14.5, lineHeight: 1.6, opacity: 0.85 }}>
                 {trip.pax} traveler{trip.pax > 1 ? "s" : ""} · {trip.hotel} hotel · {trip.transport} · {trip.tours.length} experience{trip.tours.length !== 1 ? "s" : ""}: {trip.tours.map((id) => TOURS.find((t) => t.id === id)?.name.split(" —")[0]).join(", ") || "none yet"}
               </p>
-              <button style={{ ...btnGold, width: "100%" }} onClick={() => notify("Itinerary request sent — an ATS advisor will confirm availability and final quote (demo)")}>Request this itinerary</button>
-              <button style={{ ...btnGreen, width: "100%", marginTop: 8, background: "#fff", color: T.green, border: `1.5px solid ${T.green}` }} onClick={() => go("tours")}>Keep browsing tours</button>
+              {sent ? (
+                <div style={{ background: T.paperDark, border: `1px solid ${T.line}`, borderRadius: 12, padding: 16, fontSize: 14.5, lineHeight: 1.6 }}>
+                  ✅ <strong>Request received.</strong> An ATS advisor will email you at <strong>{contact.email}</strong> to confirm availability and your final quote.
+                  <button style={{ ...btnGreen, width: "100%", marginTop: 12, background: "#fff", color: T.green, border: `1.5px solid ${T.green}` }} onClick={() => go("tours")}>Keep browsing tours</button>
+                </div>
+              ) : (
+                <>
+                  <label style={label}>Full name</label>
+                  <input style={input} value={contact.name} onChange={(e) => setContact({ ...contact, name: e.target.value })} placeholder="e.g. Awa Diop" />
+                  <label style={label}>Email</label>
+                  <input style={input} type="email" value={contact.email} onChange={(e) => setContact({ ...contact, email: e.target.value })} placeholder="you@example.com" />
+                  <label style={label}>Phone / WhatsApp (optional)</label>
+                  <input style={input} value={contact.phone} onChange={(e) => setContact({ ...contact, phone: e.target.value })} placeholder="+221 …" />
+                  <label style={label}>Notes for ATS (optional)</label>
+                  <textarea style={{ ...input, minHeight: 70, resize: "vertical" }} value={contact.notes} onChange={(e) => setContact({ ...contact, notes: e.target.value })} placeholder="Travel dates, special requests…" />
+                  <button disabled={sending} style={{ ...btnGold, width: "100%", marginTop: 6, opacity: sending ? 0.6 : 1 }} onClick={requestItinerary}>{sending ? "Sending…" : "Request this itinerary"}</button>
+                  <button style={{ ...btnGreen, width: "100%", marginTop: 8, background: "#fff", color: T.green, border: `1.5px solid ${T.green}` }} onClick={() => go("tours")}>Keep browsing tours</button>
+                </>
+              )}
             </>
           )}
         </div>
@@ -782,7 +1182,7 @@ function AboutPage({ notify }) {
       <div style={{ background: `linear-gradient(160deg, ${T.ink}, ${T.green})`, color: T.paper }}>
         <Wrap style={{ padding: "56px 20px" }}>
           <Eyebrow><span style={{ color: T.gold }}>Qui sommes-nous</span></Eyebrow>
-          <h1 className="disp" style={{ fontSize: "clamp(30px,5vw,50px)", fontWeight: 800, margin: "10px 0 14px", letterSpacing: "-0.02em" }}>About Africa Tourism Solutions</h1>
+          <h1 className="disp" style={{ fontSize: "clamp(26px,4vw,40px)", fontWeight: 700, margin: "10px 0 14px", letterSpacing: "-0.02em" }}>About Africa Tourism Solutions</h1>
           <p style={{ maxWidth: 680, fontSize: 17, lineHeight: 1.6, opacity: 0.92 }}>
             Founded by two young Senegalese entrepreneurs, ATS is the expression of an Africa revalued — historically, touristically and culturally. We exist to break the stereotype of a continent defined by poverty and danger, with a rich, authentic offer that shows its true, majestic beauty.
           </p>
@@ -851,57 +1251,264 @@ function AboutPage({ notify }) {
 }
 
 // ---------------- ACCOUNT ----------------
-function AccountPage({ user, bookings, setSignin, notify }) {
+const planLabel = (p) => p === "deposit" ? "Ma Tontine Voyage" : p === "quote" ? "Quote requested" : p === "itinerary" ? "Custom itinerary" : "Paid in full";
+const planColor = (p) => p === "deposit" ? T.laterite : p === "quote" ? T.indigo : p === "itinerary" ? T.indigo : T.green;
+const statusLabel = { pending: "In progress", confirmed: "Confirmed", cancelled: "Cancelled", settled: "Fully paid" };
+const statusColor = (s) => s === "cancelled" ? "#B3261E" : s === "settled" || s === "confirmed" ? T.green : T.laterite;
+
+function AccountPage({ user, bookings, setSignin, notify, signOut, patchBooking, cancelBooking }) {
+  const [filter, setFilter] = useState("all");
+  const [detail, setDetail] = useState(null);
   if (!user) return (
     <Wrap>
       <H2>My account</H2>
-      <p style={{ opacity: 0.8 }}>Sign in to view your bookings, payment plans and travel documents.</p>
+      <p style={{ opacity: 0.8 }}>Sign in to view your bookings, quote requests, payment plans and travel documents.</p>
       <button style={btnGold} onClick={() => setSignin(true)}>Sign in</button>
     </Wrap>
   );
+  const tabs = [["all", "All"], ["booking", "Bookings"], ["quote", "Quotes"], ["itinerary", "Itineraries"]];
+  const bucket = (b) => b.plan === "quote" ? "quote" : b.plan === "itinerary" ? "itinerary" : "booking";
+  const list = bookings.filter((b) => filter === "all" || bucket(b) === filter);
+
   return (
     <Wrap>
-      <Eyebrow>Customer portal</Eyebrow><H2>Welcome, {user.name}</H2>
-      {bookings.length === 0 ? (
-        <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 14, padding: 24 }}>No bookings yet — book a tour and it will appear here with its payment plan.</div>
-      ) : bookings.map((b, i) => (
-        <div key={i} style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 16, padding: 20, marginBottom: 14 }}>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
+      <Eyebrow>Customer portal</Eyebrow>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+        <H2>Welcome, {user.name}</H2>
+        <button style={{ marginLeft: "auto", background: "none", border: `1.5px solid ${T.line}`, borderRadius: 999, padding: "7px 16px", cursor: "pointer", fontWeight: 700, fontSize: 13.5, color: T.ink }} onClick={signOut}>Sign out</button>
+      </div>
+      <div style={{ fontSize: 13.5, opacity: 0.65, marginTop: -6, marginBottom: 16 }}>{user.email}</div>
+
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 18 }}>
+        {tabs.map(([k, l]) => {
+          const n = k === "all" ? bookings.length : bookings.filter((b) => bucket(b) === k).length;
+          return <button key={k} onClick={() => setFilter(k)} style={{ border: "none", cursor: "pointer", background: filter === k ? T.green : "#fff", color: filter === k ? "#fff" : T.ink, borderRadius: 999, padding: "8px 16px", fontWeight: 600, fontSize: 13, boxShadow: `inset 0 0 0 1px ${T.line}` }}>{l} {n > 0 && `· ${n}`}</button>;
+        })}
+      </div>
+
+      {list.length === 0 ? (
+        <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 14, padding: 24 }}>Nothing here yet — book a tour, request a quote or build a trip and it will appear in this space.</div>
+      ) : list.map((b, i) => {
+        const paidCount = b.paid || 0;
+        const paidAmount = b.plan === "deposit" ? b.deposit + ((b.total - b.deposit) / b.months) * paidCount : 0;
+        const pct = b.plan === "deposit" && b.total ? Math.round((paidAmount / b.total) * 100) : 0;
+        return (
+        <div key={b._id || i} className="card-hover" style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 16, padding: 20, marginBottom: 14, opacity: b._status === "cancelled" ? 0.6 : 1, display: "flex", flexDirection: "column", gap: 12 }}>
+          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
             <span style={{ fontSize: 30 }}>{b.tour.emoji}</span>
-            <div style={{ flex: 1, minWidth: 200 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
               <div className="disp" style={{ fontWeight: 800, fontSize: 17 }}>{b.tour.name}</div>
-              <div style={{ fontSize: 13, opacity: 0.7 }}>{b.adults} adult{b.adults > 1 ? "s" : ""}{b.children ? ` · ${b.children} child` : ""}{b.plan === "quote" ? " · awaiting ATS proposal" : ` · Total ${fmtXOF(b.total)}`}</div>
+              <div style={{ fontSize: 13, opacity: 0.7 }}>{b.adults} traveler{b.adults > 1 ? "s" : ""}{b.children ? ` · ${b.children} child` : ""}{b.date ? ` · ${b.date}` : ""}{b.plan === "quote" || b.plan === "itinerary" ? "" : ` · Total ${fmtXOF(b.total)}`}</div>
             </div>
-            <span style={{ ...pill(b.plan === "deposit" ? T.laterite : b.plan === "quote" ? T.indigo : T.green), fontSize: 12 }}>
-              {b.plan === "deposit" ? "Ma Tontine Voyage" : b.plan === "quote" ? "Quote requested" : "Paid in full (demo)"}
-            </span>
           </div>
-          {b.plan === "deposit" && (
-            <div style={{ marginTop: 12, background: T.paperDark, borderRadius: 12, padding: "12px 14px", fontSize: 14, lineHeight: 1.6 }}>
-              Deposit paid: <strong>{fmtXOF(b.deposit)}</strong> · Remaining: <strong>{fmtXOF(b.total - b.deposit)}</strong> in {b.months} instalments of {fmtXOF((b.total - b.deposit) / b.months)}.
-              <div style={{ marginTop: 8 }}>
-                <button style={{ ...btnGreen, fontSize: 13, padding: "8px 16px" }} onClick={() => notify("Instalment payment recorded — receipt sent by email (demo)")}>Pay next instalment</button>
-                <button style={{ background: "none", border: "none", cursor: "pointer", fontWeight: 600, color: T.indigo, marginLeft: 10, fontSize: 13.5 }} onClick={() => notify("Invoice PDF downloaded (demo)")}>Download invoice</button>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <span style={{ ...pill(planColor(b.plan)), fontSize: 12 }}>{planLabel(b.plan)}</span>
+            <span style={{ fontSize: 11.5, fontWeight: 700, color: statusColor(b._status), alignSelf: "center" }}>● {statusLabel[b._status] || "In progress"}</span>
+          </div>
+
+          {b.plan === "deposit" && b._status !== "cancelled" && (
+            <div style={{ background: T.paperDark, borderRadius: 12, padding: "12px 14px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, fontWeight: 700, marginBottom: 6 }}>
+                <span>{pct >= 100 ? "Fully paid 🎉" : `Ma Tontine · ${paidCount}/${b.months} instalment${b.months > 1 ? "s" : ""} paid`}</span>
+                <span style={{ color: T.green }}>{pct}%</span>
+              </div>
+              <div style={{ height: 9, borderRadius: 999, background: "rgba(11,46,27,.12)", overflow: "hidden" }}>
+                <div style={{ height: "100%", width: `${pct}%`, background: `linear-gradient(90deg, ${T.green}, ${T.gold})`, borderRadius: 999, transition: "width .4s ease" }} />
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, opacity: 0.7, marginTop: 6 }}>
+                <span>Paid: {fmtXOF(paidAmount)}</span>
+                <span>Remaining: {fmtXOF(b.total - paidAmount)}</span>
               </div>
             </div>
           )}
+
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <button style={{ ...btnGreen, fontSize: 13, padding: "8px 16px" }} onClick={() => setDetail(b)}>View details</button>
+            {b.plan === "deposit" && b._status !== "cancelled" && paidCount < b.months && (
+              <button style={{ background: "none", border: `1.5px solid ${T.line}`, borderRadius: 10, cursor: "pointer", fontWeight: 700, color: T.ink, padding: "8px 16px", fontSize: 13 }}
+                onClick={async () => { const paid = paidCount + 1; await patchBooking(b, { paid, ...(paid >= b.months ? { _status: "settled" } : {}) }); notify(`Instalment ${paid}/${b.months} recorded — receipt sent by email.`); }}>Pay next instalment</button>
+            )}
+          </div>
         </div>
-      ))}
+        );
+      })}
+
+      {detail && <BookingDetail rec={detail} onClose={() => setDetail(null)} notify={notify} patchBooking={patchBooking} cancelBooking={cancelBooking} user={user} />}
     </Wrap>
   );
 }
 
-// ---------------- MODALS ----------------
-function SignInModal({ onClose, onLogin }) {
-  const [name, setName] = useState("");
+function downloadInvoice(rec, user) {
+  const remaining = rec.plan === "deposit" ? rec.total - rec.deposit : 0;
+  const rows = [
+    ["Reference", (rec._id || "PENDING").toString().slice(0, 8).toUpperCase()],
+    ["Customer", user?.name || rec.contact?.name || "—"],
+    ["Email", user?.email || rec.contact?.email || "—"],
+    ["Item", rec.tour.name],
+    ["Travelers", `${rec.adults} adult(s)${rec.children ? ` · ${rec.children} child` : ""}`],
+    rec.date ? ["Date", rec.date] : null,
+    ["Payment plan", planLabel(rec.plan)],
+    rec.plan !== "quote" && rec.plan !== "itinerary" ? ["Total", fmtXOF(rec.total)] : null,
+    rec.plan === "deposit" ? ["Deposit paid", fmtXOF(rec.deposit)] : null,
+    rec.plan === "deposit" ? ["Remaining", `${fmtXOF(remaining)} in ${rec.months} instalments`] : null,
+    rec.plan === "deposit" ? ["Instalments paid", `${rec.paid || 0} / ${rec.months}`] : null,
+  ].filter(Boolean);
+  const html = `<!doctype html><html><head><meta charset="utf-8"><title>ATS invoice</title>
+    <style>body{font-family:Arial,sans-serif;color:#0B2E1B;max-width:640px;margin:40px auto;padding:0 20px}
+    h1{color:#009245}.h{border-bottom:2px solid #F8D815;padding-bottom:10px;margin-bottom:20px}
+    table{width:100%;border-collapse:collapse}td{padding:9px 4px;border-bottom:1px solid #eee;font-size:14px}
+    td:first-child{opacity:.6;width:40%}td:last-child{font-weight:600;text-align:right}
+    .f{margin-top:24px;font-size:12px;opacity:.6;line-height:1.6}</style></head>
+    <body><div class="h"><h1>Africa Tourism Solutions</h1><div>Booking confirmation / invoice</div></div>
+    <table>${rows.map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join("")}</table>
+    <div class="f">Immeuble SICAP, Point E, Lot 8, Dakar · +221 77 480 78 78 · infos@africatourismsolutions.com<br>Demo document — not a fiscal invoice.</div>
+    <script>window.onload=function(){window.print()}</script></body></html>`;
+  const w = window.open("", "_blank");
+  if (w) { w.document.write(html); w.document.close(); }
+}
+
+function BookingDetail({ rec, onClose, notify, patchBooking, cancelBooking, user }) {
+  const it = rec.itinerary;
+  const remaining = rec.plan === "deposit" ? rec.total - rec.deposit : 0;
+  const canCancel = rec._status !== "cancelled" && rec._status !== "settled";
   return (
     <Overlay onClose={onClose}>
-      <h3 className="disp" style={{ fontWeight: 800, fontSize: 22, marginTop: 0 }}>Sign in to ATS</h3>
-      <p style={{ fontSize: 14, opacity: 0.75, lineHeight: 1.5 }}>Demo login — no password needed. In production: email/password, Google, and WhatsApp OTP.</p>
-      <label style={label}>Your name</label>
-      <input style={input} placeholder="e.g. Awa Diop" value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && name && onLogin(name)} />
-      <button style={{ ...btnGold, width: "100%", marginTop: 14 }} onClick={() => name ? onLogin(name) : null}>Continue</button>
-      <button style={{ background: "none", border: "none", cursor: "pointer", marginTop: 10, fontWeight: 600, color: T.indigo, width: "100%", fontSize: 14 }} onClick={onClose}>Cancel</button>
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <span style={{ fontSize: 30 }}>{rec.tour.emoji}</span>
+        <h3 className="disp" style={{ fontWeight: 800, fontSize: 20, margin: 0, flex: 1 }}>{rec.tour.name}</h3>
+      </div>
+      <div style={{ display: "flex", gap: 8, margin: "10px 0 14px" }}>
+        <span style={{ ...pill(planColor(rec.plan)), fontSize: 12 }}>{planLabel(rec.plan)}</span>
+        <span style={{ fontSize: 12, fontWeight: 700, color: statusColor(rec._status), alignSelf: "center" }}>● {statusLabel[rec._status] || "In progress"}</span>
+      </div>
+
+      <div style={{ background: T.paperDark, borderRadius: 12, padding: "12px 14px", fontSize: 14, lineHeight: 1.7 }}>
+        <Row l="Travelers" v={`${rec.adults} adult(s)${rec.children ? ` · ${rec.children} child` : ""}${rec.infants ? ` · ${rec.infants} infant` : ""}`} />
+        {rec.date && <Row l="Date" v={rec.date} />}
+        {rec.tour.pole && <Row l="Category" v={rec.tour.pole} />}
+        {rec.tour.dur && <Row l="Duration" v={rec.tour.dur} />}
+        {it && <>
+          <Row l="Destination" v={it.dest} />
+          <Row l="Hotel" v={it.hotel} />
+          <Row l="Transport" v={it.transport} />
+          <div style={{ padding: "4px 0" }}><span style={{ opacity: 0.75 }}>Experiences</span><div style={{ fontWeight: 600, marginTop: 4 }}>{it.tours}</div></div>
+          {it.notes && <div style={{ padding: "4px 0" }}><span style={{ opacity: 0.75 }}>Notes</span><div style={{ marginTop: 4 }}>{it.notes}</div></div>}
+        </>}
+        {rec.plan !== "quote" && rec.plan !== "itinerary" && <Row l="Total" v={fmtXOF(rec.total)} />}
+        {rec.plan === "deposit" && <>
+          <Row l="Deposit paid" v={fmtXOF(rec.deposit)} />
+          <Row l="Remaining" v={`${fmtXOF(remaining)} · ${rec.months} instalment(s) of ${fmtXOF(remaining / rec.months)}${rec.schedule ? ` over ${rec.schedule}` : ""}`} />
+          <Row l="Instalments paid" v={`${rec.paid || 0} / ${rec.months}`} />
+        </>}
+      </div>
+
+      {(rec.plan === "quote" || rec.plan === "itinerary") && rec._status === "pending" && (
+        <div style={{ fontSize: 13.5, opacity: 0.75, marginTop: 12, lineHeight: 1.5 }}>An ATS advisor is reviewing your request and will reply by email with a personalised proposal.</div>
+      )}
+
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 16 }}>
+        {rec.plan === "deposit" && rec._status !== "cancelled" && (rec.paid || 0) < rec.months && (
+          <button style={{ ...btnGold, fontSize: 13.5, padding: "9px 16px" }}
+            onClick={async () => { const paid = (rec.paid || 0) + 1; await patchBooking(rec, { paid, ...(paid >= rec.months ? { _status: "settled" } : {}) }); notify(`Instalment ${paid}/${rec.months} recorded.`); onClose(); }}>Pay next instalment</button>
+        )}
+        {rec.plan !== "quote" && rec.plan !== "itinerary" && (
+          <button style={{ ...btnGreen, fontSize: 13.5, padding: "9px 16px" }} onClick={() => downloadInvoice(rec, user)}>Download invoice</button>
+        )}
+        <button style={{ background: "none", border: "none", cursor: "pointer", fontWeight: 700, color: T.indigo, fontSize: 13.5 }} onClick={() => notify("Opening WhatsApp chat with ATS: +221 77 480 78 78")}>Contact ATS</button>
+        {canCancel && (
+          <button style={{ marginLeft: "auto", background: "none", border: `1.5px solid #B3261E`, borderRadius: 10, cursor: "pointer", fontWeight: 700, color: "#B3261E", padding: "9px 16px", fontSize: 13.5 }}
+            onClick={async () => { await cancelBooking(rec); onClose(); }}>Cancel {rec.plan === "quote" ? "request" : rec.plan === "itinerary" ? "request" : "booking"}</button>
+        )}
+      </div>
+      <button style={{ background: "none", border: "none", cursor: "pointer", marginTop: 12, fontWeight: 600, color: T.ink, opacity: 0.6, width: "100%", fontSize: 14 }} onClick={onClose}>Close</button>
+    </Overlay>
+  );
+}
+
+// ---------------- MODALS ----------------
+function SignInModal({ onClose, onDone, notify }) {
+  const [mode, setMode] = useState("signin"); // signin | signup
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  const google = async () => {
+    setError(""); setBusy(true);
+    const { error } = await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: window.location.origin } });
+    if (error) { setError(error.message); setBusy(false); }
+  };
+
+  const submit = async () => {
+    setError("");
+    if (!email || !password) return setError("Email and password are required.");
+    if (mode === "signup" && (!firstName || !lastName)) return setError("First name and last name are required.");
+    if (password.length < 8) return setError("Password must be at least 8 characters.");
+    setBusy(true);
+    if (mode === "signup") {
+      const { data, error } = await supabase.auth.signUp({
+        email, password,
+        options: { data: { first_name: firstName.trim(), last_name: lastName.trim() } },
+      });
+      setBusy(false);
+      if (error) return setError(error.message);
+      if (data.session) onDone(`Welcome, ${firstName}! Your ATS account is ready.`);
+      else onDone("Account created — check your email to confirm your address, then sign in.");
+    } else {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      setBusy(false);
+      if (error) return setError(error.message === "Invalid login credentials" ? "Incorrect email or password." : error.message);
+      onDone("Welcome back!");
+    }
+  };
+
+  const forgot = async () => {
+    if (!email) return setError("Enter your email above first, then click “Forgot password”.");
+    setBusy(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin });
+    setBusy(false);
+    if (error) return setError(error.message);
+    notify("Password reset email sent — check your inbox.");
+  };
+
+  return (
+    <Overlay onClose={onClose}>
+      <h3 className="disp" style={{ fontWeight: 800, fontSize: 22, marginTop: 0 }}>{mode === "signin" ? "Sign in to ATS" : "Create your ATS account"}</h3>
+
+      <button disabled={busy} onClick={google} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, background: "#fff", border: `1.5px solid ${T.line}`, borderRadius: 12, padding: "11px 14px", fontSize: 14.5, fontWeight: 700, cursor: "pointer", color: T.ink }}>
+        <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3l5.7-5.7C34.3 6.1 29.4 4 24 4 13 4 4 13 4 24s9 20 20 20 20-9 20-20c0-1.3-.1-2.6-.4-3.9z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.9 1.2 8 3l5.7-5.7C34.3 6.1 29.4 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.3 0 10.1-2 13.7-5.3l-6.3-5.3c-2 1.4-4.6 2.6-7.4 2.6-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.6 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.1H42V20H24v8h11.3c-.8 2.3-2.3 4.3-4.2 5.7l6.3 5.3C41.4 35.4 44 30.1 44 24c0-1.3-.1-2.6-.4-3.9z"/></svg>
+        Continue with Google
+      </button>
+
+      <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "14px 0", opacity: 0.55, fontSize: 12.5 }}>
+        <div style={{ flex: 1, height: 1, background: T.line }} /> or with email <div style={{ flex: 1, height: 1, background: T.line }} />
+      </div>
+
+      {mode === "signup" && (
+        <div style={{ display: "flex", gap: 10 }}>
+          <div style={{ flex: 1 }}><label style={label}>First name</label><input style={input} autoComplete="given-name" value={firstName} onChange={(e) => setFirstName(e.target.value)} /></div>
+          <div style={{ flex: 1 }}><label style={label}>Last name</label><input style={input} autoComplete="family-name" value={lastName} onChange={(e) => setLastName(e.target.value)} /></div>
+        </div>
+      )}
+      <label style={label}>Email</label>
+      <input style={input} type="email" autoComplete="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+      <label style={label}>Password</label>
+      <input style={input} type="password" autoComplete={mode === "signup" ? "new-password" : "current-password"} placeholder={mode === "signup" ? "Minimum 8 characters" : ""} value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={(e) => e.key === "Enter" && submit()} />
+
+      {error && <div role="alert" style={{ background: "#FDECEA", color: "#B3261E", borderRadius: 10, padding: "9px 12px", fontSize: 13.5, marginTop: 10 }}>{error}</div>}
+
+      <button disabled={busy} style={{ ...btnGold, width: "100%", marginTop: 14, opacity: busy ? 0.6 : 1 }} onClick={submit}>
+        {busy ? "Please wait…" : mode === "signin" ? "Sign in" : "Create account"}
+      </button>
+
+      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 12, fontSize: 13.5 }}>
+        <button style={{ background: "none", border: "none", cursor: "pointer", fontWeight: 700, color: T.indigo, padding: 0 }} onClick={() => { setError(""); setMode(mode === "signin" ? "signup" : "signin"); }}>
+          {mode === "signin" ? "New here? Create an account" : "Already have an account? Sign in"}
+        </button>
+        {mode === "signin" && <button style={{ background: "none", border: "none", cursor: "pointer", fontWeight: 600, color: T.indigo, padding: 0 }} onClick={forgot}>Forgot password?</button>}
+      </div>
     </Overlay>
   );
 }
@@ -948,17 +1555,45 @@ function Overlay({ children, onClose }) {
   );
 }
 
-function BookingModal({ tour, onClose, onConfirm }) {
-  const [date, setDate] = useState("");
-  const [adults, setAdults] = useState(2);
+const TONTINE_OPTIONS = [
+  { key: "15d", label: "15 days", days: 15, n: 1 },
+  { key: "1m", label: "1 month", days: 30, n: 1 },
+  { key: "2m", label: "2 months", days: 60, n: 2 },
+  { key: "3m", label: "3 months", days: 90, n: 3 },
+  { key: "6m", label: "6 months", days: 180, n: 6 },
+  { key: "9m", label: "9 months", days: 270, n: 9 },
+  { key: "1y", label: "1 year", days: 365, n: 12 },
+];
+
+function BookingModal({ tour, user, onClose, onConfirm }) {
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const [date, setDate] = useState(tour.initialDate || "");
+  const [adults, setAdults] = useState(tour.initialPax || 2);
   const [children, setChildren] = useState(0); // 3–12
   const [infants, setInfants] = useState(0);  // under 3, free
-  const [addons, setAddons] = useState([]);
-  const [vehicle, setVehicle] = useState(-1); // -1 = no transport
-  const [plan, setPlan] = useState("full");
-  const [months, setMonths] = useState(3);
+  const [addons, setAddons] = useState(tour.initialExtras || []);
+  const [vehicle, setVehicle] = useState(tour.initialVehicle ?? -1); // -1 = no transport
+  const [plan, setPlan] = useState(tour.initialPlan === "deposit" ? "deposit" : "full");
+  const [sched, setSched] = useState("3m");
   const [msg, setMsg] = useState("");
+  const [bill, setBill] = useState({ name: user?.name || "", email: user?.email || "", phone: "" });
   const toggle = (n) => setAddons((a) => (a.includes(n) ? a.filter((x) => x !== n) : [...a, n]));
+
+  // ---- Ma Tontine availability vs chosen travel date ----
+  const daysUntil = date ? Math.ceil((new Date(date + "T00:00:00") - new Date(todayStr + "T00:00:00")) / 86400000) : null;
+  const optAvailable = (o) => daysUntil != null && daysUntil >= o.days;
+  const tontineAvailable = TONTINE_OPTIONS.some(optAvailable);
+  const selectedOpt = TONTINE_OPTIONS.find((o) => o.key === sched) || TONTINE_OPTIONS[3];
+  const months = selectedOpt.n;
+
+  // keep schedule + plan valid when the date changes
+  useEffect(() => {
+    if (!tontineAvailable) { setPlan((p) => (p === "deposit" ? "full" : p)); return; }
+    if (!optAvailable(selectedOpt)) {
+      const firstOk = TONTINE_OPTIONS.find(optAvailable);
+      if (firstOk) setSched(firstOk.key);
+    }
+  }, [date]);
 
   const pax = adults + children;
   const seats = pax + infants;
@@ -1002,7 +1637,7 @@ function BookingModal({ tour, onClose, onConfirm }) {
         </div>
 
         <div style={sect}>Date</div>
-        <input type="date" style={input} value={date} onChange={(e) => setDate(e.target.value)} />
+        <input type="date" min={todayStr} style={input} value={date} onChange={(e) => setDate(e.target.value)} />
 
         <div style={sect}>Travelers</div>
         <Counter label="Adults" sub={tour.quote ? "" : `${fmtXOF(tg.a)} each at current basis`} value={adults} set={setAdults} min={1} />
@@ -1056,16 +1691,35 @@ function BookingModal({ tour, onClose, onConfirm }) {
 
             <div style={sect}>Payment</div>
             <div style={{ display: "flex", gap: 8 }}>
-              {[["full", "Pay in full"], ["deposit", "Ma Tontine Voyage · 20% deposit"]].map(([k, l]) => (
-                <button key={k} onClick={() => setPlan(k)} style={{ flex: 1, border: `1.5px solid ${plan === k ? T.green : T.line}`, background: plan === k ? "#fff" : "transparent", borderRadius: 12, padding: "10px 8px", fontWeight: 600, fontSize: 13, cursor: "pointer", color: T.ink }}>{l}</button>
-              ))}
+              <button onClick={() => setPlan("full")} style={{ flex: 1, border: `1.5px solid ${plan === "full" ? T.green : T.line}`, background: plan === "full" ? "#fff" : "transparent", borderRadius: 12, padding: "10px 8px", fontWeight: 600, fontSize: 13, cursor: "pointer", color: T.ink }}>Pay in full</button>
+              <button onClick={() => tontineAvailable && setPlan("deposit")} disabled={!tontineAvailable} title={!tontineAvailable ? "Choose a travel date further away to pay in instalments" : ""}
+                style={{ flex: 1, border: `1.5px solid ${plan === "deposit" ? T.green : T.line}`, background: plan === "deposit" ? "#fff" : "transparent", borderRadius: 12, padding: "10px 8px", fontWeight: 600, fontSize: 13, cursor: tontineAvailable ? "pointer" : "not-allowed", color: T.ink, opacity: tontineAvailable ? 1 : 0.45 }}>
+                Ma Tontine Voyage · 20% deposit
+              </button>
             </div>
-            {plan === "deposit" && (
+            {!tontineAvailable && (
+              <div style={{ marginTop: 10, background: "#FFF7E0", border: `1px solid ${T.gold}`, borderRadius: 10, padding: "10px 12px", fontSize: 13, lineHeight: 1.5, color: T.laterite }}>
+                {!date
+                  ? "🗓️ Select a travel date above to unlock Ma Tontine Voyage instalment plans."
+                  : `⏳ Your travel date is in ${daysUntil} day${daysUntil > 1 ? "s" : ""} — too soon for instalments (minimum 15 days). Please pay in full, or pick a later date.`}
+              </div>
+            )}
+            {plan === "deposit" && tontineAvailable && (
               <div style={{ marginTop: 10, fontSize: 14 }}>
-                Instalments:{" "}
-                {[2, 3, 4].map((m) => (
-                  <button key={m} onClick={() => setMonths(m)} style={{ ...btnCircle, width: "auto", padding: "4px 12px", borderRadius: 999, marginRight: 6, background: months === m ? T.green : "#fff", color: months === m ? "#fff" : T.ink }}>{m} months</button>
-                ))}
+                <div style={{ fontSize: 12.5, opacity: 0.7, marginBottom: 6 }}>Choose your instalment period (fully paid before departure):</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {TONTINE_OPTIONS.map((o) => {
+                    const ok = optAvailable(o);
+                    return (
+                      <button key={o.key} onClick={() => ok && setSched(o.key)} disabled={!ok}
+                        title={ok ? "" : `Needs a travel date at least ${o.days} days away`}
+                        style={{ border: `1.5px solid ${sched === o.key && ok ? T.green : T.line}`, borderRadius: 999, padding: "5px 13px", fontWeight: 600, fontSize: 12.5, cursor: ok ? "pointer" : "not-allowed", background: sched === o.key && ok ? T.green : "#fff", color: sched === o.key && ok ? "#fff" : T.ink, opacity: ok ? 1 : 0.4 }}>
+                        {o.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div style={{ fontSize: 12, opacity: 0.6, marginTop: 6 }}>Greyed periods require a travel date further in the future than the period itself.</div>
               </div>
             )}
 
@@ -1083,17 +1737,27 @@ function BookingModal({ tour, onClose, onConfirm }) {
                   {onRequestAddons.length > 0 && `${onRequestAddons.length} selected add-on(s) priced on request — quoted before payment.`}
                 </div>
               )}
-              {plan === "deposit" && (
+              {plan === "deposit" && tontineAvailable && (
                 <div style={{ marginTop: 10, background: T.paperDark, borderRadius: 10, padding: "10px 12px", fontSize: 13.5, lineHeight: 1.6 }}>
-                  <strong style={{ color: T.laterite }}>Due today: {fmtXOF(calc.deposit)}</strong><br />
-                  Then {months} × {fmtXOF(calc.installment)} — balance settled before departure. Reminders by email, SMS and WhatsApp.
+                  <strong style={{ color: T.laterite }}>Due today: {fmtXOF(calc.deposit)}</strong> (20% deposit)<br />
+                  Remaining {fmtXOF(calc.total - calc.deposit)} over {selectedOpt.label}: <strong>{months} × {fmtXOF(calc.installment)}</strong> before each deadline.<br />
+                  Balance fully settled before your travel date{date ? ` (${date})` : ""}. Reminders by email, SMS and WhatsApp.
                 </div>
               )}
             </div>
 
-            <button style={{ width: "100%", marginTop: 14, background: T.gold, color: T.ink, border: "none", borderRadius: 12, padding: 14, fontWeight: 800, fontSize: 16, cursor: "pointer" }}
-              onClick={() => onConfirm({ tour, date, adults, children, infants, plan, months, total: calc.total, deposit: calc.deposit })}>
-              {plan === "deposit" ? `Reserve with ${fmtXOF(calc.deposit)} deposit` : "Continue to payment"}
+            <div style={sect}>{plan === "deposit" ? "Reservation details" : "Reservation & billing details"}</div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <div style={{ flex: 1 }}><label style={label}>Full name</label><input style={input} value={bill.name} onChange={(e) => setBill({ ...bill, name: e.target.value })} placeholder="e.g. Awa Diop" /></div>
+              <div style={{ flex: 1 }}><label style={label}>Phone</label><input style={input} value={bill.phone} onChange={(e) => setBill({ ...bill, phone: e.target.value })} placeholder="+221 …" /></div>
+            </div>
+            <label style={label}>Email</label>
+            <input style={input} type="email" value={bill.email} onChange={(e) => setBill({ ...bill, email: e.target.value })} placeholder="you@example.com" />
+
+            <button style={{ width: "100%", marginTop: 14, background: T.gold, color: T.ink, border: "none", borderRadius: 12, padding: 14, fontWeight: 800, fontSize: 16, cursor: "pointer", opacity: bill.name && bill.email ? 1 : 0.55 }}
+              disabled={!bill.name || !bill.email}
+              onClick={() => onConfirm({ tour, date, adults, children, infants, plan, months, schedule: plan === "deposit" ? selectedOpt.label : "", total: calc.total, deposit: calc.deposit, contact: bill, addonsChosen: addons })}>
+              {plan === "deposit" ? `Reserve with ${fmtXOF(calc.deposit)} deposit` : `Pay in full — ${fmtXOF(calc.total)}`}
             </button>
             <div style={{ marginTop: 10, fontSize: 12, opacity: 0.6, textAlign: "center" }}>
               Visa · Mastercard · PayPal · Orange Money · Wave · Free Money · M-Pesa · Bank transfer — demo, no real charge
