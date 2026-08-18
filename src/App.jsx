@@ -28,10 +28,10 @@ const fmtUSD = (n) => "≈ $" + Math.round(n / XOF_USD);
 const TOURS = [{"id": "goree", "pole": "Dakar", "name": "Goree Island — Memory & Heritage", "dur": "Half day", "tag": "Heritage", "emoji": "🏛️", "zone": "dakar", "desc": "Ferry crossing to the UNESCO island: House of Slaves, colonial lanes, artists' quarter. Senegal's #1 site.", "quote": false, "grid": {"p12": {"a": 25000, "c": 17000}, "p34": {"a": 20000, "c": 15000}, "grp": {"a": 17000, "c": 10000}}, "sub": "Standard departure from client hotel · Dakar port ferry terminal · sea crossing 3.5 km / ~25 min · total 3h30–4h", "steps": ["Pick-up at hotel, transfer to Port Autonome ferry terminal (Liaison Maritime Dakar-Gorée)  ·  5–10 km / 20–30 min", "Check-in and boarding (tickets pre-purchased by ATS; verify current timetable weekly)", "Ferry crossing to Goree  ·  3.5 km / 25 min", "Guided walk: harbour square → House of Slaves & Door of No Return (interior visit)| Colonial quarter walk: Saint-Charles church |Sand painting demonstration | Artists' village and baobab square  |Guns of Navarone  ·  90 min", "Return ferry  ·  25 min", "Transfer back to hotel — end of service  ·  20–30 min"], "addons": [{"name": "Seafront lunch on Goree (menu, per person)", "price": 12000, "per": "person"}, {"name": "Goree museums entry (IFAN Historical / Fort d’Estrées)", "price": 3000, "per": "booking"}, {"name": "Extended night stay", "price": null, "per": "booking"}]}, {"id": "city", "pole": "Dakar", "name": "Dakar City Tour", "dur": "Half Day", "tag": "Culture", "emoji": "🌆", "zone": "dakar", "desc": "Plateau, Medina, Soumbédioune and the corniche in a private vehicle — Dakar decoded in an afternoon.", "quote": false, "grid": {"p12": {"a": 65000, "c": 30000}, "p34": {"a": 30000, "c": 15000}, "grp": {"a": 20000, "c": 10000}}, "sub": "Departure 09:00 or 14:30 · private vehicle · ~30 km urban loop · 3h30–4h", "steps": ["Pick-up; Place de l'Indépendance and colonial administrative quarter (drive + short walk)  ·  3 km / 30 min", "Cathedrale church  ·  15 min", "Soumbedioune fishing beach and craft market  ·  30 min", "Corniche Ouest: Mosque of the Divinity photo stop  ·  45 min", "African Renaissance Monument outdoor  ·  45 min", "Corniche viewpoints → drop-off at hotel or restaurant  ·  5 km / 30 min"], "addons": [{"name": "Craft-market shopping assistant (negotiation support)", "price": 10000, "per": "booking"}, {"name": "Lunch at a Senegalese restaurant (reservation + menu)", "price": 10000, "per": "booking"}, {"name": "Iconic ‘car rapide’ rental for the tour (per vehicle)", "price": 35000, "per": "booking"}, {"name": "Extension: Renaissance Monument exterior photo stop", "price": 6000, "per": "booking"}]}, {"id": "monument", "pole": "Dakar", "name": "African Renaissance Monument", "dur": "2–3 h visit", "tag": "Heritage", "emoji": "🗿", "zone": "dakar", "desc": "Africa's tallest statue at Ouakam — a short, high-impact visit with panoramic city views.", "quote": false, "grid": {"p12": {"a": 10000, "c": 6000}, "p34": {"a": 8000, "c": 5000}, "grp": {"a": 7000, "c": 4000}}, "sub": "Departure 09:00 or 15:30 · Ouakam, 10 km / 25 min from Plateau hotels · sold separately or combined with the Museum of Black Civilizations", "steps": ["Pick-up; drive to Ouakam  ·  10 km / 25 min", "Exterior approach and history briefing at the foot of the 52 m monument  ·  20 min", "Inside visit of the monument, Panoramic view of Ouakam  ·  45 min"], "addons": [{"name": "Combine with the Museum of Black Civilisations (combined half-day rate)", "price": 5000, "per": "booking"}, {"name": "Ouakam fishing village", "price": null, "per": "booking"}]}, {"id": "museum", "pole": "Dakar", "name": "Museum of Black Civilizations", "dur": "2–3 h visit", "tag": "Heritage", "emoji": "🖼️", "zone": "dakar", "desc": "The landmark Museum of Black Civilizations on the Plateau (closed Mondays).", "quote": true, "grid": {"p12": {"a": null, "c": 5000}, "p34": {"a": null, "c": 4000}, "grp": {"a": null, "c": 3000}}, "sub": "Departure 09:30 or 14:30 · Plateau · closed Mondays (verify) · sold separately or combined with the Renaissance Monument", "steps": ["Pick-up; drive to the museum (Plateau)  ·  3–10 km / 15–25 min", "Curated guided route : origins of humankind, African civilizations, contemporary works.  ·  90 min"], "addons": [{"name": "Combine with the Renaissance Monument (combined half-day rate)", "price": 6000, "per": "booking"}, {"name": "IFAN Museum extension (+1 h)", "price": 5000, "per": "booking"}]}, {"id": "monmus", "pole": "Dakar", "name": "Combined: Monument + Museum of Black Civilizations", "dur": "Half day", "tag": "Heritage", "emoji": "🗿", "zone": "dakar", "desc": "The Monument and the Museum of Black Civilizations combined at one rate in a single half day.", "quote": true, "grid": {"p12": {"a": null, "c": null}, "p34": {"a": null, "c": null}, "grp": {"a": null, "c": null}}, "sub": "Departure 09:00 · ~25 km total · 4 h · the combined option of Monument + Museum at one rate", "steps": ["Renaissance Monument program: visit and panoramic deck  ·  10 km / 100 min on site", "Drive Ouakam → Plateau  ·  12 km / 30 min", "Museum of Black Civilisations  ·  90 min", "Return transfer — end of service  ·  15–25 min"], "addons": [{"name": "IFAN Museum extension (+1 h)", "price": 5000, "per": "booking"}, {"name": "Lunch downtown after the museum", "price": 12000, "per": "booking"}]}, {"id": "ngor", "pole": "Dakar", "name": "Ngor Island Escape", "dur": "Half day", "tag": "Beach", "emoji": "🛶", "zone": "dakar", "desc": "A 5-minute pirogue crossing to a car-free island of coves, surf and grilled fish.", "quote": false, "grid": {"p12": {"a": 20000, "c": 15000}, "p34": {"a": 18000, "c": 10000}, "grp": {"a": 15000, "c": 7000}}, "sub": "Departure 09:30 or 14:00 · pirogue crossing 400 m / 5 min · 3h30–4h", "steps": ["Pick-up; drive to Ngor village beach  ·  14 km / 30–40 min", "Traditional pirogue crossing to the island  ·  5 min", "Guided island loop: lanes, art houses, ocean-side viewpoint over the surf break  ·  60 min", "Free time: swim on the sheltered beach / café  ·  60–90 min", "Pirogue return + transfer to hotel  ·  45 min"], "addons": [{"name": "Seafood lunch on the island (per person)", "price": 0, "per": "person"}, {"name": "Jet-ski session", "price": 0, "per": "booking"}, {"name": "Canoe / kayak hire", "price": 0, "per": "booking"}, {"name": "Combine with the Dakar City Tour into a full day", "price": 20000, "per": "booking"}]}, {"id": "lacrose", "pole": "Dakar", "name": "Lac Rose (Pink Lake) Discovery", "dur": "Half or full day", "tag": "Nature", "emoji": "🌸", "zone": "dakar", "desc": "Salt harvesters, dunes and the famous pink water, 40 km from Dakar by toll road.", "quote": false, "grid": {"p12": {"a": 40000, "c": 25000}, "p34": {"a": 35000, "c": 20000}, "grp": {"a": 30000, "c": 15000}}, "sub": "Departure 08:30 (half) / 09:00 (full) · 40 km via toll road · 1h–1h15 each way", "steps": ["Pick-up; drive to Lac Rose via toll motorway  ·  40 km / 1h–1h15", "Lakeshore: salt harvesters, cooperative visit, salt-mound landscape  ·  60 min", "Boat tour on the lake  ·  25 min", "Quad excursion: dune belt crossing to the Atlantic beach (old Dakar Rally finish)  ·  12 km loop / 45–60 min", "Full-day: return to Dakar — end of service  ·  35 km / 1h"], "addons": [{"name": "Camel ride on the dunes (per person)", "price": 5000, "per": "person"}, {"name": "Horse ride", "price": 5000, "per": "booking"}, {"name": "4x4 / buggy upgrade instead of shared 4x4", "price": 40000, "per": "booking"}, {"name": "Lakeside lunch (per person)", "price": 10000, "per": "person"}, {"name": "Noflaye Turtle Village entry", "price": 3500, "per": "booking"}]}, {"id": "boat", "pole": "Dakar", "name": "Dakar Boat Party Tour — Oceane Cruise Senegal", "dur": "Half day or sunset", "tag": "Nightlife", "emoji": "⛵", "zone": "dakar", "desc": "Modern comfort boats off Ngor beach with catering, drinks and music — partner rated 4.9/5.", "quote": false, "grid": {"p12": {"a": 45000, "c": null}, "p34": {"a": 40000, "c": null}, "grp": {"a": 37000, "c": null}}, "sub": "Departs Plage de Ngor · partner: OCEANE CRUISE Sénégal (+221 77 801 98 98, daily 10:00–23:00, rated 4.9/5) · modern comfort boats · music, catering & drinks INCLUDED", "steps": ["Pick-up; transfer to Ngor beach; welcome by the Océane Cruise crew  ·  14 km / 30–40 min from Plateau", "Boarding; safety briefing; welcome drinks; music on board (DJ/sound system)  ·  20 min", "Cruise along the Dakar coastline: Ngor island, Almadies point, corniche cliffs and viewpoints  ·  90 min", "Anchor stop: swimming from the boat (conditions permitting); catering service on board — food & drinks included in the rate  ·  60–75 min", "Party cruise return leg with music; disembark at Ngor beach  ·  45 min", "Transfer back to hotel — end of service (sunset format: shift the whole program to 16:30–20:30)  ·  30–40 min"], "addons": [{"name": "Private full-boat charter (birthdays, bachelor(ette) parties, corporate)", "price": 190000, "per": "booking"}, {"name": "Event extras via Océane Cruise: decoration, photographer, cake, beach-dinner add-on", "price": null, "per": "booking"}, {"name": "Premium drinks upgrade", "price": null, "per": "booking"}]}, {"id": "food", "pole": "Dakar", "name": "Dakar Food Tour — Teranga on a Plate", "dur": "2h30", "tag": "Gastronomy", "emoji": "🍲", "zone": "dakar", "desc": "Medina, Soumbédioune and beach grills: thieboudienne, grilled fish, café Touba — eat like a Dakarois.", "quote": true, "grid": {"p12": {"a": null, "c": null}, "p34": {"a": null, "c": null}, "grp": {"a": null, "c": null}}, "sub": "Departure 10:00 (morning) or 17:30 (evening) · Medina + Soumbédioune + beach grills · walking + vehicle · groups 2–8 · max 2h30", "steps": ["Departure from the hotel", "Medina: authentic atmosphere; taste grilled meat with local sauces  ·  40 min", "Soumbédioune Fishing Port and its lively fish market  ·  35 min", "Magic Land / Cassation Beach: grilled-fish outdoor restaurants — taste fresh grilled fish and seafood  ·  10 min transfer + 60 min", "Return to hotel — end of service (~12:30–13:00)  ·  20–30 min"], "addons": [{"name": "Evening variant: dibiterie + live-music venue (cover + drinks)", "price": null, "per": "booking"}, {"name": "Pointe des Almadies extension: grilled squid & lobster at Africa’s westernmost point", "price": null, "per": "booking"}, {"name": "Fast-food / quick-bite variant for time-limited clients", "price": null, "per": "booking"}, {"name": "Cooking-class upgrade: shop the market then cook with the host (3 pax)", "price": 25000, "per": "booking"}, {"name": "Vegetarian / dietary-adapted track (flag at booking)", "price": null, "per": "booking"}]}, {"id": "market", "pole": "Dakar", "name": "Dakar Market Experience", "dur": "Half day", "tag": "Culture", "emoji": "🧺", "zone": "dakar", "desc": "The shopping-focused Dakar: fabric, crafts and market energy with a negotiation-savvy guide.", "quote": false, "grid": {"p12": {"a": 25000, "c": 12500}, "p34": {"a": 15000, "c": 7500}, "grp": {"a": 10000, "c": 5000}}, "sub": "Departure 09:30 · vehicle + walking · 3–4 h · shopping-focused variant of the city tour", "steps": ["Pick-up; Soumbedioune craft market: woodwork, textiles, jewellery (fixed-price orientation first)  ·  45–60 min", "Sandaga or Tilène market: fabrics (wax, bazin), tailors' quarter — order same-day tailoring  ·  60 min", "HLM market: Senegal’s fabric capital — wax prints, brocades, trims  ·  60 min", "Drop-off at hotel or restaurant — end of service  ·  20–30 min"], "addons": [{"name": "Lunch after the markets (per person)", "price": 12000, "per": "person"}, {"name": "Shopping-porter / negotiation assistant", "price": 15000, "per": "booking"}]}, {"id": "galleries", "pole": "Dakar", "name": "Dakar Museums & Galleries Circuit", "dur": "Half or full day", "tag": "Culture", "emoji": "🎨", "zone": "dakar", "desc": "Museums and galleries circuit for art lovers — verify opening days, several close Mondays.", "quote": false, "grid": {"p12": {"a": 32000, "c": 20000}, "p34": {"a": 27000, "c": 15000}, "grp": {"a": 25000, "c": 12000}}, "sub": "Departure 09:30 · verify opening days (several close Mondays) · art-lover product", "steps": ["Museum of Black Civilizations — curated route  ·  90 min", "IFAN Museum of African Arts (masks, statuary, textiles of West Africa)  ·  60 min", "Lunch break downtown  ·  75 min", "Léopold Sédar Senghor Museum (presidential residence-museum)  ·  60 min", "Return transfer — end of service  ·  20–30 min"], "addons": [{"name": "Half-day version (MCN + IFAN only)", "price": 10000, "per": "booking"}, {"name": "Contemporary loop: Ousmane Sow Museum (sculptor’s house), OH Gallery and/or National Gallery of Art", "price": 5000, "per": "booking"}]}, {"id": "bandia", "pole": "Petite Côte", "name": "Bandia Wildlife Reserve Safari", "dur": "From Dakar dep. 07:30 or from Saly dep. ", "tag": "Safari", "emoji": "🦒", "zone": "bandia", "desc": "Rhinos, giraffes, buffalo and antelope in open 4x4 — Senegal's classic morning safari, 1h from Dakar.", "quote": false, "grid": {"p12": {"a": 73500, "c": 36750}, "p34": {"a": 35000, "c": 17500}, "grp": {"a": 35000, "c": 17500}}, "sub": "From Dakar dep. 07:30 or from Saly dep. 08:30 · 2–3 h on site · morning strongly preferred", "steps": ["Pick-up Dakar (or 08:30 Saly); drive to Bandia gate  ·  65 km / 1h (Saly: 15 km / 20 min)", "Reserve formalities; board open safari truck (or client 4x4 + ranger)  ·  15 min", "Game drive: rhino & giraffe sectors, eland, zebra, antelope plains  ·  90 min", "Griot burial baobab and monumental baobabs; short walk  ·  20 min", "Waterhole restaurant deck: crocodiles, drinks stop  ·  10 min", "Return"], "addons": [{"name": "Waterhole drinks package", "price": null, "per": "booking"}, {"name": "Combo with Accrobaobab same day (combo rate)", "price": null, "per": "booking"}]}, {"id": "lions", "pole": "Petite Côte", "name": "Ranch of Lions — Lion Safari", "dur": "adjacent to Bandia", "tag": "Safari", "emoji": "🦁", "zone": "bandia", "desc": "4x4 drive in the lion enclosure adjacent to Bandia (~30 min) — clearly-labelled opt-in experience.", "quote": false, "grid": {"p12": {"a": 73500, "c": 36750}, "p34": {"a": 35000, "c": 17500}, "grp": {"a": 35000, "c": 17500}}, "sub": "Same access as Bandia/Ranch complex · 4x4 lion-enclosure drive ~30 min · opt-in product", "steps": ["Arrival at the lion park  ·  1–2 km from reserve gate", "Briefing; board dedicated 4x4 for the lion-enclosure safari  ·  15 min", "Drive among the lions with ranger commentary  ·  30 min", "Exit and return"], "addons": [{"name": "Lunch at Bandia reserve", "price": null, "per": "booking"}]}, {"id": "accro", "pole": "Petite Côte", "name": "Accrobaobab Adventure Park", "dur": "Sindia", "tag": "Adventure", "emoji": "🌳", "zone": "bandia", "desc": "Ziplines and rope courses strung between giant baobabs at Sindia. Height/weight limits apply.", "quote": false, "grid": {"p12": {"a": 25000, "c": 20000}, "p34": {"a": 22000, "c": 17000}, "grp": {"a": 20000, "c": 15000}}, "sub": "Sindia · 2–3 h on site · dep. Dakar 08:00 / Saly 09:00 or afternoon 15:00 slot · height/weight limits apply", "steps": ["Arrival; waivers, harness fitting, safety briefing  ·  30 min", "Course rotation by ability: children's circuit / discovery / sport / black course between giant baobabs  ·  90–120 min", "Debrief, photos, refreshments; depart"], "addons": [{"name": "Photo/video package by park staff", "price": null, "per": "booking"}, {"name": "Group team-building format (MICE, with facilitator)", "price": null, "per": "booking"}]}, {"id": "somone", "pole": "Petite Côte", "name": "Somone Lagoon Pirogue & Bird Sanctuary", "dur": "Tide-dependent — schedule around high wa", "tag": "Nature", "emoji": "🦩", "zone": "dakar", "desc": "Glide the lagoon at high tide among herons, pelicans and mangroves. Tide-dependent scheduling.", "quote": false, "grid": {"p12": {"a": 30000, "c": 20000}, "p34": {"a": 25000, "c": 17000}, "grp": {"a": 20000, "c": 15000}}, "sub": "Tide-dependent — schedule around high water · best 07:30–10:00 or 16:30–sunset · 2–3 h on water", "steps": ["Pick-up Dakar/Somone hotels; transfer to lagoon jetty  ·  12 km / 20 min", "Board pirogue; mangrove channels of the community reserve  ·  45 min", "Sandbank stop: pelicans, herons, terns (flamingos seasonal); mangrove-reforestation point  ·  30 min", "Lunch at CHEZ RASTA  ·  75 min", "Return"], "addons": [{"name": "Oyster-gathering demonstration + tasting", "price": 3000, "per": "booking"}, {"name": "Jet-ski or quad session after the pirogue", "price": 25000, "per": "booking"}, {"name": "Sunset honeymoon private pirogue with drinks", "price": null, "per": "booking"}]}, {"id": "joal", "pole": "Petite Côte", "name": "Joal-Fadiouth Shell Island", "dur": "From Saly dep. 09:00", "tag": "Heritage", "emoji": "🐚", "zone": "joal", "desc": "Fadiouth, the island built of clam shells, its stilt granaries and the shared Christian-Muslim cemetery.", "quote": false, "grid": {"p12": {"a": 35000, "c": 30000}, "p34": {"a": 30000, "c": 25000}, "grp": {"a": 25000, "c": 20000}}, "sub": "From Saly dep. 09:00 · 45 km / 50 min · half day (full day when combined with Somone)", "steps": ["Pick-up; coastal drive via Nguékokh–Joal  ·  45 km / 50 min", "Fadial giant baobab stop en route (one of Senegal’s largest)  ·  20 min", "Joal: Senghor family home / heritage points (exterior visits)  ·  30 min", "Cross the 800 m wooden footbridge to Fadiouth (no vehicles)  ·  15 min", "Guided walk: shell streets, church and mosque, granaries on stilts viewpoint  ·  60 min", "Second bridge / pirogue to the interfaith shell cemetery  ·  45 min", "Pirogue loop around granary islets or lunch in Joal  ·  45–75 min", "Return to Dakar — end of service  ·  45 km / 50 min"], "addons": [{"name": "Seafood lunch in Joal (per person)", "price": null, "per": "person"}, {"name": "Combo day with Somone Lagoon (sunset on return)", "price": null, "per": "booking"}]}, {"id": "ndangane", "pole": "Sine Saloum", "name": "Ndangane Activity Day — ‘Aventuriers du Saloum’ base", "dur": "Day format from Dakar (dep.8:30) or Saly", "tag": "Adventure", "emoji": "🚣", "zone": "ndangane", "desc": "'Aventuriers du Saloum' activity base: kayak, quad and pirogue days on the northern delta.", "quote": false, "grid": {"p12": {"a": 39900, "c": 35000}, "p34": {"a": 35000, "c": 30000}, "grp": {"a": 32500, "c": 25000}}, "sub": "Day format from Dakar (dep.8:30) or Saly (dep. 09:00) · partner activity base at Ndangane · family/group product", "steps": ["Depart Dakar or Saly  ·  2 h", "Visit of the giant baobab of Fadial — one of the largest and oldest baobabs in Senegal  ·  30 min", "Arrive Ndangane base; welcome and program briefing  ·  20 min", "Boat ride through the mangrove channels  ·  45 min", "Buffet lunch at the base  ·  90 min", "Aquatic & beach activities: water basketball, canoe, games (equipment on site)  ·  2h", "Return drive  ·  2h"], "addons": [{"name": "Overnight at hotel", "price": null, "per": "booking"}]}, {"id": "keurpapaye", "pole": "Sine Saloum", "name": "Keur Papaye Island Day", "dur": "from Djifer", "tag": "Nature", "emoji": "🏝️", "zone": "palmarin", "desc": "Motor-pirogue from Djifer to Keur Papaye island — delta sandbanks, birds and a castaway lunch.", "quote": false, "grid": {"p12": {"a": 70000, "c": null}, "p34": {"a": 47000, "c": null}, "grp": {"a": 35000, "c": null}}, "sub": "Dep. Dakar or Saly 09:00 → Djifer / 2h", "steps": ["Depart to Djifer  ·  2h", "Boat ride departure  ·  30 min", "Arrive Keur Papaye, welcome cocktail and lunch  ·  90 min", "Free time: beach, swimming pool (towels provided), or horse-cart ride to the village  ·  2h", "Return boat + drive — end of service Saly ~18:30  ·  2h boat + 1h30 drive"], "addons": [{"name": "Private pirogue upgrade", "price": 40000, "per": "booking"}, {"name": "Overnight at hotel", "price": null, "per": "booking"}]}, {"id": "grandsaloum", "pole": "Sine Saloum", "name": "Grand Saloum Islands Boat Tour — Palmarin · Djifere · Falia", "dur": "Dep. Palmarin/Djifer by motor-pirogue", "tag": "Nature", "emoji": "⛵", "zone": "palmarin", "desc": "Full day on the water from Palmarin/Djifer: the grand tour of the Saloum shell islands.", "quote": false, "grid": {"p12": {"a": 80000, "c": null}, "p34": {"a": 70000, "c": null}, "grp": {"a": 60000, "c": null}}, "sub": "Dep. Palmarin/Djifer by motor-pirogue · full day on the water · the ‘Great Islands Tour’", "steps": ["Board in a motorized pirogue for the Great Sine Saloum Islands Tour", "Traditional salt wells of Palmarin: harvest explanation  ·  30 min", "Djifere: fishermen’s return and the lively fish-landing market  ·  60 min", "Cruise to ‘No Stress’ island; picnic on the sandbank  ·  2h incl. picnic", "Falia village walk: shell mounds, Serer-Niominka life  ·  30 min", "Paddle through the mangroves in a traditional canoe  ·  30 min", "Return  ·  -"], "addons": [{"name": "Overnight at Palmarin or Keur Papaye", "price": null, "per": "booking"}]}, {"id": "toubacouta", "pole": "Sine Saloum", "name": "Toubacouta — Mangroves, Bird Roost & Shell Islands", "dur": "core, 1–3 days", "tag": "Nature", "emoji": "🌿", "zone": "toubacouta", "desc": "The delta at its purest: bolongs by pirogue, the sunset bird roost and islands built of shells.", "quote": false, "grid": {"p12": {"a": 70000, "c": 65000}, "p34": {"a": 59500, "c": 54500}, "grp": {"a": 55000, "c": 50000}}, "sub": "Dep. Dakar 07:00 · 250 km / 4h30 · minimum 1 night (roost is at dusk) · lodge tiers: eco / mid / premium", "steps": ["Departure Dakar  ·  250 km / 4h30", "Lion walk  ·  25 min", "Lunch at hotel  ·  90 min", "Boat tour in the mangrove and visit of seashell island  ·  2h", "Return"], "addons": [{"name": "Oyster & seafood tasting platter", "price": null, "per": "booking"}, {"name": "Fishing with local pirogue crew", "price": null, "per": "booking"}, {"name": "Visit village of Toubacouta", "price": null, "per": "booking"}, {"name": "Overnight stay at hotel", "price": null, "per": "booking"}]}, {"id": "ziguinchor", "pole": "Casamance", "name": "Ziguinchor City & River", "dur": "half or full day", "tag": "Culture", "emoji": "🛖", "zone": "ziguinchor", "desc": "Casamance's river capital: markets, craft village and a bolong pirogue on the north bank.", "quote": true, "grid": {"p12": {"a": null, "c": null}, "p34": {"a": null, "c": null}, "grp": {"a": null, "c": null}}, "sub": "Dep. 09:00 from Ziguinchor hotels · walking + vehicle + pirogue", "steps": ["Colonial riverfront and Escale quarter walk; cathedral  ·  30 min", "Marché Saint-Maur guided walk (crafts, produce)  ·  30 min", "Artisan village workshops  ·  30 min", "Lunch break  ·  25 min", "Pirogue on the Casamance river to Îlot aux Oiseaux (pelicans, mangrove birds)  ·  2h", "Return — end of service / connect to circuit"], "addons": [{"name": "River-fish lunch on the quay (per person)", "price": null, "per": "person"}, {"name": "Extended pirogue to Affiniam (links the Affiniam bolongs day)", "price": null, "per": "booking"}, {"name": "Diola-culture briefing session with historian", "price": null, "per": "booking"}]}, {"id": "capskirring", "pole": "Casamance", "name": "Cap Skirring Beach Base", "dur": "1–7 days", "tag": "Beach", "emoji": "🏖️", "zone": "capskirring", "desc": "Casamance's palm-lined beaches as your base for island and village excursions, 1–7 days.", "quote": true, "grid": {"p12": {"a": null, "c": null}, "p34": {"a": null, "c": null}, "grp": {"a": null, "c": null}}, "sub": "Transfer airport→hotels 5–10 km / 15 min · activity menu within 45 min radius", "steps": ["Day 1: Airport meet & greet, hotel check-in, beach orientation walk  ·  15 min transfer", "Daily am: Beach / pool free time (activities available as add-ons)  ·  flexible", "Daily pm: One cultural or nature excursion (Oussouye & Mlomp, Carabane or Affiniam) every other day  ·  per module", "Sunset: Kabrousse fishing-pirogue landing or Diembéring dune viewpoint  ·  10–15 km / 20 min"], "addons": [{"name": "Golf green fee (per round)", "price": null, "per": "booking"}, {"name": "Fishing charter (per boat, half day)", "price": null, "per": "booking"}, {"name": "Kayak hire (per hour)", "price": null, "per": "booking"}, {"name": "Seafood beach-grill dinner (per person)", "price": null, "per": "person"}, {"name": "Diembéring viewpoint & giant fromagers sunset trip", "price": null, "per": "booking"}]}, {"id": "oussouye", "pole": "Casamance", "name": "Oussouye Kingdom & Mlomp", "dur": "full day", "tag": "Culture", "emoji": "👑", "zone": "capskirring", "desc": "The animist kingdom of Oussouye and Mlomp's two-storey mud houses — sacred Casamance.", "quote": true, "grid": {"p12": {"a": null, "c": null}, "p34": {"a": null, "c": null}, "grp": {"a": null, "c": null}}, "sub": "Dep. Cap Skirring 09:00 · 20 km / 30 min to Oussouye · sacred-site protocol briefing mandatory", "steps": ["Depart Cap Skirring; palm-wine tapping demonstration en route  ·  20 km / 40 min", "Oussouye: royal quarter surroundings, protocol explanation (audience only if granted)  ·  45 min", "Drive to Mlomp  ·  10 km / 15 min", "Mlomp: two-storey banco houses, case à impluvium, small museum, monumental fromagers  ·  45 min", "Lunch break (village host-family lunch available as add-on)  ·  25 min", "Return to Cap Skirring — end of service  ·  30 km / 45 min"], "addons": [{"name": "Host-family village lunch (per person)", "price": null, "per": "person"}, {"name": "Edioungou pottery workshop with purchase credit", "price": null, "per": "booking"}, {"name": "King's-audience protocol gift (customary, handled by guide)", "price": null, "per": "booking"}]}, {"id": "capdiscovery", "pole": "Casamance", "name": "Cap Skirring Discovery Day — Cap Saint-Georges, Elinkine & Wenday Island", "dur": "Dep. Cap Skirring 08:30", "tag": "Beach", "emoji": "🌅", "zone": "capskirring", "desc": "Cap Saint-Georges and Elinkine in one full day — Casamance's coast by vehicle and boat.", "quote": false, "grid": {"p12": {"a": 63000, "c": null}, "p34": {"a": 35000, "c": null}, "grp": {"a": 25000, "c": null}}, "sub": "Dep. Cap Skirring 08:30 · vehicle + boat combination · full day · combines coast, king’s domain and islands", "steps": ["Depart Cap Skirring; Cap Saint-Georges viewpoint and fishing beach  ·  10 km / 25 min", "Oussouye: royal domain surroundings and protocol visit (audience if granted — see Oussouye & Mlomp protocol rules)  ·  20 km / 40 min + 60 min", "Elinkine fishing village: pirogue port life  ·  15 km / 25 min + 45 min", "Boat tour of the bolongs; landing on Wenday island (beach + village)  ·  2h incl. stop", "Return to Cap Skirring — end of service ~17:00  ·  35 km / 55 min"], "addons": [{"name": "Late seafood lunch at Elinkine or island picnic", "price": null, "per": "booking"}, {"name": "Carabane Island extension instead of Wenday", "price": null, "per": "booking"}]}, {"id": "carabane", "pole": "Casamance", "name": "Carabane Island", "dur": "full day or overnight", "tag": "Heritage", "emoji": "⚓", "zone": "capskirring", "desc": "The historic island trading post at the mouth of the Casamance river — full day or overnight.", "quote": true, "grid": {"p12": {"a": null, "c": null}, "p34": {"a": null, "c": null}, "grp": {"a": null, "c": null}}, "sub": "Dep. Cap Skirring 08:30 → Elinkine 35 km / 55 min → pirogue 30 min", "steps": ["Depart Cap Skirring via Oussouye to Elinkine fishing village  ·  35 km / 55 min", "Pirogue crossing (estuary dolphins frequent)  ·  6 km / 30 min", "Guided walk: mission church ruins, colonial cemetery, village lanes  ·  90 min", "Beach / hammock time; seafood lunch at guesthouse  ·  2h", "Mangrove-edge walk or second swim  ·  60 min", "Return pirogue + drive — end of service (or overnight in guesthouse)  ·  1h30 total"], "addons": [{"name": "Guesthouse overnight (per person half-board)", "price": null, "per": "person"}, {"name": "Private sunset pirogue return", "price": null, "per": "booking"}, {"name": "Dolphin-watching extended loop", "price": null, "per": "booking"}]}, {"id": "bolongs", "pole": "Casamance", "name": "Bolongs, Oyster Villages & Affiniam", "dur": "full day", "tag": "Nature", "emoji": "🦪", "zone": "ziguinchor", "desc": "Bolongs, oyster villages and Affiniam by pirogue, with a village lunch on the north bank.", "quote": true, "grid": {"p12": {"a": null, "c": null}, "p34": {"a": null, "c": null}, "grp": {"a": null, "c": null}}, "sub": "Dep. Ziguinchor 08:30 · pirogue north bank · village lunch centrepiece", "steps": ["Board pirogue at Ziguinchor; cross to north-bank bolongs  ·  45–60 min", "Affiniam: giant case à impluvium, village walk, women's processing cooperative  ·  2h", "Mangrove oyster culture demonstration + tasting  ·  45 min", "Village lunch with family (rice-paddy landscape)  ·  90 min", "Return pirogue via smaller bolongs, birdlife  ·  60–75 min", "End of service Ziguinchor"], "addons": [{"name": "Cooperative products purchase pack (fruit, cashew, pottery)", "price": null, "per": "booking"}, {"name": "Extended birding loop with specialist guide", "price": null, "per": "booking"}]}, {"id": "ferry", "pole": "Casamance", "name": "Casamance Ferry Experience", "dur": "Dakar ⇄ Ziguinchor", "tag": "Adventure", "emoji": "🚢", "zone": "", "desc": "The legendary overnight ferry Dakar ⇄ Ziguinchor via Carabane — cabins and sea sunset.", "quote": true, "grid": {"p12": {"a": null, "c": null}, "p34": {"a": null, "c": null}, "grp": {"a": null, "c": null}}, "sub": "Overnight sailing ~15–16 h via Carabane · cabins 2/4 berth + seats · verify weekly schedule & book early", "steps": ["Day 1: ATS transfer to Dakar ferry terminal; check-in, cabin allocation  ·  20–30 min", "17:00 (typ.): Departure — sunset past Gorée from deck (confirm current sailing time)", "Night: At sea along the coast; dinner on board", "Day 2 dawn: Entry into the Casamance river; Carabane call; mangrove approach  ·  2–3 h river leg", "Day 2 ~: Arrive Ziguinchor; ATS meet & greet at the quay"], "addons": [{"name": "Cabin class upgrade (4-berth → 2-berth)", "price": null, "per": "booking"}, {"name": "On-board dinner package", "price": null, "per": "booking"}, {"name": "Carabane disembark option (start circuit on the island)", "price": null, "per": "booking"}]}, {"id": "stlouis", "pole": "Saint-Louis", "name": "Saint-Louis Island Heritage Tour", "dur": "half day", "tag": "Heritage", "emoji": "🌉", "zone": "stlouis", "desc": "The UNESCO former capital by calèche and on foot: Faidherbe bridge, colonial island, Guet Ndar.", "quote": false, "grid": {"p12": {"a": 20000, "c": 15000}, "p34": {"a": 15000, "c": 10000}, "grp": {"a": 10000, "c": 7500}}, "sub": "Dep. 09:00 or 15:30 from Saint-Louis hotels · calèche + walking · UNESCO island", "steps": ["Faidherbe bridge crossing on foot: history and engineering  ·  30 min", "Calèche (horse-cart) circuit: colonial grid, balconied houses, Governor's quarter, cathedral  ·  75 min", "Walking: signares heritage, Museum of Photography (MuPho), craft galleries, riverfront  ·  60 min", "Guet Ndar fishing quarter: pirogue landing beach (small groups, local guide, ask-before-photo)  ·  60 min", "End of service on the island"], "addons": [{"name": "Island lunch (colonial-house restaurant, per person)", "price": 10000, "per": "person"}, {"name": "Photography-focused sunset variant (dep. 15:30, ends at Guet Ndar landing)", "price": null, "per": "booking"}, {"name": "Jazz-history walk (festival season)", "price": null, "per": "booking"}]}, {"id": "djoudj", "pole": "Saint-Louis", "name": "Djoudj National Bird Sanctuary", "dur": "Nov–Apr", "tag": "Wildlife", "emoji": "🦜", "zone": "stlouis", "desc": "One of the world's great bird sanctuaries — pelican colonies by boat safari (Nov–Apr).", "quote": false, "grid": {"p12": {"a": 35000, "c": null}, "p34": {"a": 30000, "c": null}, "grp": {"a": 25000, "c": null}}, "sub": "Dep. Saint-Louis 07:00 · 60 km / 1h15 · boat safari ~2h · park fee + boat fee", "steps": ["Depart Saint-Louis (early = best light and bird activity)  ·  60 km / 1h15", "Park formalities; board boat at the quay  ·  30 min", "Boat safari to the great white-pelican breeding colony; flamingos, cormorants, spoonbills; crocodiles and warthogs on banks  ·  2h", "Observation tower / short drive circuit in the park  ·  45 min", "Return to Saint-Louis — end of service ~12:45  ·  60 km / 1h15"], "addons": [{"name": "Private boat (photographers)", "price": null, "per": "booking"}, {"name": "Picnic in the park", "price": null, "per": "booking"}]}, {"id": "barbarie", "pole": "Saint-Louis", "name": "Langue de Barbarie", "dur": "Dep. Saint-Louis 08:30 or 15:30", "tag": "Nature", "emoji": "🐢", "zone": "stlouis", "desc": "Langue de Barbarie national park: pirogue between river and ocean, birds and turtle beaches.", "quote": false, "grid": {"p12": {"a": 25000, "c": null}, "p34": {"a": 20000, "c": null}, "grp": {"a": 15000, "c": null}}, "sub": "Dep. Saint-Louis 08:30 or 15:30 · 20 km / 40 min · pirogue + 4x4", "steps": ["Depart Saint-Louis south along the Langue de Barbarie  ·  20 km / 40 min", "Pirogue between river and ocean: tern/gull colonies (strongest in nesting season)  ·  90 min", "Return — end of service ~12:30  ·  40 min"], "addons": [{"name": "Geumbeul reserve", "price": 10000, "per": "booking"}]}, {"id": "lompoul", "pole": "Saint-Louis", "name": "Lompoul Desert Overnight", "dur": "en-route module", "tag": "Adventure", "emoji": "🏜️", "zone": "lompoul", "desc": "Orange dunes, camel rides and a night in a desert camp between Dakar and Saint-Louis.", "quote": false, "grid": {"p12": {"a": 50000, "c": null}, "p34": {"a": 45000, "c": null}, "grp": {"a": 40000, "c": null}}, "sub": "Dep. Dakar → camp for sunset · 150 km / 2h30–3h · continue to Saint-Louis next morning (115 km / 1h45)", "steps": ["Depart Dakar (or 09:00 if sold as day 1 standalone)  ·  150 km / 2h30", "4x4 shuttle from village to the dune camp  ·  4 km / 15 min", "Camel ride in the dunes and sandboarding  ·  90 min", "Dinner and cultural night  ·  evening", "Day 2: Breakfast and check out  ·  90 min", "Depart to Saint-Louis  ·  115 km / 1h45"], "addons": [{"name": "Quad tour in the dunes", "price": 35000, "per": "booking"}, {"name": "Paintball session (camp-dependent)", "price": 10000, "per": "booking"}, {"name": "Private dune dinner (honeymoon)", "price": null, "per": "booking"}]}, {"id": "kedafia", "pole": "Kédougou", "name": "Weekend Discovery — Afia Shea Workshop + Dindéfélo Falls", "dur": "3 days · fly-in", "tag": "Circuit", "emoji": "💧", "zone": "kedougou", "desc": "Fly to Senegal's far east: shea workshop in Afia, Bassari country and the 100 m Dindéfélo waterfall.", "quote": true, "grid": {"p12": {"a": null, "c": null}, "p34": {"a": null, "c": null}, "grp": {"a": null, "c": null}}, "sub": "Day-by-day operating plan in the ATS manual — priced per departure", "steps": ["Day 1: flight Dakar → Kédougou, hotel", "Day 2: Afia shea workshop + Bassari country", "Day 3: Dindéfélo falls & return flight"], "addons": []}, {"id": "kediwol", "pole": "Kédougou", "name": "Weekend Discovery — Iwol Village + Dindéfélo Falls", "dur": "3 days · fly-in", "tag": "Circuit", "emoji": "⛰️", "zone": "kedougou", "desc": "Bedik hilltop village of Iwol, sacred baobabs and the Dindéfélo waterfall on a fly-in weekend.", "quote": true, "grid": {"p12": {"a": null, "c": null}, "p34": {"a": null, "c": null}, "grp": {"a": null, "c": null}}, "sub": "Day-by-day operating plan in the ATS manual — priced per departure", "steps": ["Day 1: flight Dakar → Kédougou, hotel", "Day 2: Iwol village hike (Bassari country)", "Day 3: Dindéfélo falls & return flight"], "addons": []}, {"id": "wild12", "pole": "Grand Tours", "name": "Wild Senegal — The Flagship Circuit", "dur": "12 days · Nov–May", "tag": "Circuit", "emoji": "🌍", "zone": "", "desc": "North & Delta + Casamance: the cross-country flagship combining Saint-Louis, Lompoul, the Saloum and Casamance.", "quote": true, "grid": {"p12": {"a": null, "c": null}, "p34": {"a": null, "c": null}, "grp": {"a": null, "c": null}}, "sub": "Day-by-day operating plan in the ATS manual — priced per departure", "steps": ["Saint-Louis & Djoudj", "Lompoul desert", "Sine Saloum delta", "Casamance by air or ferry"], "addons": []}];
 const POLES = ["All", "Dakar", "Petite Côte", "Sine Saloum", "Casamance", "Saint-Louis", "Kédougou", "Grand Tours"];
 const VEHICLES = [
-  { name: "Standard Sedan", cap: 3 }, { name: "Premium Sedan", cap: 3 }, { name: "Luxury Sedan", cap: 3 },
-  { name: "Standard SUV", cap: 4 }, { name: "Premium SUV", cap: 4 }, { name: "Luxury SUV", cap: 4 },
-  { name: "Standard Minivan (14)", cap: 14 }, { name: "Premium Minivan (7)", cap: 7 }, { name: "Luxury Minivan (7)", cap: 7 },
-  { name: "Coaster coach (22)", cap: 22 }, { name: "Minicoach (33)", cap: 33 }, { name: "Motorcoach (50)", cap: 50 },
+  { name: "Standard Sedan", cap: 3, slug: "standard-sedan" }, { name: "Premium Sedan", cap: 3, slug: "premium-sedan" }, { name: "Luxury Sedan", cap: 3, slug: "luxury-sedan" },
+  { name: "Standard SUV", cap: 4, slug: "standard-suv" }, { name: "Premium SUV", cap: 4, slug: "premium-suv" }, { name: "Luxury SUV", cap: 4, slug: "luxury-suv" },
+  { name: "Standard Minivan (14)", cap: 14, slug: "standard-minivan" }, { name: "Premium Minivan (7)", cap: 7, slug: "premium-minivan" }, { name: "Luxury Minivan (7)", cap: 7, slug: "luxury-minivan" },
+  { name: "Coaster coach (22)", cap: 22, slug: "coaster-22" }, { name: "Minicoach (33)", cap: 33, slug: "minicoach-33" }, { name: "Motorcoach (50)", cap: 50, slug: "motorcoach-50" },
 ];
 const RATES = {"airport": [30000, 50000, 100000, 50000, 75000, 200000, 110000, 100000, 150000, 65000, 90000, 180000], "dakar": [85000, 100000, 250000, 95000, 150000, 350000, 150000, 180000, 250000, 115000, 170000, 325000], "bandia": [85000, 100000, 250000, 95000, 150000, 350000, 150000, 180000, 250000, 115000, 170000, 325000], "joal": [110000, 125000, 315000, 120000, 190000, 445000, 190000, 230000, 315000, 150000, 215000, 410000], "ndangane": [150000, 180000, 445000, 170000, 265000, 620000, 265000, 320000, 445000, 210000, 300000, 580000], "palmarin": [145000, 170000, 430000, 165000, 260000, 605000, 260000, 310000, 430000, 200000, 290000, 560000], "toubacouta": [235000, 280000, 695000, 265000, 415000, 970000, 415000, 500000, 695000, 325000, 470000, 905000], "lompoul": [115000, 135000, 335000, 125000, 200000, 465000, 200000, 240000, 335000, 155000, 230000, 435000], "stlouis": [165000, 195000, 490000, 185000, 295000, 690000, 295000, 355000, 490000, 230000, 330000, 635000], "kedougou": [375000, 440000, 1095000, 415000, 660000, 1535000, 660000, 790000, 1095000, 515000, 740000, 1425000], "ziguinchor": [255000, 300000, 750000, 285000, 450000, 1050000, 450000, 540000, 750000, 350000, 505000, 975000], "capskirring": [290000, 340000, 845000, 320000, 510000, 1185000, 510000, 610000, 845000, 395000, 570000, 1100000]};
 const tierOf = (pax) => (pax <= 2 ? "p12" : pax <= 4 ? "p34" : "grp");
@@ -131,12 +131,55 @@ export default function ATSPlatformPreview() {
   const saveRecord = async (b) => {
     if (user) {
       const { data, error } = await supabase.from("bookings").insert({ user_id: user.id, data: b, status: b.status || "pending" }).select("id, data, status, created_at").single();
-      if (error) { console.error("Save failed:", error.message); return; }
-      setBookings((x) => [mapRow(data), ...x]);
-    } else {
-      setBookings((x) => [{ ...b, _status: b.status || "pending" }, ...x]);
-      setPending((p) => [...p, b]);
+      if (error) { console.error("Save failed:", error.message); return null; }
+      const rec = mapRow(data);
+      setBookings((x) => [rec, ...x]);
+      return rec;
     }
+    const local = { ...b, _status: b.status || "pending" };
+    setBookings((x) => [local, ...x]);
+    setPending((p) => [...p, b]);
+    return local;
+  };
+
+  // ---- PayDunya : create invoice + redirect ----
+  const startPayment = async (b) => {
+    const amount = b.plan === "deposit" ? Math.round(b.deposit) : Math.round(b.total);
+    if (!amount || amount <= 0) { notify("Nothing to pay for this item."); return; }
+    notify("Redirecting to secure payment…");
+    const rec = await saveRecord({ ...b, status: "pending" });
+    const { data, error } = await supabase.functions.invoke("create-payment", {
+      body: {
+        amount,
+        description: `${b.tour?.name || "ATS booking"}${b.plan === "deposit" ? " — 20% deposit" : ""}`,
+        bookingId: rec?._id || null,
+        customer: b.contact || {},
+        siteUrl: window.location.origin,
+        meta: { kind: b.plan === "deposit" ? "deposit" : "full" },
+      },
+    });
+    if (error || !data?.url) { notify("Payment could not be started. Please try again."); return; }
+    window.location.href = data.url;
+  };
+
+  // ---- Pay one Ma Tontine instalment via PayDunya ----
+  const payInstallment = async (rec) => {
+    if (!rec._id) { notify("This booking can't be paid online yet."); return; }
+    const amount = Math.round((rec.total - rec.deposit) / rec.months);
+    const nextNo = (rec.paid || 0) + 1;
+    notify("Redirecting to secure payment…");
+    const { data, error } = await supabase.functions.invoke("create-payment", {
+      body: {
+        amount,
+        description: `${rec.tour?.name || "ATS booking"} — instalment ${nextNo}/${rec.months}`,
+        bookingId: rec._id,
+        customer: rec.contact || {},
+        siteUrl: window.location.origin,
+        meta: { kind: "installment" },
+      },
+    });
+    if (error || !data?.url) { notify("Payment could not be started. Please try again."); return; }
+    window.location.href = data.url;
   };
 
   // ---- Update / cancel a record ----
@@ -153,15 +196,45 @@ export default function ATSPlatformPreview() {
     notify("Request cancelled.");
   };
 
+  const [pendingPay, setPendingPay] = useState(null);
   const go = (name, params = {}) => { setPage({ name, ...params }); window.scrollTo({ top: 0 }); };
   const confirmBooking = (b) => {
     setBooking(null);
-    saveRecord(b);
-    notify(b.plan === "quote" ? "Quote request sent — an ATS advisor will reply with a personalised price (demo)" : `Booking reserved — ${b.plan === "deposit" ? "deposit " + fmtXOF(b.deposit) + " due" : "ready for payment"} (demo)`);
-    if (!user) setSignin(true); else go("account");
+    // Quote / itinerary requests: no payment, just save + notify
+    if (b.plan === "quote" || b.plan === "itinerary") {
+      saveRecord(b);
+      notify("Request sent — an ATS advisor will reply with a personalised price.");
+      if (!user) setSignin(true); else go("account");
+      return;
+    }
+    // Paid booking (full or deposit) → sign-in required, then PayDunya
+    if (!user) { setPendingPay(b); setSignin(true); notify("Sign in to complete your payment."); return; }
+    startPayment(b);
   };
 
-  const ctx = { go, notify, setBooking, user, setUser, bookings, filters, setFilters, setSignin, setChat, signOut, saveRecord, patchBooking, cancelBooking };
+  // Resume payment right after the user signs in
+  useEffect(() => {
+    if (user && pendingPay) { const b = pendingPay; setPendingPay(null); startPayment(b); }
+  }, [user?.id]);
+
+  // Handle return from PayDunya (?payment=success|cancel[&token=…]) → confirm + show page
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const p = params.get("payment");
+    const token = params.get("token");
+    if (!p) return;
+    window.history.replaceState({}, "", window.location.pathname);
+    setPage({ name: "payment", status: p });
+    window.scrollTo({ top: 0 });
+    if (p === "success" && token) {
+      // Safety net: confirm server-side even if the async IPN didn't arrive
+      supabase.functions.invoke("confirm-payment", { body: { token } })
+        .then(() => supabase.auth.getSession())
+        .then(({ data }) => { const uid = data.session?.user?.id; if (uid) reloadBookings(uid); });
+    }
+  }, []);
+
+  const ctx = { go, notify, setBooking, user, setUser, bookings, filters, setFilters, setSignin, setChat, signOut, saveRecord, patchBooking, cancelBooking, payInstallment };
 
   return (
     <div style={{ background: T.paper, color: T.ink, fontFamily: "'Century Gothic','Poppins',system-ui,sans-serif", minHeight: "100vh" }}>
@@ -183,12 +256,13 @@ export default function ATSPlatformPreview() {
       {page.name === "tour" && <TourDetail {...ctx} tourId={page.id} />}
       {page.name === "builder" && <TripBuilder {...ctx} />}
       {page.name === "flights" && <FlightsPage {...ctx} />}
-      {page.name === "transport" && <TransportPage addBooking={confirmBooking} notify={notify} />}
+      {page.name === "transport" && <TransportPage addBooking={confirmBooking} notify={notify} user={user} />}
       {page.name === "events" && <EventsPage {...ctx} />}
       {page.name === "corporate" && <CorporatePage {...ctx} />}
       {page.name === "agents" && <AgentsPage {...ctx} />}
       {page.name === "about" && <AboutPage {...ctx} />}
       {page.name === "account" && <AccountPage {...ctx} />}
+      {page.name === "payment" && <PaymentResult status={page.status} {...ctx} />}
       <Footer {...ctx} />
 
       {booking && <BookingModal tour={booking} user={user} onClose={() => setBooking(null)} onConfirm={confirmBooking} />}
@@ -274,7 +348,7 @@ function Nav({ go, page, user, setSignin, bookings }) {
 }
 
 // ---------------- HOME ----------------
-function Home({ go, notify, setBooking, filters, setFilters, setChat, addBookingHome }) {
+function Home({ go, notify, setBooking, filters, setFilters, setChat, addBookingHome, user }) {
   const [country, setCountry] = useState(COUNTRIES[0]);
   const [search, setSearch] = useState({ dest: "Senegal", exp: "All", date: "", pax: 2 });
   const featured = ["goree","bandia","lacrose","toubacouta","stlouis","lompoul","food","boat"].map((id) => TOURS.find((t) => t.id === id));
@@ -370,7 +444,7 @@ function Home({ go, notify, setBooking, filters, setFilters, setChat, addBooking
             <div><Eyebrow>ATS Logistics</Eyebrow><h2 className="disp" style={{ fontSize: 24, fontWeight: 800, margin: "6px 0 0" }}>Need a transfer or a car? Book it now.</h2></div>
             <button onClick={() => go("transport")} style={{ marginLeft: "auto", background: "none", border: "none", color: T.indigo, fontWeight: 700, cursor: "pointer", fontSize: 14 }}>All transport services →</button>
           </div>
-          <TransferWidget addBooking={addBookingHome} compact />
+          <TransferWidget addBooking={addBookingHome} compact user={user} />
         </Wrap>
       </section>
 
@@ -484,6 +558,17 @@ function PortalTabs({ go }) {
 // e.g. tour-photos/goree/cover.jpg, tour-photos/goree/2.jpg, ...
 const PHOTO_BUCKET = "tour-photos";
 const coverUrl = (id) => supabase.storage.from(PHOTO_BUCKET).getPublicUrl(`${id}/cover.jpg`).data.publicUrl;
+
+function Thumb({ rec, size = 46 }) {
+  const [ok, setOk] = useState(true);
+  const id = rec.tour?.id;
+  const url = rec.tour?.thumb || (id ? coverUrl(id) : null);
+  return (
+    <div style={{ width: size, height: size, borderRadius: 10, overflow: "hidden", background: T.paperDark, display: "flex", alignItems: "center", justifyContent: "center", fontSize: Math.round(size * 0.6), flexShrink: 0 }}>
+      {ok && url ? <img src={url} alt="" onError={() => setOk(false)} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} /> : rec.tour.emoji}
+    </div>
+  );
+}
 
 function Cover({ id, emoji, ratio, radius = 0, fontSize = 58 }) {
   const [ok, setOk] = useState(true);
@@ -820,8 +905,9 @@ function TourDetail({ tourId, go, setBooking }) {
               <button style={{ ...btnGold, width: "100%", marginTop: 14, borderRadius: 12, background: T.indigo, color: "#fff" }} onClick={() => openBooking("quote")}>Request a quote</button>
             ) : (
               <>
-                <button style={{ ...btnGold, width: "100%", marginTop: 14, borderRadius: 12 }} onClick={() => openBooking("full")}>Pay in full</button>
-                <button style={{ width: "100%", marginTop: 8, background: T.laterite, color: "#fff", border: "none", borderRadius: 12, padding: "12px 14px", fontWeight: 800, cursor: "pointer", fontSize: 15 }} onClick={() => openBooking("deposit")}>Pay with Ma Tontine (20%)</button>
+                <button disabled={!dateOk} style={{ ...btnGold, width: "100%", marginTop: 14, borderRadius: 12, opacity: dateOk ? 1 : 0.5, cursor: dateOk ? "pointer" : "not-allowed" }} onClick={() => dateOk && openBooking("full")}>Pay in full</button>
+                <button disabled={!tontinePossible} style={{ width: "100%", marginTop: 8, background: T.laterite, color: "#fff", border: "none", borderRadius: 12, padding: "12px 14px", fontWeight: 800, cursor: tontinePossible ? "pointer" : "not-allowed", fontSize: 15, opacity: tontinePossible ? 1 : 0.5 }} onClick={() => tontinePossible && openBooking("deposit")}>Pay with Ma Tontine (20%)</button>
+                {!dateOk && <div style={{ fontSize: 12.5, color: T.laterite, marginTop: 8, textAlign: "center" }}>Choose a travel date to book.</div>}
               </>
             )}
             <button style={{ width: "100%", marginTop: 8, background: "#fff", color: T.green, border: `1.5px solid ${T.green}`, borderRadius: 12, padding: "11px 14px", fontWeight: 700, cursor: "pointer", fontSize: 14 }} onClick={() => go("builder")}>
@@ -861,9 +947,10 @@ function TourDetail({ tourId, go, setBooking }) {
               </div>
             </div>
             <div style={{ display: "flex", gap: 8 }}>
-              <button style={{ ...btnGold, flex: 1, borderRadius: 12, fontSize: 14, padding: "12px 8px" }} onClick={() => openBooking("full")}>Pay in full</button>
-              <button style={{ flex: 1, background: T.laterite, color: "#fff", border: "none", borderRadius: 12, padding: "12px 8px", fontWeight: 800, cursor: "pointer", fontSize: 14 }} onClick={() => openBooking("deposit")}>Ma Tontine</button>
+              <button disabled={!dateOk} style={{ ...btnGold, flex: 1, borderRadius: 12, fontSize: 14, padding: "12px 8px", opacity: dateOk ? 1 : 0.5 }} onClick={() => dateOk && openBooking("full")}>Pay in full</button>
+              <button disabled={!tontinePossible} style={{ flex: 1, background: T.laterite, color: "#fff", border: "none", borderRadius: 12, padding: "12px 8px", fontWeight: 800, cursor: tontinePossible ? "pointer" : "not-allowed", fontSize: 14, opacity: tontinePossible ? 1 : 0.5 }} onClick={() => tontinePossible && openBooking("deposit")}>Ma Tontine</button>
             </div>
+            {!dateOk && <div style={{ fontSize: 11.5, color: T.laterite, marginTop: 6, textAlign: "center" }}>Choose a travel date above to book.</div>}
           </>
         )}
       </div>
@@ -1250,13 +1337,43 @@ function AboutPage({ notify }) {
   );
 }
 
+// ---------------- PAYMENT RESULT ----------------
+function PaymentResult({ status, go, user, setSignin }) {
+  const success = status === "success";
+  return (
+    <Wrap>
+      <div style={{ maxWidth: 520, margin: "20px auto", background: "#fff", border: `1px solid ${T.line}`, borderRadius: 20, padding: 32, textAlign: "center" }}>
+        <div style={{ width: 72, height: 72, borderRadius: "50%", margin: "0 auto 16px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 38, background: success ? "#E9F7EE" : "#FDECEA", color: success ? T.green : "#B3261E" }}>
+          {success ? "✓" : "✕"}
+        </div>
+        <h1 className="disp" style={{ fontSize: 24, fontWeight: 700, margin: "0 0 8px" }}>
+          {success ? "Payment received" : "Payment not completed"}
+        </h1>
+        <p style={{ fontSize: 15, lineHeight: 1.6, color: "#3B4A42", margin: "0 0 22px" }}>
+          {success
+            ? "Thank you! Your payment was received and your booking is being confirmed. You'll find it in your account with its receipt shortly."
+            : "Your payment was cancelled or did not go through. No charge was made — your booking is still pending, you can try paying again from your account."}
+        </p>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {user
+            ? <button style={{ ...btnGold, width: "100%", borderRadius: 12 }} onClick={() => go("account")}>View my bookings</button>
+            : <button style={{ ...btnGold, width: "100%", borderRadius: 12 }} onClick={() => setSignin(true)}>Sign in to see my booking</button>}
+          {!success && <button style={{ width: "100%", background: "#fff", color: T.green, border: `1.5px solid ${T.green}`, borderRadius: 12, padding: "11px 14px", fontWeight: 700, cursor: "pointer", fontSize: 14 }} onClick={() => go("tours")}>Browse tours</button>}
+          <button style={{ background: "none", border: "none", cursor: "pointer", fontWeight: 600, color: T.ink, opacity: 0.65, fontSize: 14 }} onClick={() => go("home")}>Back to home</button>
+        </div>
+        {success && <div style={{ fontSize: 12, opacity: 0.55, marginTop: 16 }}>Final confirmation is validated automatically once PayDunya notifies our system.</div>}
+      </div>
+    </Wrap>
+  );
+}
+
 // ---------------- ACCOUNT ----------------
 const planLabel = (p) => p === "deposit" ? "Ma Tontine Voyage" : p === "quote" ? "Quote requested" : p === "itinerary" ? "Custom itinerary" : "Paid in full";
 const planColor = (p) => p === "deposit" ? T.laterite : p === "quote" ? T.indigo : p === "itinerary" ? T.indigo : T.green;
-const statusLabel = { pending: "In progress", confirmed: "Confirmed", cancelled: "Cancelled", settled: "Fully paid" };
-const statusColor = (s) => s === "cancelled" ? "#B3261E" : s === "settled" || s === "confirmed" ? T.green : T.laterite;
+const statusLabel = { pending: "In progress", confirmed: "Confirmed", paid: "Paid", cancelled: "Cancelled", settled: "Fully paid" };
+const statusColor = (s) => s === "cancelled" ? "#B3261E" : s === "settled" || s === "confirmed" || s === "paid" ? T.green : T.laterite;
 
-function AccountPage({ user, bookings, setSignin, notify, signOut, patchBooking, cancelBooking }) {
+function AccountPage({ user, bookings, setSignin, notify, signOut, patchBooking, cancelBooking, payInstallment }) {
   const [filter, setFilter] = useState("all");
   const [detail, setDetail] = useState(null);
   if (!user) return (
@@ -1289,13 +1406,14 @@ function AccountPage({ user, bookings, setSignin, notify, signOut, patchBooking,
       {list.length === 0 ? (
         <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 14, padding: 24 }}>Nothing here yet — book a tour, request a quote or build a trip and it will appear in this space.</div>
       ) : list.map((b, i) => {
-        const paidCount = b.paid || 0;
-        const paidAmount = b.plan === "deposit" ? b.deposit + ((b.total - b.deposit) / b.months) * paidCount : 0;
+        const paidCount = b.paid || 0; // number of instalments paid (excludes the 20% deposit)
+        const perInst = b.plan === "deposit" ? (b.total - b.deposit) / b.months : 0;
+        const paidAmount = b.plan === "deposit" ? b.deposit + perInst * paidCount : 0;
         const pct = b.plan === "deposit" && b.total ? Math.round((paidAmount / b.total) * 100) : 0;
         return (
         <div key={b._id || i} className="card-hover" style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 16, padding: 20, marginBottom: 14, opacity: b._status === "cancelled" ? 0.6 : 1, display: "flex", flexDirection: "column", gap: 12 }}>
           <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-            <span style={{ fontSize: 30 }}>{b.tour.emoji}</span>
+            <Thumb rec={b} size={48} />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div className="disp" style={{ fontWeight: 800, fontSize: 17 }}>{b.tour.name}</div>
               <div style={{ fontSize: 13, opacity: 0.7 }}>{b.adults} traveler{b.adults > 1 ? "s" : ""}{b.children ? ` · ${b.children} child` : ""}{b.date ? ` · ${b.date}` : ""}{b.plan === "quote" || b.plan === "itinerary" ? "" : ` · Total ${fmtXOF(b.total)}`}</div>
@@ -1309,7 +1427,7 @@ function AccountPage({ user, bookings, setSignin, notify, signOut, patchBooking,
           {b.plan === "deposit" && b._status !== "cancelled" && (
             <div style={{ background: T.paperDark, borderRadius: 12, padding: "12px 14px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, fontWeight: 700, marginBottom: 6 }}>
-                <span>{pct >= 100 ? "Fully paid 🎉" : `Ma Tontine · ${paidCount}/${b.months} instalment${b.months > 1 ? "s" : ""} paid`}</span>
+                <span>{pct >= 100 ? "Fully paid 🎉" : `Ma Tontine · deposit + ${paidCount}/${b.months} instalment${b.months > 1 ? "s" : ""} paid`}</span>
                 <span style={{ color: T.green }}>{pct}%</span>
               </div>
               <div style={{ height: 9, borderRadius: 999, background: "rgba(11,46,27,.12)", overflow: "hidden" }}>
@@ -1326,14 +1444,14 @@ function AccountPage({ user, bookings, setSignin, notify, signOut, patchBooking,
             <button style={{ ...btnGreen, fontSize: 13, padding: "8px 16px" }} onClick={() => setDetail(b)}>View details</button>
             {b.plan === "deposit" && b._status !== "cancelled" && paidCount < b.months && (
               <button style={{ background: "none", border: `1.5px solid ${T.line}`, borderRadius: 10, cursor: "pointer", fontWeight: 700, color: T.ink, padding: "8px 16px", fontSize: 13 }}
-                onClick={async () => { const paid = paidCount + 1; await patchBooking(b, { paid, ...(paid >= b.months ? { _status: "settled" } : {}) }); notify(`Instalment ${paid}/${b.months} recorded — receipt sent by email.`); }}>Pay next instalment</button>
+                onClick={() => payInstallment(b)}>Pay next instalment</button>
             )}
           </div>
         </div>
         );
       })}
 
-      {detail && <BookingDetail rec={detail} onClose={() => setDetail(null)} notify={notify} patchBooking={patchBooking} cancelBooking={cancelBooking} user={user} />}
+      {detail && <BookingDetail rec={detail} onClose={() => setDetail(null)} notify={notify} patchBooking={patchBooking} cancelBooking={cancelBooking} user={user} payInstallment={payInstallment} />}
     </Wrap>
   );
 }
@@ -1347,6 +1465,7 @@ function downloadInvoice(rec, user) {
     ["Item", rec.tour.name],
     ["Travelers", `${rec.adults} adult(s)${rec.children ? ` · ${rec.children} child` : ""}`],
     rec.date ? ["Date", rec.date] : null,
+    ...(rec.addons && rec.addons.length ? rec.addons.map((a) => [`Add-on: ${a.name}${a.per === "person" ? " (per person)" : ""}`, a.amount != null ? fmtXOF(a.amount) : "on request"]) : []),
     ["Payment plan", planLabel(rec.plan)],
     rec.plan !== "quote" && rec.plan !== "itinerary" ? ["Total", fmtXOF(rec.total)] : null,
     rec.plan === "deposit" ? ["Deposit paid", fmtXOF(rec.deposit)] : null,
@@ -1367,14 +1486,14 @@ function downloadInvoice(rec, user) {
   if (w) { w.document.write(html); w.document.close(); }
 }
 
-function BookingDetail({ rec, onClose, notify, patchBooking, cancelBooking, user }) {
+function BookingDetail({ rec, onClose, notify, patchBooking, cancelBooking, user, payInstallment }) {
   const it = rec.itinerary;
   const remaining = rec.plan === "deposit" ? rec.total - rec.deposit : 0;
   const canCancel = rec._status !== "cancelled" && rec._status !== "settled";
   return (
     <Overlay onClose={onClose}>
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <span style={{ fontSize: 30 }}>{rec.tour.emoji}</span>
+        <Thumb rec={rec} size={44} />
         <h3 className="disp" style={{ fontWeight: 800, fontSize: 20, margin: 0, flex: 1 }}>{rec.tour.name}</h3>
       </div>
       <div style={{ display: "flex", gap: 8, margin: "10px 0 14px" }}>
@@ -1394,10 +1513,21 @@ function BookingDetail({ rec, onClose, notify, patchBooking, cancelBooking, user
           <div style={{ padding: "4px 0" }}><span style={{ opacity: 0.75 }}>Experiences</span><div style={{ fontWeight: 600, marginTop: 4 }}>{it.tours}</div></div>
           {it.notes && <div style={{ padding: "4px 0" }}><span style={{ opacity: 0.75 }}>Notes</span><div style={{ marginTop: 4 }}>{it.notes}</div></div>}
         </>}
+        {rec.addons && rec.addons.length > 0 && (
+          <div style={{ padding: "4px 0" }}>
+            <span style={{ opacity: 0.75 }}>Add-ons</span>
+            {rec.addons.map((a) => (
+              <div key={a.name} style={{ display: "flex", fontSize: 13.5, marginTop: 4 }}>
+                <span>{a.name}{a.per === "person" ? " (per person)" : ""}</span>
+                <span style={{ marginLeft: "auto", fontWeight: 600 }}>{a.amount != null ? fmtXOF(a.amount) : "on request"}</span>
+              </div>
+            ))}
+          </div>
+        )}
         {rec.plan !== "quote" && rec.plan !== "itinerary" && <Row l="Total" v={fmtXOF(rec.total)} />}
         {rec.plan === "deposit" && <>
           <Row l="Deposit paid" v={fmtXOF(rec.deposit)} />
-          <Row l="Remaining" v={`${fmtXOF(remaining)} · ${rec.months} instalment(s) of ${fmtXOF(remaining / rec.months)}${rec.schedule ? ` over ${rec.schedule}` : ""}`} />
+          <Row l="Balance" v={`${fmtXOF(remaining)} · ${rec.months} × ${fmtXOF(remaining / rec.months)}${rec.schedule ? ` over ${rec.schedule}` : ""}`} />
           <Row l="Instalments paid" v={`${rec.paid || 0} / ${rec.months}`} />
         </>}
       </div>
@@ -1409,7 +1539,7 @@ function BookingDetail({ rec, onClose, notify, patchBooking, cancelBooking, user
       <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 16 }}>
         {rec.plan === "deposit" && rec._status !== "cancelled" && (rec.paid || 0) < rec.months && (
           <button style={{ ...btnGold, fontSize: 13.5, padding: "9px 16px" }}
-            onClick={async () => { const paid = (rec.paid || 0) + 1; await patchBooking(rec, { paid, ...(paid >= rec.months ? { _status: "settled" } : {}) }); notify(`Instalment ${paid}/${rec.months} recorded.`); onClose(); }}>Pay next instalment</button>
+            onClick={() => { onClose(); payInstallment(rec); }}>Pay next instalment</button>
         )}
         {rec.plan !== "quote" && rec.plan !== "itinerary" && (
           <button style={{ ...btnGreen, fontSize: 13.5, padding: "9px 16px" }} onClick={() => downloadInvoice(rec, user)}>Download invoice</button>
@@ -1555,6 +1685,8 @@ function Overlay({ children, onClose }) {
   );
 }
 
+// n = number of instalments for the 80% balance (AFTER the 20% deposit).
+// Total payments = 1 deposit + n instalments.
 const TONTINE_OPTIONS = [
   { key: "15d", label: "15 days", days: 15, n: 1 },
   { key: "1m", label: "1 month", days: 30, n: 1 },
@@ -1576,7 +1708,7 @@ function BookingModal({ tour, user, onClose, onConfirm }) {
   const [plan, setPlan] = useState(tour.initialPlan === "deposit" ? "deposit" : "full");
   const [sched, setSched] = useState("3m");
   const [msg, setMsg] = useState("");
-  const [bill, setBill] = useState({ name: user?.name || "", email: user?.email || "", phone: "" });
+  const [bill, setBill] = useState(() => { const [fn, ...rn] = (user?.name || "").split(" "); return { firstName: fn || "", lastName: rn.join(" ") || "", email: user?.email || "", phone: "", address: "", city: "", country: "" }; });
   const toggle = (n) => setAddons((a) => (a.includes(n) ? a.filter((x) => x !== n) : [...a, n]));
 
   // ---- Ma Tontine availability vs chosen travel date ----
@@ -1613,6 +1745,7 @@ function BookingModal({ tour, user, onClose, onConfirm }) {
   }, [tour, adults, children, addons, vehicle, months, pax, tg, rates]);
 
   const onRequestAddons = tour.addons.filter((x) => addons.includes(x.name) && !x.price);
+  const chosenAddons = tour.addons.filter((x) => addons.includes(x.name)).map((a) => ({ name: a.name, per: a.per, price: a.price, amount: a.price ? (a.per === "person" ? a.price * pax : a.price) : null }));
 
   const Counter = ({ label: l, sub, value, set, min = 0 }) => (
     <div style={{ display: "flex", alignItems: "center", padding: "10px 0", borderBottom: `1px solid ${T.line}` }}>
@@ -1726,7 +1859,7 @@ function BookingModal({ tour, user, onClose, onConfirm }) {
             <div style={{ marginTop: 18, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 14, padding: 16, fontSize: 14.5 }}>
               <Row l={`Tour · ${tierLabel[tier]} · ${adults} ad${children ? ` + ${children} ch` : ""}`} v={fmtXOF(calc.base)} />
               {calc.transport > 0 && <Row l={`Transport · ${VEHICLES[vehicle].name}`} v={fmtXOF(calc.transport)} />}
-              {calc.addonTotal > 0 && <Row l="Add-ons" v={fmtXOF(calc.addonTotal)} />}
+              {chosenAddons.map((a) => <Row key={a.name} l={`+ ${a.name}${a.per === "person" ? ` (×${pax})` : ""}`} v={a.amount != null ? fmtXOF(a.amount) : "on request"} />)}
               <div style={{ borderTop: `1px solid ${T.line}`, marginTop: 8, paddingTop: 10, display: "flex", fontSize: 17 }}>
                 <strong>Total</strong>
                 <strong style={{ marginLeft: "auto" }}>{fmtXOF(calc.total)} <span style={{ fontWeight: 500, fontSize: 13, opacity: 0.6 }}>{fmtUSD(calc.total)}</span></strong>
@@ -1740,23 +1873,19 @@ function BookingModal({ tour, user, onClose, onConfirm }) {
               {plan === "deposit" && tontineAvailable && (
                 <div style={{ marginTop: 10, background: T.paperDark, borderRadius: 10, padding: "10px 12px", fontSize: 13.5, lineHeight: 1.6 }}>
                   <strong style={{ color: T.laterite }}>Due today: {fmtXOF(calc.deposit)}</strong> (20% deposit)<br />
-                  Remaining {fmtXOF(calc.total - calc.deposit)} over {selectedOpt.label}: <strong>{months} × {fmtXOF(calc.installment)}</strong> before each deadline.<br />
-                  Balance fully settled before your travel date{date ? ` (${date})` : ""}. Reminders by email, SMS and WhatsApp.
+                  Then <strong>{months} × {fmtXOF(calc.installment)}</strong> over {selectedOpt.label} (balance {fmtXOF(calc.total - calc.deposit)}).<br />
+                  Fully settled before your travel date{date ? ` (${date})` : ""}. Reminders by email, SMS and WhatsApp.
                 </div>
               )}
             </div>
 
-            <div style={sect}>{plan === "deposit" ? "Reservation details" : "Reservation & billing details"}</div>
-            <div style={{ display: "flex", gap: 10 }}>
-              <div style={{ flex: 1 }}><label style={label}>Full name</label><input style={input} value={bill.name} onChange={(e) => setBill({ ...bill, name: e.target.value })} placeholder="e.g. Awa Diop" /></div>
-              <div style={{ flex: 1 }}><label style={label}>Phone</label><input style={input} value={bill.phone} onChange={(e) => setBill({ ...bill, phone: e.target.value })} placeholder="+221 …" /></div>
-            </div>
-            <label style={label}>Email</label>
-            <input style={input} type="email" value={bill.email} onChange={(e) => setBill({ ...bill, email: e.target.value })} placeholder="you@example.com" />
+            <div style={sect}>Reservation & billing details</div>
+            <BillingFields bill={bill} setBill={setBill} />
+            {!date && <div style={{ fontSize: 12.5, color: T.laterite, marginTop: 8 }}>Please choose a travel date above to book.</div>}
 
-            <button style={{ width: "100%", marginTop: 14, background: T.gold, color: T.ink, border: "none", borderRadius: 12, padding: 14, fontWeight: 800, fontSize: 16, cursor: "pointer", opacity: bill.name && bill.email ? 1 : 0.55 }}
-              disabled={!bill.name || !bill.email}
-              onClick={() => onConfirm({ tour, date, adults, children, infants, plan, months, schedule: plan === "deposit" ? selectedOpt.label : "", total: calc.total, deposit: calc.deposit, contact: bill, addonsChosen: addons })}>
+            <button style={{ width: "100%", marginTop: 14, background: T.gold, color: T.ink, border: "none", borderRadius: 12, padding: 14, fontWeight: 800, fontSize: 16, cursor: "pointer", opacity: (billValid(bill) && date) ? 1 : 0.55 }}
+              disabled={!billValid(bill) || !date}
+              onClick={() => onConfirm({ tour, date, adults, children, infants, plan, months, schedule: plan === "deposit" ? selectedOpt.label : "", total: calc.total, deposit: calc.deposit, contact: { ...bill, name: `${bill.firstName} ${bill.lastName}`.trim() }, addons: chosenAddons })}>
               {plan === "deposit" ? `Reserve with ${fmtXOF(calc.deposit)} deposit` : `Pay in full — ${fmtXOF(calc.total)}`}
             </button>
             <div style={{ marginTop: 10, fontSize: 12, opacity: 0.6, textAlign: "center" }}>
@@ -1769,6 +1898,36 @@ function BookingModal({ tour, user, onClose, onConfirm }) {
   );
 }
 const sect = { margin: "18px 0 8px", fontWeight: 700, fontSize: 13, textTransform: "uppercase", letterSpacing: ".08em", color: T.green };
+
+const COUNTRY_LIST = ["Senegal", "Gambia", "Mali", "Mauritania", "Guinea", "Ivory Coast", "France", "Morocco", "United States", "United Kingdom", "Canada", "Other"];
+const billValid = (b) => b.firstName && b.lastName && b.email && b.phone && b.address && b.city && b.country;
+
+function BillingFields({ bill, setBill }) {
+  const set = (k) => (e) => setBill({ ...bill, [k]: e.target.value });
+  return (
+    <>
+      <div style={{ display: "flex", gap: 10 }}>
+        <div style={{ flex: 1 }}><label style={label}>First name *</label><input style={input} value={bill.firstName || ""} onChange={set("firstName")} autoComplete="given-name" /></div>
+        <div style={{ flex: 1 }}><label style={label}>Last name *</label><input style={input} value={bill.lastName || ""} onChange={set("lastName")} autoComplete="family-name" /></div>
+      </div>
+      <div style={{ display: "flex", gap: 10 }}>
+        <div style={{ flex: 1 }}><label style={label}>Email *</label><input style={input} type="email" value={bill.email || ""} onChange={set("email")} autoComplete="email" /></div>
+        <div style={{ flex: 1 }}><label style={label}>Phone / WhatsApp *</label><input style={input} value={bill.phone || ""} onChange={set("phone")} placeholder="+221 …" autoComplete="tel" /></div>
+      </div>
+      <label style={label}>Address *</label>
+      <input style={input} value={bill.address || ""} onChange={set("address")} placeholder="Street, building, apt" autoComplete="street-address" />
+      <div style={{ display: "flex", gap: 10 }}>
+        <div style={{ flex: 1 }}><label style={label}>City *</label><input style={input} value={bill.city || ""} onChange={set("city")} autoComplete="address-level2" /></div>
+        <div style={{ flex: 1 }}><label style={label}>Country *</label>
+          <select style={input} value={bill.country || ""} onChange={set("country")}>
+            <option value="">Select…</option>
+            {COUNTRY_LIST.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </div>
+      </div>
+    </>
+  );
+}
 
 
 // ---------------- ATS LOGISTICS QUICK-BOOK ----------------
@@ -1786,20 +1945,99 @@ const ROUTES = [
   { id: "kedougou", name: "Round trip — Kédougou", zone: "kedougou", unit: "round trip" },
 ];
 
-function TransferWidget({ addBooking, compact }) {
+// Vehicle photos live in the same bucket under the "vehicles/" folder.
+// Any extension works (jpg, png, webp…): the file's base name must equal the vehicle slug.
+// e.g. vehicles/standard-suv.png, vehicles/luxury-minivan.webp
+function useVehiclePhotoMap() {
+  const [map, setMap] = useState({});
+  useEffect(() => {
+    supabase.storage.from(PHOTO_BUCKET).list("vehicles", { limit: 100 }).then(({ data }) => {
+      if (!data) return;
+      const m = {};
+      for (const f of data) {
+        if (!f.name || f.name.startsWith(".")) continue;
+        const base = f.name.replace(/\.[^.]+$/, "");
+        m[base] = supabase.storage.from(PHOTO_BUCKET).getPublicUrl(`vehicles/${f.name}`).data.publicUrl;
+      }
+      setMap(m);
+    });
+  }, []);
+  return map;
+}
+
+function VehiclePhoto({ url, name, height }) {
+  const [ok, setOk] = useState(true);
+  useEffect(() => { setOk(true); }, [url]);
+  return (
+    <div style={{ marginTop: 10, height, display: "flex", alignItems: "center", justifyContent: "flex-start", background: "transparent", fontSize: 44 }}>
+      {ok && url ? <img src={url} alt={name} onError={() => setOk(false)} style={{ height: "100%", width: "auto", maxWidth: "100%", objectFit: "contain", display: "block" }} /> : "🚙"}
+    </div>
+  );
+}
+
+function TransferCheckout({ detail, user, onClose, onConfirm }) {
+  const [bill, setBill] = useState(() => { const [fn, ...rn] = (user?.name || "").split(" "); return { firstName: fn || "", lastName: rn.join(" ") || "", email: user?.email || "", phone: "", address: "", city: "", country: "" }; });
+  const total = detail.total;
+
+  const confirm = () => {
+    if (!billValid(bill)) return;
+    onConfirm({
+      tour: detail.tour, date: detail.date, adults: detail.pax, children: 0, infants: 0,
+      plan: "full", months: 0, schedule: "",
+      total, deposit: 0, contact: { ...bill, name: `${bill.firstName} ${bill.lastName}`.trim() }, transfer: { time: detail.time, unit: detail.unit },
+    });
+  };
+
+  return (
+    <Overlay onClose={onClose}>
+      <h3 className="disp" style={{ fontWeight: 800, fontSize: 20, marginTop: 0 }}>Confirm your transfer</h3>
+      <div style={{ background: T.paperDark, borderRadius: 12, padding: "12px 14px", fontSize: 14, lineHeight: 1.7 }}>
+        <Row l="Service" v={detail.route} />
+        <Row l="Vehicle" v={detail.vehicle} />
+        <Row l="Date" v={detail.date || "—"} />
+        <Row l="Pick-up" v={detail.time} />
+        <Row l="Passengers" v={detail.pax} />
+        <div style={{ borderTop: `1px solid ${T.line}`, marginTop: 8, paddingTop: 8, display: "flex", fontSize: 16 }}>
+          <strong>Total</strong><strong style={{ marginLeft: "auto" }}>{fmtXOF(total)} <span style={{ fontWeight: 500, fontSize: 12, opacity: 0.6 }}>{fmtUSD(total)}</span></strong>
+        </div>
+      </div>
+      <div style={{ fontSize: 12.5, color: "#6B7A72", marginTop: 8 }}>Transfers are confirmed with full payment — no instalment plan.</div>
+
+      <div style={sect}>Reservation & billing details</div>
+      <BillingFields bill={bill} setBill={setBill} />
+
+      <button disabled={!billValid(bill)} style={{ ...btnGold, width: "100%", marginTop: 14, opacity: billValid(bill) ? 1 : 0.55 }} onClick={confirm}>
+        Pay in full — {fmtXOF(total)}
+      </button>
+      <div style={{ marginTop: 8, fontSize: 12, opacity: 0.6, textAlign: "center" }}>Visa · Mastercard · Orange Money · Wave · Bank transfer — demo, no real charge</div>
+    </Overlay>
+  );
+}
+
+function TransferWidget({ addBooking, compact, user }) {
   const [route, setRoute] = useState(0);
   const [vehicle, setVehicle] = useState(0);
   const [pax, setPax] = useState(2);
   const [date, setDate] = useState("");
   const [time, setTime] = useState("10:00");
+  const [checkout, setCheckout] = useState(null);
+  const vmap = useVehiclePhotoMap();
+  const todayStr = new Date().toISOString().slice(0, 10);
   const r = ROUTES[route];
   const price = RATES[r.zone][vehicle];
-  const ok = VEHICLES[vehicle].cap >= pax;
+  const capOk = VEHICLES[vehicle].cap >= pax;
+  const complete = capOk && !!date && !!time && pax > 0;
+
+  const openCheckout = () => setCheckout({
+    tour: { emoji: "🚙", name: `${VEHICLES[vehicle].name} — ${r.name}`, pole: "ATS Logistics", dur: `${r.unit}${time ? ` · ${time}` : ""}`, thumb: vmap[VEHICLES[vehicle].slug] || null },
+    route: r.name, vehicle: VEHICLES[vehicle].name, unit: r.unit, date, time, pax, total: price,
+  });
+
   return (
     <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 16, padding: compact ? 16 : 22 }}>
-      {!compact && <h3 className="disp" style={{ fontWeight: 800, fontSize: 19, marginTop: 0 }}>Book a transfer or vehicle</h3>}
+      {!compact && <h3 className="disp" style={{ fontWeight: 700, fontSize: 18, marginTop: 0 }}>Book a transfer or vehicle</h3>}
       <label style={label}>Route / service</label>
-      <select style={{ ...input, fontWeight: 600 }} value={route} onChange={(e) => { setRoute(+e.target.value); }}>
+      <select style={{ ...input, fontWeight: 600 }} value={route} onChange={(e) => setRoute(+e.target.value)}>
         {ROUTES.map((x, i) => <option key={x.id} value={i}>{x.name}</option>)}
       </select>
       <label style={{ ...label, marginTop: 10 }}>Vehicle</label>
@@ -1808,8 +2046,9 @@ function TransferWidget({ addBooking, compact }) {
           <option key={v.name} value={i} disabled={v.cap < pax}>{v.name} · up to {v.cap} — {fmtXOF(RATES[r.zone][i])} {r.unit}</option>
         ))}
       </select>
+      <VehiclePhoto url={vmap[VEHICLES[vehicle].slug]} name={VEHICLES[vehicle].name} height={compact ? 200 : 220} />
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginTop: 10 }}>
-        <div><label style={label}>Date</label><input type="date" style={input} value={date} onChange={(e) => setDate(e.target.value)} /></div>
+        <div><label style={label}>Date</label><input type="date" min={todayStr} style={input} value={date} onChange={(e) => setDate(e.target.value)} /></div>
         <div><label style={label}>Pick-up</label><input type="time" style={input} value={time} onChange={(e) => setTime(e.target.value)} /></div>
         <div><label style={label}>Passengers</label>
           <select style={input} value={pax} onChange={(e) => setPax(+e.target.value)}>{[1,2,3,4,5,6,7,10,14,22,33,50].map((n) => <option key={n} value={n}>{n}</option>)}</select>
@@ -1817,42 +2056,43 @@ function TransferWidget({ addBooking, compact }) {
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 14, flexWrap: "wrap" }}>
         <div>
-          <div className="disp" style={{ fontWeight: 800, fontSize: 22 }}>{fmtXOF(price)}</div>
+          <div className="disp" style={{ fontWeight: 800, fontSize: 22, color: T.green }}>{fmtXOF(price)}</div>
           <div style={{ fontSize: 12, opacity: 0.6 }}>{fmtUSD(price)} · per vehicle, {r.unit} · fixed rate</div>
         </div>
-        <button disabled={!ok} style={{ ...btnGold, marginLeft: "auto", opacity: ok ? 1 : 0.5 }}
-          onClick={() => addBooking({ tour: { emoji: "🚙", name: `${VEHICLES[vehicle].name} — ${r.name}`, pole: "ATS Logistics", dur: r.unit }, date, adults: pax, children: 0, infants: 0, plan: "full", months: 0, total: price, deposit: 0 })}>
-          Book now — {fmtXOF(price)}
+        <button disabled={!complete} style={{ ...btnGold, marginLeft: "auto", opacity: complete ? 1 : 0.5, cursor: complete ? "pointer" : "not-allowed" }} onClick={() => complete && openCheckout()}>
+          Continue →
         </button>
       </div>
-      {!ok && <div style={{ fontSize: 12.5, color: T.laterite, marginTop: 6 }}>This vehicle is too small for {pax} passengers — pick a larger category.</div>}
+      {!capOk && <div style={{ fontSize: 12.5, color: T.laterite, marginTop: 6 }}>This vehicle is too small for {pax} passengers — pick a larger category.</div>}
+      {capOk && !date && <div style={{ fontSize: 12.5, color: T.laterite, marginTop: 6 }}>Choose a date to continue.</div>}
+      {capOk && date && !time && <div style={{ fontSize: 12.5, color: T.laterite, marginTop: 6 }}>Choose a pick-up time to continue.</div>}
+
+      {checkout && <TransferCheckout detail={checkout} user={user} onClose={() => setCheckout(null)} onConfirm={(rec) => { setCheckout(null); addBooking(rec); }} />}
     </div>
   );
 }
 
-function TransportPage({ addBooking, notify }) {
+function TransportPage({ addBooking, notify, user }) {
   return (
     <Wrap>
       <Eyebrow>ATS Logistics · fixed rates, instant booking</Eyebrow>
       <H2>Transfers & vehicle hire</H2>
-      <p style={{ maxWidth: 640, lineHeight: 1.6, opacity: 0.85 }}>
-        Every price below is a published fixed rate from the ATS Logistics rate card — no quote needed. Pick your route and vehicle, book in under a minute. Fuel and driver included; per-diem applies on multi-day circuits.
+      <p style={{ maxWidth: 640, lineHeight: 1.6, color: "#3B4A42" }}>
+        Every price below is a published fixed rate from the ATS Logistics rate card — no quote needed. Pick your route and vehicle, then pay in full or reserve with Ma Tontine. Fuel and driver included; per-diem applies on multi-day circuits.
       </p>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 24, alignItems: "start" }}>
-        <TransferWidget addBooking={addBooking} />
-        <div>
-          <div style={{ display: "grid", gap: 12 }}>
-            {[["🛬", "Airport transfers", "AIBD ⇄ Dakar, Saly or Lac Rose from 30,000 XOF — meet & greet at arrivals."],
-              ["🚙", "Vehicle + driver at disposal", "Full-day city disposal from 85,000 XOF; multi-day circuits with driver per-diem."],
-              ["🚌", "Groups & coaches", "Coaster 22, Minicoach 33, Motorcoach 50 seats — events, delegations, team building."],
-              ["📦", "Corporate & event logistics", "Fleet coordination, group movement and staff transport under contract."]].map(([i, n, b]) => (
-              <div key={n} style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 14, padding: 16, display: "flex", gap: 12 }}>
-                <div style={{ fontSize: 26 }}>{i}</div>
-                <div><strong>{n}</strong><div style={{ fontSize: 13.5, opacity: 0.75, lineHeight: 1.5 }}>{b}</div></div>
-              </div>
-            ))}
-            <button style={{ ...btnGreen, justifySelf: "start" }} onClick={() => notify("Corporate fleet request sent — ATS Logistics will contact you (demo)")}>Request corporate fleet quote</button>
-          </div>
+        <TransferWidget addBooking={addBooking} user={user} />
+        <div style={{ display: "grid", gap: 12 }}>
+          {[["🛬", "Airport transfers", "AIBD ⇄ Dakar, Saly or Lac Rose from 30,000 XOF — meet & greet at arrivals."],
+            ["🚙", "Vehicle + driver at disposal", "Full-day city disposal from 85,000 XOF; multi-day circuits with driver per-diem."],
+            ["🚌", "Groups & coaches", "Coaster 22, Minicoach 33, Motorcoach 50 seats — events, delegations, team building."],
+            ["📦", "Corporate & event logistics", "Fleet coordination, group movement and staff transport under contract."]].map(([i, n, b]) => (
+            <div key={n} className="card-hover" style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 14, padding: 16, display: "flex", gap: 12 }}>
+              <div style={{ fontSize: 26 }}>{i}</div>
+              <div><strong>{n}</strong><div style={{ fontSize: 13.5, color: "#6B7A72", lineHeight: 1.5 }}>{b}</div></div>
+            </div>
+          ))}
+          <button style={{ ...btnGreen, justifySelf: "start" }} onClick={() => notify("Corporate fleet request sent — ATS Logistics will contact you (demo)")}>Request corporate fleet quote</button>
         </div>
       </div>
     </Wrap>

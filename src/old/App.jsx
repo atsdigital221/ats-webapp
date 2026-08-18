@@ -15,7 +15,7 @@ import { supabase } from "./lib/supabase";
 // Century Gothic (web substitute: Poppins), dotted-map brand motif.
 const T = {
   ink: "#0B2E1B", paper: "#FFFFFF", paperDark: "#EAF4EC",
-  gold: "#F8D815", indigo: "#006B33", laterite: "#8F7500",
+  gold: "#F8D815", indigo: "#006B33", laterite: "#006B33",
   green: "#009245", line: "rgba(11,46,27,0.14)",
 };
 const XOF_USD = 590;
@@ -69,8 +69,14 @@ const btnGreen = { ...btnGold, background: T.green, color: "#fff" };
 const input = { width: "100%", boxSizing: "border-box", padding: "11px 13px", borderRadius: 10, border: `1px solid ${T.line}`, background: "#fff", fontSize: 14.5, fontFamily: "inherit", color: T.ink };
 const label = { fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".07em", color: T.laterite, display: "block", marginBottom: 5 };
 const Eyebrow = ({ children }) => <p style={{ color: T.laterite, fontWeight: 600, letterSpacing: ".14em", fontSize: 12, textTransform: "uppercase", margin: 0 }}>{children}</p>;
-const H2 = ({ children }) => <h2 className="disp" style={{ fontSize: "clamp(26px,4vw,38px)", fontWeight: 800, letterSpacing: "-0.02em", margin: "8px 0 14px" }}>{children}</h2>;
+const H2 = ({ children }) => <h2 className="disp" style={{ fontSize: "clamp(22px,3.2vw,30px)", fontWeight: 700, letterSpacing: "-0.01em", margin: "8px 0 14px" }}>{children}</h2>;
 const Wrap = ({ children, style }) => <div style={{ maxWidth: 1200, margin: "0 auto", padding: "48px 20px", ...style }}>{children}</div>;
+const Section = ({ title, children }) => (
+  <section style={{ marginTop: 30 }}>
+    <h2 className="disp" style={{ fontSize: 18, fontWeight: 700, margin: "0 0 12px", letterSpacing: "-0.01em" }}>{title}</h2>
+    {children}
+  </section>
+);
 function Row({ l, v }) { return <div style={{ display: "flex", padding: "4px 0" }}><span style={{ opacity: 0.75 }}>{l}</span><span style={{ marginLeft: "auto", fontWeight: 600 }}>{v}</span></div>; }
 
 // ============================================================
@@ -185,7 +191,7 @@ export default function ATSPlatformPreview() {
       {page.name === "account" && <AccountPage {...ctx} />}
       <Footer {...ctx} />
 
-      {booking && <BookingModal tour={booking} onClose={() => setBooking(null)} onConfirm={confirmBooking} />}
+      {booking && <BookingModal tour={booking} user={user} onClose={() => setBooking(null)} onConfirm={confirmBooking} />}
       {signin && <SignInModal onClose={() => setSignin(false)} notify={notify} onDone={(msg) => { setSignin(false); if (msg) notify(msg); }} />}
       {chat && <AIChat onClose={() => setChat(false)} go={go} />}
 
@@ -234,7 +240,7 @@ function Nav({ go, page, user, setSignin, bookings }) {
       `}</style>
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: "12px 20px", display: "flex", alignItems: "center", gap: 14 }}>
         <button onClick={() => nav("home")} className="disp" style={{ fontWeight: 800, fontSize: 19, letterSpacing: "-0.02em", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-          <span style={{ color: T.green }}>Africa</span> Tourism <span style={{ color: "#C9A902" }}>Solutions</span>
+          <span style={{ color: T.green }}>Africa</span> Tourism <span style={{ color: T.green }}>Solutions</span>
         </button>
 
         {/* Desktop links */}
@@ -281,7 +287,7 @@ function Home({ go, notify, setBooking, filters, setFilters, setChat, addBooking
         </svg>
         <div style={{ maxWidth: 1200, margin: "0 auto", padding: "64px 20px 76px", position: "relative" }}>
           <Eyebrow><span style={{ color: T.gold }}>Stop wondering, start discovering</span></Eyebrow>
-          <h1 className="disp" style={{ fontSize: "clamp(36px,6vw,64px)", lineHeight: 1.02, fontWeight: 800, margin: "14px 0 16px", maxWidth: 780, letterSpacing: "-0.02em" }}>
+          <h1 className="disp" style={{ fontSize: "clamp(30px,5vw,50px)", lineHeight: 1.05, fontWeight: 700, margin: "14px 0 16px", maxWidth: 780, letterSpacing: "-0.02em" }}>
             Africa, organised by the people who live it.
           </h1>
           <p style={{ maxWidth: 560, fontSize: 17, opacity: 0.9, lineHeight: 1.55 }}>
@@ -473,20 +479,52 @@ function PortalTabs({ go }) {
 }
 
 // ---------------- TOURS LISTING ----------------
+// ---- Tour photos (Supabase Storage bucket "tour-photos") ----
+// Convention: one folder per tour id. Cover file must be named cover.jpg.
+// e.g. tour-photos/goree/cover.jpg, tour-photos/goree/2.jpg, ...
+const PHOTO_BUCKET = "tour-photos";
+const coverUrl = (id) => supabase.storage.from(PHOTO_BUCKET).getPublicUrl(`${id}/cover.jpg`).data.publicUrl;
+
+function Cover({ id, emoji, ratio, radius = 0, fontSize = 58 }) {
+  const [ok, setOk] = useState(true);
+  return (
+    <div style={{ aspectRatio: ratio, width: "100%", borderRadius: radius, overflow: "hidden", background: `linear-gradient(140deg, ${T.green}, ${T.indigo})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize }}>
+      {ok ? <img src={coverUrl(id)} alt="" onError={() => setOk(false)} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} /> : emoji}
+    </div>
+  );
+}
+
+function useTourPhotos(tourId) {
+  const [photos, setPhotos] = useState([]);
+  useEffect(() => {
+    let alive = true;
+    supabase.storage.from(PHOTO_BUCKET).list(tourId, { limit: 20, sortBy: { column: "name", order: "asc" } })
+      .then(({ data }) => {
+        if (!alive || !data) return;
+        const urls = data
+          .filter((f) => f.name && !f.name.startsWith("."))
+          .map((f) => supabase.storage.from(PHOTO_BUCKET).getPublicUrl(`${tourId}/${f.name}`).data.publicUrl);
+        urls.sort((a, b) => (a.includes("/cover.") ? -1 : b.includes("/cover.") ? 1 : 0));
+        setPhotos(urls);
+      });
+    return () => { alive = false; };
+  }, [tourId]);
+  return photos;
+}
+
 function TourGrid({ tours, go, setBooking }) {
   return (
     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 18, marginTop: 18 }}>
       {tours.map((t) => (
-        <article key={t.id} className="card-hover" style={{ background: T.paper, border: `1px solid ${T.line}`, borderRadius: 16, overflow: "hidden", display: "flex", flexDirection: "column" }}>
-          <button onClick={() => go("tour", { id: t.id })} style={{ aspectRatio: "4 / 3", width: "100%", border: "none", cursor: "pointer", background: `linear-gradient(140deg, ${T.green}, ${T.indigo})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 58 }} aria-label={`Open ${t.name}`}>{t.emoji}</button>
+        <article key={t.id} className="card-hover" onClick={() => go("tour", { id: t.id })} style={{ background: T.paper, border: `1px solid ${T.line}`, borderRadius: 16, overflow: "hidden", display: "flex", flexDirection: "column", cursor: "pointer" }}>
+          <Cover id={t.id} emoji={t.emoji} ratio="4 / 3" fontSize={58} />
+
           <div style={{ padding: 14, display: "flex", flexDirection: "column", flex: 1 }}>
             <div style={{ display: "flex", gap: 5, marginBottom: 7, flexWrap: "nowrap", overflow: "hidden" }}>
               <span style={pill(T.laterite)}>{t.pole}</span><span style={pill(T.indigo)}>{t.tag}</span>
               {!t.quote && <span style={pill(T.green)}>Group discounts</span>}
             </div>
-            <button onClick={() => go("tour", { id: t.id })} style={{ background: "none", border: "none", padding: 0, textAlign: "left", cursor: "pointer" }}>
-              <h3 className="disp" style={{ fontSize: 14.5, fontWeight: 700, lineHeight: 1.2, margin: 0, color: T.ink }}>{t.name}</h3>
-            </button>
+            <h3 className="disp" style={{ fontSize: 14.5, fontWeight: 700, lineHeight: 1.2, margin: 0, color: T.ink }}>{t.name}</h3>
             <p style={{ fontSize: 12.5, lineHeight: 1.45, opacity: 0.8, flex: 1, marginTop: 5, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{t.desc}</p>
             <div style={{ fontSize: 11.5, opacity: 0.65, margin: "8px 0 4px" }}>{t.dur}</div>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -500,7 +538,7 @@ function TourGrid({ tours, go, setBooking }) {
                   </>
                 )}
               </div>
-              <button onClick={() => setBooking(t)} style={{ marginLeft: "auto", background: t.quote ? T.indigo : T.gold, color: t.quote ? "#fff" : T.ink, border: "none", borderRadius: 10, padding: "8px 15px", fontWeight: 700, fontSize: 13.5, cursor: "pointer", flexShrink: 0 }}>{t.quote ? "Get quote" : "Book"}</button>
+              <button onClick={(e) => { e.stopPropagation(); setBooking(t); }} style={{ marginLeft: "auto", background: t.quote ? T.indigo : T.gold, color: t.quote ? "#fff" : T.ink, border: "none", borderRadius: 10, padding: "8px 15px", fontWeight: 700, fontSize: 13.5, cursor: "pointer", flexShrink: 0 }}>{t.quote ? "Get quote" : "Book"}</button>
             </div>
           </div>
         </article>
@@ -561,86 +599,284 @@ function PriceGrid({ t }) {
   );
 }
 
-function TourDetail({ tourId, go, setBooking, notify }) {
+const REVIEWS = [
+  { who: "Awa M.", txt: "Guide exceptionnel, organisation sans faille. À refaire les yeux fermés." },
+  { who: "Jean D.", txt: "Parfait pour un premier séjour au Sénégal — rythme idéal et logistique impeccable." },
+  { who: "Caroline", txt: "Merci pour ce moment mémorable, tout était fluide du début à la fin." },
+];
+
+function TourDetail({ tourId, go, setBooking }) {
   const t = TOURS.find((x) => x.id === tourId) || TOURS[0];
-  const [tab, setTab] = useState("program");
   const [fav, setFav] = useState(false);
+  const [pax, setPax] = useState(2);
+  const [extras, setExtras] = useState([]);
+  const [vehicle, setVehicle] = useState(-1);      // -1 = no transport
+  const [preview, setPreview] = useState(null);   // gallery lightbox index
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const [date, setDate] = useState("");
+  const daysUntil = date ? Math.ceil((new Date(date + "T00:00:00") - new Date(todayStr + "T00:00:00")) / 86400000) : null;
+  const dateOk = daysUntil != null && daysUntil >= 0;
+  const tontinePossible = daysUntil != null && daysUntil >= 15;
+  const openBooking = (plan) => setBooking({ ...t, initialPlan: plan, initialPax: pax, initialExtras: extras, initialDate: date, initialVehicle: vehicle });
+
+  const imgs = useTourPhotos(t.id);
+  const galleryCount = Math.max(5, imgs.length);
+  const tile = (i) => imgs[i] || null;
+
+  // Highlights derived from the program steps (first clause before the distance/time note)
+  const highlights = (t.steps || []).slice(0, 6).map((s) => s.split("  ·  ")[0].split("|")[0].trim()).filter(Boolean);
+
+  // Per-person price by group size (auto): 1–2 → p12, 3–4 → p34, 5+ → group rate
+  const tier = tierOf(pax);
+  const ppUnit = t.quote ? null : (t.grid[tier]?.a ?? fromPrice(t));
+  const rates = t.zone ? RATES[t.zone] : null;
+  const transportCost = vehicle >= 0 && rates ? rates[vehicle] : 0;
+  const extrasTotal = t.addons.filter((a) => extras.includes(a.name) && a.price).reduce((s, a) => s + (a.per === "person" ? a.price * pax : a.price), 0);
+  const estTotal = ppUnit != null ? ppUnit * pax + extrasTotal + transportCost : null;
+  const toggleExtra = (name) => setExtras((x) => x.includes(name) ? x.filter((n) => n !== name) : [...x, name]);
+
   return (
     <>
-      <div style={{ background: `linear-gradient(140deg, ${T.green}, ${T.indigo})`, color: T.paper }}>
-        <Wrap style={{ padding: "40px 20px" }}>
-          <button onClick={() => go("tours")} style={{ background: "none", border: "none", color: T.paper, cursor: "pointer", fontWeight: 600, opacity: 0.85, padding: 0 }}>← All tours</button>
-          <div style={{ display: "flex", gap: 16, alignItems: "center", marginTop: 12, flexWrap: "wrap" }}>
-            <div style={{ fontSize: 64 }}>{t.emoji}</div>
-            <div style={{ flex: 1, minWidth: 240 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".1em", color: T.gold }}>{t.pole} · {t.dur}</div>
-              <h1 className="disp" style={{ fontSize: "clamp(24px,4.5vw,40px)", fontWeight: 800, margin: "6px 0", letterSpacing: "-0.02em" }}>{t.name}</h1>
-              <p style={{ opacity: 0.9, maxWidth: 640, margin: 0, fontSize: 14.5 }}>{t.sub}</p>
-            </div>
-          </div>
-        </Wrap>
-      </div>
-      <Wrap style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(290px, 1fr))", gap: 28 }}>
-        <div style={{ minWidth: 0 }}>
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-            {[["program", "Program"], ["prices", "Prices"], ["addons", `Add-ons (${t.addons.length})`], ["faq", "FAQ"]].map(([k, l]) => (
-              <button key={k} onClick={() => setTab(k)} style={{ border: `1px solid ${tab === k ? T.green : T.line}`, background: tab === k ? T.green : "#fff", color: tab === k ? "#fff" : T.ink, borderRadius: 999, padding: "8px 16px", fontWeight: 600, cursor: "pointer", fontSize: 13.5 }}>{l}</button>
-            ))}
-          </div>
-          <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 16, padding: 22, marginTop: 14, lineHeight: 1.65, fontSize: 15 }}>
-            {tab === "program" && (
-              t.steps.length ? (
-                <ol style={{ margin: 0, paddingLeft: 20 }}>{t.steps.map((s, i) => <li key={i} style={{ padding: "6px 0" }}>{s}</li>)}</ol>
-              ) : <p style={{ margin: 0 }}>{t.desc}</p>
-            )}
-            {tab === "prices" && (
-              <>
-                <PriceGrid t={t} />
-                <p style={{ fontSize: 13, opacity: 0.7, marginBottom: 0 }}>
-                  Per-person tour price by group size — the more you are, the less you pay. Children 3–12; under 3 free. *Child rate confirmed at booking where marked. Transport not included: choose your vehicle category at booking.
-                </p>
-              </>
-            )}
-            {tab === "addons" && (
-              t.addons.length ? t.addons.map((a) => (
-                <div key={a.name} style={{ display: "flex", gap: 10, padding: "9px 0", borderBottom: `1px solid ${T.line}`, fontSize: 14.5 }}>
-                  <span style={{ flex: 1 }}>{a.name}</span>
-                  <strong style={{ whiteSpace: "nowrap" }}>{a.price ? fmtXOF(a.price) + (a.per === "person" ? " /pp" : "") : "On request"}</strong>
-                </div>
-              )) : <p style={{ margin: 0 }}>No add-ons listed for this product.</p>
-            )}
-            {tab === "faq" && (
-              <>
-                <p><strong>Why do prices change with group size?</strong><br />ATS prices per person by basis — Private 1–2, Private 3–4, or Group 5+ — so bigger groups automatically pay less per person.</p>
-                <p><strong>Is transport included?</strong><br />No. Choose your vehicle category at booking (Sedan, SUV, Minivan or coach — Standard to Luxury), priced per vehicle from the ATS Logistics rate card.</p>
-                <p style={{ margin: 0 }}><strong>Can I pay in instalments?</strong><br />Yes — Ma Tontine Voyage: 20% deposit confirms your booking, balance in scheduled instalments before departure.</p>
-              </>
-            )}
-          </div>
+      <Wrap style={{ paddingBottom: 20 }}>
+        {/* Breadcrumb */}
+        <div style={{ fontSize: 13, opacity: 0.7, marginBottom: 12 }}>
+          <button onClick={() => go("home")} style={{ background: "none", border: "none", cursor: "pointer", color: T.ink, opacity: 0.8, padding: 0 }}>Home</button>
+          {" › "}
+          <button onClick={() => go("tours")} style={{ background: "none", border: "none", cursor: "pointer", color: T.ink, opacity: 0.8, padding: 0 }}>Senegal</button>
+          {" › "}<span style={{ fontWeight: 600 }}>{t.name}</span>
         </div>
-        <aside>
+
+        <div style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".12em", color: T.green }}>{t.tag} · {t.pole}</div>
+        <h1 className="disp" style={{ fontSize: "clamp(22px,3.6vw,32px)", fontWeight: 700, margin: "6px 0 10px", letterSpacing: "-0.01em" }}>{t.name}</h1>
+        <div style={{ display: "flex", gap: 14, flexWrap: "wrap", fontSize: 13.5, opacity: 0.8 }}>
+          <span>⏱ {t.dur}</span>
+          <span>📍 {t.pole}, Senegal</span>
+          <span>🗣️ Français, English</span>
+        </div>
+
+        {/* Gallery — grid on desktop, swipeable slider on mobile */}
+        <style>{`
+          .tour-gallery{display:grid;grid-template-columns:2fr 1fr 1fr;grid-template-rows:1fr 1fr;gap:10px;margin-top:18px;height:340px}
+          .tour-gallery .gtile{border:none;cursor:pointer;border-radius:14px;overflow:hidden;display:flex;align-items:center;justify-content:center;position:relative;padding:0}
+          .tour-gallery .gtile:first-child{grid-column:1 / 2;grid-row:1 / 3}
+          @media(max-width:700px){
+            .tour-gallery{display:flex;grid-template-columns:none;grid-template-rows:none;overflow-x:auto;scroll-snap-type:x mandatory;height:230px;-webkit-overflow-scrolling:touch}
+            .tour-gallery .gtile{flex:0 0 88%;scroll-snap-align:center}
+            .tour-gallery .gtile:first-child{grid-column:auto;grid-row:auto}
+          }
+        `}</style>
+        <div className="tour-gallery">
+          {Array.from({ length: galleryCount }).slice(0, 5).map((_, i) => (
+            <button key={i} className="gtile" onClick={() => setPreview(i)} aria-label={`View photo ${i + 1}`}
+              style={{ background: tile(i) ? `center/cover no-repeat url(${tile(i)})` : `linear-gradient(140deg, ${T.green}, ${T.indigo})`, fontSize: i === 0 ? 72 : 40 }}>
+              {!tile(i) && t.emoji}
+              {i === 4 && galleryCount > 5 && <span style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.45)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 700 }}>+{galleryCount - 5} photos</span>}
+            </button>
+          ))}
+        </div>
+        <div style={{ fontSize: 12, opacity: 0.55, marginTop: 6 }}>Photos coming soon — tap any tile to preview (swipe on mobile). Real imagery will replace these placeholders.</div>
+      </Wrap>
+
+      <Wrap style={{ paddingTop: 0, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 32 }}>
+        <div style={{ minWidth: 0 }}>
+          {highlights.length > 0 && (
+            <Section title="Highlights">
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "8px 20px" }}>
+                {highlights.map((h, i) => (
+                  <div key={i} style={{ display: "flex", gap: 8, fontSize: 14.5, lineHeight: 1.4 }}><span style={{ color: T.green, fontWeight: 800 }}>✓</span><span>{h}</span></div>
+                ))}
+              </div>
+            </Section>
+          )}
+
+          <Section title="Description">
+            <p style={{ fontSize: 15, lineHeight: 1.75, margin: 0, color: "#3B4A42", maxWidth: 640 }}>{t.desc}</p>
+            {t.sub && <p style={{ fontSize: 13, lineHeight: 1.65, color: "#6B7A72", marginTop: 10, maxWidth: 640 }}>{t.sub}</p>}
+          </Section>
+
+          {t.steps.length > 0 && (
+            <Section title="Itinerary">
+              <div style={{ borderLeft: `2px solid ${T.line}`, paddingLeft: 18, display: "flex", flexDirection: "column", gap: 16 }}>
+                {t.steps.map((s, i) => (
+                  <div key={i} style={{ position: "relative" }}>
+                    <span style={{ position: "absolute", left: -27, top: 0, width: 18, height: 18, borderRadius: "50%", background: T.green, color: "#fff", fontSize: 10, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{i + 1}</span>
+                    <div style={{ fontSize: 14.5, lineHeight: 1.55 }}>{s}</div>
+                  </div>
+                ))}
+              </div>
+            </Section>
+          )}
+
+          {t.addons.length > 0 && (
+            <Section title="Options & extras">
+              <p style={{ fontSize: 13.5, color: "#6B7A72", margin: "0 0 12px" }}>Add options to your experience — they update the estimate on the right. Final selection is confirmed at booking.</p>
+              {t.addons.map((a) => {
+                const on = extras.includes(a.name);
+                const selectable = !!a.price;
+                return (
+                  <div key={a.name} role="button" tabIndex={0}
+                    onClick={() => selectable && toggleExtra(a.name)}
+                    onKeyDown={(e) => { if (selectable && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); toggleExtra(a.name); } }}
+                    style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", border: `1.5px solid ${on ? T.green : T.line}`, borderRadius: 12, marginBottom: 8, cursor: selectable ? "pointer" : "default", background: on ? "#F3FAF5" : "#fff", opacity: selectable ? 1 : 0.7 }}>
+                    <span style={{ width: 20, height: 20, borderRadius: 6, border: `1.5px solid ${on ? T.green : T.line}`, background: on ? T.green : "#fff", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, flexShrink: 0 }}>{on ? "✓" : ""}</span>
+                    <span style={{ flex: 1, fontSize: 14.5 }}>{a.name}</span>
+                    <strong style={{ whiteSpace: "nowrap", color: T.green }}>{a.price ? "+ " + fmtXOF(a.price) + (a.per === "person" ? " /pp" : "") : "On request"}</strong>
+                  </div>
+                );
+              })}
+            </Section>
+          )}
+
+          {!t.quote && (
+            <Section title="Prices">
+              <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 14, padding: 18 }}>
+                <PriceGrid t={t} />
+                <p style={{ fontSize: 12.5, color: "#6B7A72", margin: "10px 0 0" }}>Per-person price by group size — larger groups pay less per person. Children 3–12; under 3 free. Transport not included (chosen at booking).</p>
+              </div>
+            </Section>
+          )}
+
+          <Section title="FAQ">
+            <div style={{ display: "flex", flexDirection: "column", gap: 12, fontSize: 14.5, lineHeight: 1.6 }}>
+              <div><strong>Why do prices change with group size?</strong><br />ATS prices per person by basis — Private 1–2, Private 3–4, or Group 5+ — so bigger groups pay less per person.</div>
+              <div><strong>Is transport included?</strong><br />No. Choose your vehicle category at booking (Sedan, SUV, Minivan or coach), priced per vehicle from the ATS Logistics rate card.</div>
+              <div><strong>Can I pay in instalments?</strong><br />Yes — Ma Tontine Voyage: 20% deposit confirms your booking, balance in scheduled instalments before departure.</div>
+            </div>
+          </Section>
+
+          <Section title="Traveler reviews">
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              {REVIEWS.map((r, i) => (
+                <div key={i} style={{ borderBottom: `1px solid ${T.line}`, paddingBottom: 12 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ width: 30, height: 30, borderRadius: "50%", background: T.green, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800 }}>{r.who.split(" ").map((w) => w[0]).join("")}</span>
+                    <strong style={{ fontSize: 14 }}>{r.who}</strong>
+                    <span style={{ color: T.gold, fontSize: 13, letterSpacing: 1 }}>★★★★★</span>
+                  </div>
+                  <p style={{ margin: "6px 0 0", fontSize: 14, opacity: 0.85 }}>{r.txt}</p>
+                </div>
+              ))}
+            </div>
+          </Section>
+        </div>
+
+        {/* Sticky booking sidebar (desktop) */}
+        <aside className="tour-aside">
           <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 16, padding: 22, position: "sticky", top: 80 }}>
             {t.quote ? (
               <div className="disp" style={{ fontWeight: 800, fontSize: 22, color: T.indigo }}>Price on request</div>
             ) : (
               <>
-                <div style={{ fontWeight: 800, fontSize: 24 }} className="disp">from {fmtXOF(fromPrice(t))}</div>
-                <div style={{ fontSize: 13, opacity: 0.65 }}>per person · group 5+ rate · {fmtUSD(fromPrice(t))}</div>
-                <div style={{ marginTop: 8, fontSize: 13, background: T.paperDark, borderRadius: 8, padding: "8px 10px" }}>
-                  1–2 pax: <strong>{fmtXOF(t.grid.p12.a)}</strong> · 3–4 pax: <strong>{fmtXOF(t.grid.p34.a)}</strong> pp
+                <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                  <span className="disp" style={{ fontWeight: 800, fontSize: 26, color: T.green }}>{fmtXOF(ppUnit)}</span>
+                  <span style={{ fontSize: 13, opacity: 0.6 }}>/ person</span>
+                </div>
+                <div style={{ fontSize: 12.5, opacity: 0.6 }}>{fmtUSD(ppUnit)} · {tierLabel[tier]}</div>
+
+                <div style={{ marginTop: 14 }}>
+                  <label style={label}>Travelers</label>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <button onClick={() => setPax(Math.max(1, pax - 1))} style={btnCircle} aria-label="Fewer">−</button>
+                    <span style={{ fontWeight: 700, minWidth: 20, textAlign: "center" }}>{pax}</span>
+                    <button onClick={() => setPax(pax + 1)} style={btnCircle} aria-label="More">+</button>
+                  </div>
+                  <div style={{ fontSize: 11.5, opacity: 0.6, marginTop: 4 }}>Price adjusts automatically with group size.</div>
+                </div>
+
+                <div style={{ marginTop: 12 }}>
+                  <label style={label}>Travel date</label>
+                  <input type="date" min={todayStr} value={date} onChange={(e) => setDate(e.target.value)} style={input} />
+                  {date && (
+                    <div style={{ fontSize: 12, marginTop: 5, color: dateOk ? T.green : "#B3261E", fontWeight: 600 }}>
+                      {dateOk ? `✓ Available on ${date}${tontinePossible ? " · Ma Tontine eligible" : " · full payment only (under 15 days)"}` : "Please choose a future date"}
+                    </div>
+                  )}
+                </div>
+
+                {rates && (
+                  <div style={{ marginTop: 12 }}>
+                    <label style={label}>Transport (optional)</label>
+                    <select value={vehicle} onChange={(e) => setVehicle(+e.target.value)} style={{ ...input, fontWeight: 600 }}>
+                      <option value={-1}>No transport — I'll arrange my own</option>
+                      {VEHICLES.map((v, i) => (
+                        <option key={v.name} value={i} disabled={v.cap < pax}>{v.name} · up to {v.cap} — {fmtXOF(rates[i])}{v.cap < pax ? " (too small)" : ""}</option>
+                      ))}
+                    </select>
+                    <div style={{ fontSize: 11.5, opacity: 0.6, marginTop: 4 }}>Per vehicle, for the day — chosen by group size.</div>
+                  </div>
+                )}
+
+                <div style={{ borderTop: `1px solid ${T.line}`, marginTop: 14, paddingTop: 12, display: "flex", fontSize: 15 }}>
+                  <span style={{ opacity: 0.7 }}>Estimated total</span>
+                  <strong style={{ marginLeft: "auto" }}>{fmtXOF(estTotal)}</strong>
+                </div>
+                <div style={{ background: T.paperDark, borderRadius: 10, padding: "10px 12px", fontSize: 12.5, lineHeight: 1.6, marginTop: 10 }}>
+                  <strong style={{ color: T.laterite }}>Ma Tontine Voyage:</strong> reserve with {fmtXOF(estTotal * 0.2)} (20%), balance in instalments before departure.
                 </div>
               </>
             )}
-            <button style={{ ...btnGold, width: "100%", marginTop: 14, borderRadius: 12, background: t.quote ? T.indigo : T.gold, color: t.quote ? "#fff" : T.ink }} onClick={() => setBooking(t)}>
-              {t.quote ? "Request a quote" : "Check availability & book"}
+
+            {t.quote ? (
+              <button style={{ ...btnGold, width: "100%", marginTop: 14, borderRadius: 12, background: T.indigo, color: "#fff" }} onClick={() => openBooking("quote")}>Request a quote</button>
+            ) : (
+              <>
+                <button style={{ ...btnGold, width: "100%", marginTop: 14, borderRadius: 12 }} onClick={() => openBooking("full")}>Pay in full</button>
+                <button style={{ width: "100%", marginTop: 8, background: T.laterite, color: "#fff", border: "none", borderRadius: 12, padding: "12px 14px", fontWeight: 800, cursor: "pointer", fontSize: 15 }} onClick={() => openBooking("deposit")}>Pay with Ma Tontine (20%)</button>
+              </>
+            )}
+            <button style={{ width: "100%", marginTop: 8, background: "#fff", color: T.green, border: `1.5px solid ${T.green}`, borderRadius: 12, padding: "11px 14px", fontWeight: 700, cursor: "pointer", fontSize: 14 }} onClick={() => go("builder")}>
+              ✦ Build a 100% custom trip
             </button>
-            <button style={{ background: "none", border: "none", cursor: "pointer", marginTop: 10, fontWeight: 600, color: fav ? T.laterite : T.ink, fontSize: 14 }} onClick={() => setFav(!fav)}>
+            <button style={{ background: "none", border: "none", cursor: "pointer", marginTop: 10, fontWeight: 600, color: fav ? T.laterite : T.ink, fontSize: 14, width: "100%" }} onClick={() => setFav(!fav)}>
               {fav ? "♥ Saved to favorites" : "♡ Save to favorites"}
             </button>
-            <div style={{ fontSize: 12.5, opacity: 0.65, marginTop: 10, lineHeight: 1.5 }}>Transport quoted per vehicle at booking · Ma Tontine Voyage available</div>
+            <div style={{ fontSize: 12, opacity: 0.6, marginTop: 10, lineHeight: 1.5, textAlign: "center" }}>🛡 Instalments available · free cancellation 48h</div>
           </div>
         </aside>
       </Wrap>
+
+      {/* Fixed booking bar (mobile only) */}
+      <style>{`
+        .tour-bottombar{display:none}
+        @media(max-width:900px){
+          .tour-aside{display:none}
+          .tour-bottombar{display:block}
+        }
+      `}</style>
+      <div className="tour-bottombar" style={{ position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 60, background: "#fff", borderTop: `1px solid ${T.line}`, boxShadow: "0 -8px 24px rgba(0,0,0,.12)", padding: "10px 14px calc(10px + env(safe-area-inset-bottom))" }}>
+        {t.quote ? (
+          <button style={{ ...btnGold, width: "100%", borderRadius: 12, background: T.indigo, color: "#fff" }} onClick={() => openBooking("quote")}>Request a quote</button>
+        ) : (
+          <>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontWeight: 800, fontSize: 18, color: T.green }} className="disp">{fmtXOF(estTotal)}</div>
+                <div style={{ fontSize: 11.5, opacity: 0.6 }}>{fmtXOF(ppUnit)} /pers · {pax} pax</div>
+              </div>
+              <input type="date" min={todayStr} value={date} onChange={(e) => setDate(e.target.value)} style={{ ...input, padding: "7px 8px", fontSize: 12.5, width: "auto", flex: 1, minWidth: 0 }} />
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <button onClick={() => setPax(Math.max(1, pax - 1))} style={btnCircle} aria-label="Fewer">−</button>
+                <span style={{ fontWeight: 700, minWidth: 16, textAlign: "center" }}>{pax}</span>
+                <button onClick={() => setPax(pax + 1)} style={btnCircle} aria-label="More">+</button>
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button style={{ ...btnGold, flex: 1, borderRadius: 12, fontSize: 14, padding: "12px 8px" }} onClick={() => openBooking("full")}>Pay in full</button>
+              <button style={{ flex: 1, background: T.laterite, color: "#fff", border: "none", borderRadius: 12, padding: "12px 8px", fontWeight: 800, cursor: "pointer", fontSize: 14 }} onClick={() => openBooking("deposit")}>Ma Tontine</button>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Gallery lightbox */}
+      {preview !== null && (
+        <div role="dialog" aria-modal="true" onClick={() => setPreview(null)} style={{ position: "fixed", inset: 0, zIndex: 80, background: "rgba(0,0,0,.8)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <button onClick={() => setPreview(null)} aria-label="Close" style={{ position: "absolute", top: 18, right: 18, background: "rgba(255,255,255,.15)", border: "none", color: "#fff", width: 42, height: 42, borderRadius: "50%", cursor: "pointer", fontSize: 18 }}>✕</button>
+          <div onClick={(e) => e.stopPropagation()} style={{ width: "min(900px, 92vw)", aspectRatio: "16 / 10", borderRadius: 16, overflow: "hidden", background: tile(preview) ? `center/cover no-repeat url(${tile(preview)})` : `linear-gradient(140deg, ${T.green}, ${T.indigo})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 120 }}>
+            {!tile(preview) && t.emoji}
+          </div>
+        </div>
+      )}
     </>
   );
 }
@@ -946,7 +1182,7 @@ function AboutPage({ notify }) {
       <div style={{ background: `linear-gradient(160deg, ${T.ink}, ${T.green})`, color: T.paper }}>
         <Wrap style={{ padding: "56px 20px" }}>
           <Eyebrow><span style={{ color: T.gold }}>Qui sommes-nous</span></Eyebrow>
-          <h1 className="disp" style={{ fontSize: "clamp(30px,5vw,50px)", fontWeight: 800, margin: "10px 0 14px", letterSpacing: "-0.02em" }}>About Africa Tourism Solutions</h1>
+          <h1 className="disp" style={{ fontSize: "clamp(26px,4vw,40px)", fontWeight: 700, margin: "10px 0 14px", letterSpacing: "-0.02em" }}>About Africa Tourism Solutions</h1>
           <p style={{ maxWidth: 680, fontSize: 17, lineHeight: 1.6, opacity: 0.92 }}>
             Founded by two young Senegalese entrepreneurs, ATS is the expression of an Africa revalued — historically, touristically and culturally. We exist to break the stereotype of a continent defined by poverty and danger, with a rich, authentic offer that shows its true, majestic beauty.
           </p>
@@ -1329,17 +1565,18 @@ const TONTINE_OPTIONS = [
   { key: "1y", label: "1 year", days: 365, n: 12 },
 ];
 
-function BookingModal({ tour, onClose, onConfirm }) {
+function BookingModal({ tour, user, onClose, onConfirm }) {
   const todayStr = new Date().toISOString().slice(0, 10);
-  const [date, setDate] = useState("");
-  const [adults, setAdults] = useState(2);
+  const [date, setDate] = useState(tour.initialDate || "");
+  const [adults, setAdults] = useState(tour.initialPax || 2);
   const [children, setChildren] = useState(0); // 3–12
   const [infants, setInfants] = useState(0);  // under 3, free
-  const [addons, setAddons] = useState([]);
-  const [vehicle, setVehicle] = useState(-1); // -1 = no transport
-  const [plan, setPlan] = useState("full");
+  const [addons, setAddons] = useState(tour.initialExtras || []);
+  const [vehicle, setVehicle] = useState(tour.initialVehicle ?? -1); // -1 = no transport
+  const [plan, setPlan] = useState(tour.initialPlan === "deposit" ? "deposit" : "full");
   const [sched, setSched] = useState("3m");
   const [msg, setMsg] = useState("");
+  const [bill, setBill] = useState({ name: user?.name || "", email: user?.email || "", phone: "" });
   const toggle = (n) => setAddons((a) => (a.includes(n) ? a.filter((x) => x !== n) : [...a, n]));
 
   // ---- Ma Tontine availability vs chosen travel date ----
@@ -1509,9 +1746,18 @@ function BookingModal({ tour, onClose, onConfirm }) {
               )}
             </div>
 
-            <button style={{ width: "100%", marginTop: 14, background: T.gold, color: T.ink, border: "none", borderRadius: 12, padding: 14, fontWeight: 800, fontSize: 16, cursor: "pointer" }}
-              onClick={() => onConfirm({ tour, date, adults, children, infants, plan, months, schedule: plan === "deposit" ? selectedOpt.label : "", total: calc.total, deposit: calc.deposit })}>
-              {plan === "deposit" ? `Reserve with ${fmtXOF(calc.deposit)} deposit` : "Continue to payment"}
+            <div style={sect}>{plan === "deposit" ? "Reservation details" : "Reservation & billing details"}</div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <div style={{ flex: 1 }}><label style={label}>Full name</label><input style={input} value={bill.name} onChange={(e) => setBill({ ...bill, name: e.target.value })} placeholder="e.g. Awa Diop" /></div>
+              <div style={{ flex: 1 }}><label style={label}>Phone</label><input style={input} value={bill.phone} onChange={(e) => setBill({ ...bill, phone: e.target.value })} placeholder="+221 …" /></div>
+            </div>
+            <label style={label}>Email</label>
+            <input style={input} type="email" value={bill.email} onChange={(e) => setBill({ ...bill, email: e.target.value })} placeholder="you@example.com" />
+
+            <button style={{ width: "100%", marginTop: 14, background: T.gold, color: T.ink, border: "none", borderRadius: 12, padding: 14, fontWeight: 800, fontSize: 16, cursor: "pointer", opacity: bill.name && bill.email ? 1 : 0.55 }}
+              disabled={!bill.name || !bill.email}
+              onClick={() => onConfirm({ tour, date, adults, children, infants, plan, months, schedule: plan === "deposit" ? selectedOpt.label : "", total: calc.total, deposit: calc.deposit, contact: bill, addonsChosen: addons })}>
+              {plan === "deposit" ? `Reserve with ${fmtXOF(calc.deposit)} deposit` : `Pay in full — ${fmtXOF(calc.total)}`}
             </button>
             <div style={{ marginTop: 10, fontSize: 12, opacity: 0.6, textAlign: "center" }}>
               Visa · Mastercard · PayPal · Orange Money · Wave · Free Money · M-Pesa · Bank transfer — demo, no real charge
