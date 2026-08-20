@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { supabase } from "./lib/supabase";
 import {
@@ -121,7 +121,7 @@ function RangeDate({ from, to, onChange, triggerStyle }) {
       {open && (
         <>
           <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 90 }} />
-          <div style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 91, background: "#fff", color: T.ink, border: `1px solid ${T.line}`, borderRadius: 14, boxShadow: "0 18px 40px rgba(0,0,0,.22)", padding: 14, width: 290 }}>
+          <div style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 91, background: "#fff", color: T.ink, border: `1px solid ${T.line}`, borderRadius: 14, boxShadow: "0 18px 40px rgba(0,0,0,.22)", padding: 14, width: "min(290px, calc(100vw - 32px))", maxWidth: "90vw" }}>
             <div style={{ display: "flex", alignItems: "center", marginBottom: 10 }}>
               <button type="button" disabled={!canPrev} onClick={() => setView((v) => ({ y: v.m === 0 ? v.y - 1 : v.y, m: v.m === 0 ? 11 : v.m - 1 }))}
                 style={{ ...btnCircle, opacity: canPrev ? 1 : 0.3, cursor: canPrev ? "pointer" : "not-allowed" }}>‹</button>
@@ -218,7 +218,11 @@ function Row({ l, v }) { return <div style={{ display: "flex", padding: "4px 0" 
 
 // ============================================================
 export default function ATSPlatformPreview() {
-  const [page, setPage] = useState({ name: "home" });
+  const [page, setPage] = useState(() => {
+    try { const s = sessionStorage.getItem("ats_page"); if (s) return JSON.parse(s); } catch { /* ignore */ }
+    return { name: "home" };
+  });
+  useEffect(() => { try { sessionStorage.setItem("ats_page", JSON.stringify(page)); } catch { /* ignore */ } }, [page]);
   const [toast, setToast] = useState(null);
   const [user, setUser] = useState(null);
   const [bookings, setBookings] = useState([]);
@@ -708,10 +712,29 @@ function PortalTabs({ go }) {
 const PHOTO_BUCKET = "tour-photos";
 const coverUrl = (id) => supabase.storage.from(PHOTO_BUCKET).getPublicUrl(`${id}/cover.jpg`).data.publicUrl;
 
+// Resolve a tour's cover by listing its folder — matches "cover.*" (any extension),
+// falls back to the first image. Avoids the hard-coded ".jpg" assumption.
+function useCoverUrl(id) {
+  const [url, setUrl] = useState(null);
+  useEffect(() => {
+    if (!id) { setUrl(null); return; }
+    let alive = true;
+    supabase.storage.from(PHOTO_BUCKET).list(id, { limit: 30 }).then(({ data }) => {
+      if (!alive || !data) return;
+      const files = data.filter((f) => f.name && !f.name.startsWith("."));
+      const cover = files.find((f) => /^cover\.[^.]+$/i.test(f.name)) || files[0];
+      setUrl(cover ? supabase.storage.from(PHOTO_BUCKET).getPublicUrl(`${id}/${cover.name}`).data.publicUrl : null);
+    });
+    return () => { alive = false; };
+  }, [id]);
+  return url;
+}
+
 function Thumb({ rec, size = 46 }) {
-  const [ok, setOk] = useState(true);
   const id = rec.tour?.id;
-  const url = rec.tour?.thumb || (id ? coverUrl(id) : null);
+  const auto = useCoverUrl(rec.tour?.thumb ? null : id);
+  const url = rec.tour?.thumb || auto;
+  const [ok, setOk] = useState(true);
   return (
     <div style={{ width: size, height: size, borderRadius: 10, overflow: "hidden", background: T.paperDark, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: T.green }}>
       {ok && url ? <img src={url} alt="" onError={() => setOk(false)} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} /> : <CatIcon tour={rec.tour} size={Math.round(size * 0.5)} />}
@@ -720,11 +743,12 @@ function Thumb({ rec, size = 46 }) {
 }
 
 function Cover({ tour, id, ratio, radius = 0, size = 58 }) {
-  const [ok, setOk] = useState(true);
   const cid = id || tour?.id;
+  const url = useCoverUrl(cid);
+  const [ok, setOk] = useState(true);
   return (
     <div style={{ aspectRatio: ratio, width: "100%", borderRadius: radius, overflow: "hidden", background: `linear-gradient(140deg, ${T.green}, ${T.indigo})`, display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,.9)" }}>
-      {ok ? <img src={coverUrl(cid)} alt="" onError={() => setOk(false)} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} /> : <CatIcon tour={tour} size={size} color="rgba(255,255,255,.92)" strokeWidth={1.4} />}
+      {ok && url ? <img src={url} alt="" onError={() => setOk(false)} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} /> : <CatIcon tour={tour} size={size} color="rgba(255,255,255,.92)" strokeWidth={1.4} />}
     </div>
   );
 }
@@ -751,29 +775,29 @@ function TourGrid({ tours, go, setBooking }) {
   return (
     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 18, marginTop: 18 }}>
       {tours.map((t) => (
-        <article key={t.id} className="card-hover" onClick={() => go("tour", { id: t.id })} style={{ background: T.paper, border: `1px solid ${T.line}`, borderRadius: 16, overflow: "hidden", display: "flex", flexDirection: "column", cursor: "pointer" }}>
+        <article key={t.id} className="card-hover" onClick={() => go("tour", { id: t.id })} style={{ background: T.paper, border: `1px solid ${T.line}`, borderRadius: 16, overflow: "hidden", display: "flex", flexDirection: "column", cursor: "pointer", color: "#1A1A1A" }}>
           <Cover tour={t} ratio="4 / 3" size={58} />
 
           <div style={{ padding: 14, display: "flex", flexDirection: "column", flex: 1 }}>
             <div style={{ display: "flex", gap: 5, marginBottom: 7, flexWrap: "nowrap", overflow: "hidden" }}>
-              <span style={pill(T.laterite)}>{t.pole}</span><span style={pill(T.indigo)}>{t.tag}</span>
-              {!t.quote && <span style={pill(T.green)}>Group discounts</span>}
+              <span style={pill()}>{t.pole}</span><span style={pill()}>{t.tag}</span>
+              {!t.quote && <span style={pill()}>Group discounts</span>}
             </div>
-            <h3 className="disp" style={{ fontSize: 14.5, fontWeight: 700, lineHeight: 1.2, margin: 0, color: T.ink }}>{t.name}</h3>
-            <p style={{ fontSize: 12.5, lineHeight: 1.45, opacity: 0.8, flex: 1, marginTop: 5, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{t.desc}</p>
-            <div style={{ fontSize: 11.5, opacity: 0.65, margin: "8px 0 4px" }}>{t.dur}</div>
+            <h3 className="disp" style={{ fontSize: 14.5, fontWeight: 700, lineHeight: 1.2, margin: 0, color: "#1A1A1A" }}>{t.name}</h3>
+            <p style={{ fontSize: 12.5, lineHeight: 1.45, color: "#555", flex: 1, marginTop: 5, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{t.desc}</p>
+            <div style={{ fontSize: 11.5, color: "#777", margin: "8px 0 4px" }}>{t.dur}</div>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <div style={{ minWidth: 0 }}>
                 {t.quote ? (
-                  <div style={{ fontWeight: 700, fontSize: 14, color: T.indigo }}>Price on request</div>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: "#1A1A1A" }}>Price on request</div>
                 ) : (
                   <>
-                    <div style={{ fontWeight: 700, fontSize: 14 }}>from {fmtXOF(fromPrice(t))} <span style={{ fontWeight: 500, fontSize: 11.5, opacity: 0.6 }}>pp</span></div>
-                    <div style={{ fontSize: 11, opacity: 0.6 }}>group rate · {fmtUSD(fromPrice(t))} · 1–2 pax: {fmtXOF(t.grid.p12.a)}</div>
+                    <div style={{ fontWeight: 700, fontSize: 14, color: "#1A1A1A" }}>from {fmtXOF(fromPrice(t))} <span style={{ fontWeight: 500, fontSize: 11.5, color: "#888" }}>pp</span></div>
+                    <div style={{ fontSize: 11, color: "#888" }}>group rate · {fmtUSD(fromPrice(t))} · 1–2 pax: {fmtXOF(t.grid.p12.a)}</div>
                   </>
                 )}
               </div>
-              <button onClick={(e) => { e.stopPropagation(); setBooking(t); }} style={{ marginLeft: "auto", background: t.quote ? T.indigo : T.gold, color: t.quote ? "#fff" : T.ink, border: "none", borderRadius: 10, padding: "8px 15px", fontWeight: 700, fontSize: 13.5, cursor: "pointer", flexShrink: 0 }}>{t.quote ? "Get quote" : "Book"}</button>
+              <button onClick={(e) => { e.stopPropagation(); setBooking(t); }} style={{ marginLeft: "auto", background: t.quote ? "#1A1A1A" : T.gold, color: t.quote ? "#fff" : T.ink, border: "none", borderRadius: 10, padding: "8px 15px", fontWeight: 700, fontSize: 13.5, cursor: "pointer", flexShrink: 0 }}>{t.quote ? "Get quote" : "Book"}</button>
             </div>
           </div>
         </article>
@@ -781,7 +805,7 @@ function TourGrid({ tours, go, setBooking }) {
     </div>
   );
 }
-const pill = (c) => ({ fontSize: 9.5, fontWeight: 600, color: c, background: "#fff", border: `1px solid ${T.line}`, padding: "2px 7px", borderRadius: 999, whiteSpace: "nowrap", flexShrink: 0 });
+const pill = () => ({ fontSize: 10, fontWeight: 500, color: "#1A1A1A", background: "#F2F2F2", border: "none", padding: "3px 9px", borderRadius: 999, whiteSpace: "nowrap", flexShrink: 0 });
 
 function ToursPage({ go, setBooking, filters, setFilters }) {
   const tags = ["All", ...new Set(TOURS.map((t) => t.tag))];
@@ -790,15 +814,17 @@ function ToursPage({ go, setBooking, filters, setFilters }) {
     <Wrap>
       <Eyebrow>Senegal · 6 regions · transport quoted separately</Eyebrow>
       <H2>All tours & experiences</H2>
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 6 }}>
-        {POLES.map((p) => (
-          <button key={p} onClick={() => setFilters({ ...filters, pole: p })} style={{ border: `1px solid ${p === filters.pole ? T.green : T.line}`, background: p === filters.pole ? T.green : "#fff", color: p === filters.pole ? "#fff" : T.ink, borderRadius: 999, padding: "7px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>{p}</button>
-        ))}
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
+        {POLES.map((p) => {
+          const on = p === filters.pole;
+          return <button key={p} onClick={() => setFilters({ ...filters, pole: p })} style={{ border: "none", background: on ? T.green : "#F7F7F7", color: on ? "#fff" : "#1A1A1A", borderRadius: 999, padding: "8px 16px", fontSize: 13, fontWeight: on ? 600 : 500, cursor: "pointer" }}>{p === "All" ? "All regions" : p}</button>;
+        })}
       </div>
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        {tags.map((p) => (
-          <button key={p} onClick={() => setFilters({ ...filters, tag: p })} style={{ border: `1px solid ${p === filters.tag ? T.indigo : T.line}`, background: p === filters.tag ? T.indigo : "transparent", color: p === filters.tag ? "#fff" : T.ink, borderRadius: 999, padding: "6px 12px", fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}>{p}</button>
-        ))}
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 20 }}>
+        {tags.map((p) => {
+          const on = p === filters.tag;
+          return <button key={p} onClick={() => setFilters({ ...filters, tag: p })} style={{ border: "none", background: on ? T.indigo : "#F7F7F7", color: on ? "#fff" : "#1A1A1A", borderRadius: 999, padding: "8px 15px", fontSize: 12.5, fontWeight: on ? 600 : 500, cursor: "pointer" }}>{p === "All" ? "All themes" : p}</button>;
+        })}
       </div>
       {tours.length === 0 ? (
         <div style={{ marginTop: 30, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 14, padding: 24 }}>
@@ -813,24 +839,26 @@ function ToursPage({ go, setBooking, filters, setFilters }) {
 function PriceGrid({ t }) {
   const rows = [["p12", t.grid.p12], ["p34", t.grid.p34], ["grp", t.grid.grp]];
   return (
-    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14.5 }}>
-      <thead>
-        <tr style={{ textAlign: "left", color: T.indigo }}>
-          <th style={{ padding: "8px 6px", borderBottom: `2px solid ${T.green}` }}>Basis (per person)</th>
-          <th style={{ padding: "8px 6px", borderBottom: `2px solid ${T.green}` }}>Adult</th>
-          <th style={{ padding: "8px 6px", borderBottom: `2px solid ${T.green}` }}>Child 3–12</th>
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map(([k, v]) => (
-          <tr key={k}>
-            <td style={{ padding: "9px 6px", borderBottom: `1px solid ${T.line}`, fontWeight: 600 }}>{tierLabel[k]}</td>
-            <td style={{ padding: "9px 6px", borderBottom: `1px solid ${T.line}` }}>{v.a ? fmtXOF(v.a) : "On request"}</td>
-            <td style={{ padding: "9px 6px", borderBottom: `1px solid ${T.line}` }}>{v.c ? fmtXOF(v.c) : v.a ? "Adult rate*" : "On request"}</td>
+    <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
+      <table style={{ width: "100%", minWidth: 320, borderCollapse: "collapse", fontSize: "clamp(12.5px, 3.2vw, 14.5px)" }}>
+        <thead>
+          <tr style={{ textAlign: "left", color: T.indigo }}>
+            <th style={{ padding: "8px 6px", borderBottom: `2px solid ${T.green}` }}>Basis (per person)</th>
+            <th style={{ padding: "8px 6px", borderBottom: `2px solid ${T.green}`, whiteSpace: "nowrap" }}>Adult</th>
+            <th style={{ padding: "8px 6px", borderBottom: `2px solid ${T.green}`, whiteSpace: "nowrap" }}>Child 3–12</th>
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {rows.map(([k, v]) => (
+            <tr key={k}>
+              <td style={{ padding: "9px 6px", borderBottom: `1px solid ${T.line}`, fontWeight: 600 }}>{tierLabel[k]}</td>
+              <td style={{ padding: "9px 6px", borderBottom: `1px solid ${T.line}`, whiteSpace: "nowrap" }}>{v.a ? fmtXOF(v.a) : "On request"}</td>
+              <td style={{ padding: "9px 6px", borderBottom: `1px solid ${T.line}`, whiteSpace: "nowrap" }}>{v.c ? fmtXOF(v.c) : v.a ? "Adult rate*" : "On request"}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
@@ -870,6 +898,26 @@ function TourDetail({ tourId, go, setBooking }) {
   const extrasTotal = t.addons.filter((a) => extras.includes(a.name) && a.price).reduce((s, a) => s + (a.per === "person" ? a.price * pax : a.price), 0);
   const estTotal = ppUnit != null ? ppUnit * pax + extrasTotal + transportCost : null;
   const toggleExtra = (name) => setExtras((x) => x.includes(name) ? x.filter((n) => n !== name) : [...x, name]);
+
+  // Similar tours for cross-sell (same tag weighted highest, then same pole/zone)
+  const similar = useMemo(() => {
+    const score = (x) => (x.tag === t.tag ? 3 : 0) + (x.pole === t.pole ? 2 : 0) + (x.zone && x.zone === t.zone ? 1 : 0);
+    return TOURS.filter((x) => x.id !== t.id).map((x) => [score(x), x]).sort((a, b) => b[0] - a[0]).slice(0, 9).map((p) => p[1]);
+  }, [t.id]);
+  const xsellRef = useRef(null);
+  const scrollXsell = (dir) => { const el = xsellRef.current; if (el) el.scrollBy({ left: dir * el.clientWidth * 0.85, behavior: "smooth" }); };
+
+  // Keyboard navigation for the gallery lightbox
+  useEffect(() => {
+    if (preview === null) return;
+    const onKey = (e) => {
+      if (e.key === "Escape") setPreview(null);
+      if (e.key === "ArrowRight") setPreview((p) => (p + 1) % galleryCount);
+      if (e.key === "ArrowLeft") setPreview((p) => (p - 1 + galleryCount) % galleryCount);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [preview, galleryCount]);
 
   return (
     <>
@@ -1108,15 +1156,53 @@ function TourDetail({ tourId, go, setBooking }) {
         )}
       </div>
 
-      {/* Gallery lightbox */}
-      {preview !== null && (
-        <div role="dialog" aria-modal="true" onClick={() => setPreview(null)} style={{ position: "fixed", inset: 0, zIndex: 80, background: "rgba(0,0,0,.8)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-          <button onClick={() => setPreview(null)} aria-label="Close" style={{ position: "absolute", top: 18, right: 18, background: "rgba(255,255,255,.15)", border: "none", color: "#fff", width: 42, height: 42, borderRadius: "50%", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><X size={20} /></button>
+      {/* Cross-sell — similar tours (3 visible, rest slide) */}
+      {similar.length > 0 && (
+        <Wrap style={{ paddingTop: 8 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 14 }}>
+            <div>
+              <Eyebrow>You may also like</Eyebrow>
+              <h3 className="disp" style={{ fontWeight: 800, fontSize: "clamp(19px,2.4vw,24px)", color: T.ink, margin: "6px 0 0" }}>Similar experiences</h3>
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={() => scrollXsell(-1)} aria-label="Scroll left" style={{ width: 42, height: 42, borderRadius: "50%", border: `1px solid ${T.line}`, background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: T.ink }}><ChevronLeft size={20} /></button>
+              <button onClick={() => scrollXsell(1)} aria-label="Scroll right" style={{ width: 42, height: 42, borderRadius: "50%", border: `1px solid ${T.line}`, background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: T.ink }}><ChevronRight size={20} /></button>
+            </div>
+          </div>
+          <div ref={xsellRef} className="xsell-row" style={{ display: "flex", gap: 18, overflowX: "auto", scrollSnapType: "x mandatory", paddingBottom: 8, scrollbarWidth: "none" }}>
+            <style>{`.xsell-row::-webkit-scrollbar{display:none}.xsell-card{flex:0 0 calc((100% - 36px)/3);scroll-snap-align:start}@media(max-width:900px){.xsell-card{flex:0 0 calc((100% - 18px)/2)}}@media(max-width:600px){.xsell-card{flex:0 0 82%}}`}</style>
+            {similar.map((s) => (
+              <article key={s.id} className="card-hover xsell-card" onClick={() => go("tour", { id: s.id })} style={{ background: T.paper, border: `1px solid ${T.line}`, borderRadius: 16, overflow: "hidden", display: "flex", flexDirection: "column", cursor: "pointer", minWidth: 0, color: "#1A1A1A" }}>
+                <Cover tour={s} ratio="4 / 3" size={52} />
+                <div style={{ padding: 14, display: "flex", flexDirection: "column", flex: 1 }}>
+                  <div style={{ display: "flex", gap: 5, marginBottom: 7, overflow: "hidden" }}>
+                    <span style={pill()}>{s.pole}</span><span style={pill()}>{s.tag}</span>
+                  </div>
+                  <h4 className="disp" style={{ fontSize: 14.5, fontWeight: 700, lineHeight: 1.2, margin: 0, color: "#1A1A1A" }}>{s.name}</h4>
+                  <div style={{ fontSize: 11.5, color: "#777", margin: "6px 0 8px" }}>{s.dur}</div>
+                  <div style={{ marginTop: "auto", display: "flex", alignItems: "center", gap: 10 }}>
+                    <div style={{ fontWeight: 700, fontSize: 13.5, color: "#1A1A1A" }}>{s.quote ? "Price on request" : <>from {fmtXOF(fromPrice(s))}</>}</div>
+                    <button onClick={(e) => { e.stopPropagation(); setBooking(s); }} style={{ marginLeft: "auto", background: s.quote ? "#1A1A1A" : T.gold, color: s.quote ? "#fff" : T.ink, border: "none", borderRadius: 10, padding: "7px 13px", fontWeight: 700, fontSize: 13, cursor: "pointer", flexShrink: 0 }}>{s.quote ? "Get quote" : "Book"}</button>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        </Wrap>
+      )}
+
+      {/* Gallery lightbox — click a photo, then browse left/right */}
+      {preview !== null && createPortal((
+        <div role="dialog" aria-modal="true" onClick={() => setPreview(null)} style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(0,0,0,.9)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <button onClick={() => setPreview(null)} aria-label="Close" style={{ position: "absolute", top: 18, right: 18, background: "rgba(255,255,255,.15)", border: "none", color: "#fff", width: 44, height: 44, borderRadius: "50%", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><X size={22} /></button>
+          <button onClick={(e) => { e.stopPropagation(); setPreview((p) => (p - 1 + galleryCount) % galleryCount); }} aria-label="Previous photo" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", width: 48, height: 48, borderRadius: "50%", border: "none", background: "rgba(255,255,255,.15)", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><ChevronLeft size={26} /></button>
+          <button onClick={(e) => { e.stopPropagation(); setPreview((p) => (p + 1) % galleryCount); }} aria-label="Next photo" style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", width: 48, height: 48, borderRadius: "50%", border: "none", background: "rgba(255,255,255,.15)", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><ChevronRight size={26} /></button>
           <div onClick={(e) => e.stopPropagation()} style={{ width: "min(900px, 92vw)", aspectRatio: "16 / 10", borderRadius: 16, overflow: "hidden", background: tile(preview) ? `center/cover no-repeat url(${tile(preview)})` : `linear-gradient(140deg, ${T.green}, ${T.indigo})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 120 }}>
             {!tile(preview) && <CatIcon tour={t} size={120} color="rgba(255,255,255,.9)" strokeWidth={1.2} />}
           </div>
+          <div style={{ position: "absolute", bottom: 18, left: 0, right: 0, textAlign: "center", color: "#fff", fontSize: 13, fontWeight: 600 }}>{preview + 1} / {galleryCount}</div>
         </div>
-      )}
+      ), document.body)}
     </>
   );
 }
@@ -1349,7 +1435,7 @@ function FlightsPage({ notify, user }) {
       <p style={{ maxWidth: 640, lineHeight: 1.6, color: "#3B4A42" }}>Domestic, international, multi-city and corporate ticketing. Submit a request and our ticketing team responds with the best available fares.</p>
 
       <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 20, alignItems: "stretch" }} className="flights-grid">
-        <style>{`@media(max-width:800px){.flights-grid{grid-template-columns:1fr !important}.flights-img{min-height:200px}}`}</style>
+        <style>{`@media(max-width:800px){.flights-grid{grid-template-columns:1fr !important}.flights-img{min-height:200px}}@media(max-width:600px){.leg-grid{grid-template-columns:1fr 1fr !important}}`}</style>
 
         {/* Left 2/3 — form */}
         <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 16, padding: 22 }}>
@@ -1373,7 +1459,7 @@ function FlightsPage({ notify, user }) {
               {multi ? (
                 <>
                   {legs.map((l, i) => (
-                    <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr auto", gap: 10, marginBottom: 10, alignItems: "end" }}>
+                    <div key={i} className="leg-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr auto", gap: 10, marginBottom: 10, alignItems: "end" }}>
                       <div><label style={label}>Leg {i + 1} — From</label><input style={input} value={l.from} onChange={(e) => setLeg(i, "from", e.target.value)} placeholder="City (CODE)" /></div>
                       <div><label style={label}>To</label><input style={input} value={l.to} onChange={(e) => setLeg(i, "to", e.target.value)} placeholder="City (CODE)" /></div>
                       <div><label style={label}>Date</label><input type="date" min={todayStr} style={input} value={l.dep} onChange={(e) => setLeg(i, "dep", e.target.value)} /></div>
@@ -2701,7 +2787,7 @@ function TransferWidget({ addBooking, compact, user }) {
         <span style={{ color: T.green, fontWeight: 700, fontSize: 13, flexShrink: 0 }}>Change ›</span>
       </button>
       {picker && <VehiclePickerModal prices={r.prices} vmap={vmap} pax={pax} onSelect={(i) => { setVehicle(i); setPicker(false); }} onClose={() => setPicker(false)} />}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginTop: 10 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 8, marginTop: 10 }}>
         <div><label style={label}>Date</label><input type="date" min={todayStr} style={input} value={date} onChange={(e) => setDate(e.target.value)} /></div>
         <div><label style={label}>Pick-up</label><input type="time" style={input} value={time} onChange={(e) => setTime(e.target.value)} /></div>
         <div><label style={label}>Passengers</label>
