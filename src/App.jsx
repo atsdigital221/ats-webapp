@@ -1326,7 +1326,7 @@ function TourDetail({ tourId, go, setBooking }) {
 }
 
 // ---------------- TRIP BUILDER ----------------
-const WEB3FORMS_KEY = import.meta.env.VITE_WEB3FORMS_KEY || "ebabe71e-99df-4752-b59a-bb901b6ce4fb";
+const WEB3FORMS_KEY = import.meta.env.VITE_WEB3FORMS_KEY || "050f6709-6ca3-40c2-a2a5-d38b33da8142";
 
 function TripBuilder({ notify, go, user, saveRecord }) {
   const [step, setStep] = useState(0);
