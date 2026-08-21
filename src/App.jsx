@@ -34,9 +34,21 @@ const T = {
   gold: "#F8D815", indigo: "#006B33", laterite: "#006B33",
   green: "#009245", line: "rgba(11,46,27,0.14)",
 };
-const XOF_USD = 590;
-const fmtXOF = (n) => new Intl.NumberFormat("fr-FR").format(Math.round(n)) + " XOF";
-const fmtUSD = (n) => "≈ $" + Math.round(n / XOF_USD);
+const XOF_USD = 590;       // 1 USD ≈ 590 XOF
+const XOF_EUR = 655.957;   // fixed CFA peg
+// Active display currency — reassigned by the app on each render from state.
+let ACTIVE_CUR = "XOF";
+const setActiveCurrency = (c) => { ACTIVE_CUR = c || "XOF"; };
+const nf = (loc) => new Intl.NumberFormat(loc);
+// All prices are stored in XOF; fmtXOF renders them in the active currency.
+const fmtXOF = (n) => {
+  const v = Math.round(n || 0);
+  if (ACTIVE_CUR === "USD") return "$" + nf("en-US").format(Math.round(v / XOF_USD));
+  if (ACTIVE_CUR === "EUR") return "€" + nf("fr-FR").format(Math.round(v / XOF_EUR));
+  return nf("fr-FR").format(v) + " XOF";
+};
+// Secondary international USD reference next to a main price. Hidden when USD is the active currency (would be redundant).
+const fmtUSD = (n) => ACTIVE_CUR === "USD" ? "" : "≈ $" + Math.round((n || 0) / XOF_USD);
 
 // ---------------- DATA ----------------
 // ---- DATA generated from ATS Senegal Operations Manual v15 (price & rate tables) ----
@@ -67,15 +79,33 @@ const COUNTRIES = [
   { id: "ke", name: "Kenya", live: false, x: 80.9, y: 48.0 },
   { id: "tz", name: "Tanzania & Zanzibar", live: false, x: 81.5, y: 55.6 },
 ];
+// [name, role, photo-slug] — photos live in bucket site/team/<slug>.webp
 const TEAM = [
-  ["Alioune Mboup", "CEO & Co-founder"], ["Aminata Mbaye", "General Manager"],
-  ["M. Bachir Lô", "Business Developer"], ["Salamata Athie", "Marketing Manager"],
-  ["Khady Mboup", "Head of Finance (DAF)"], ["Elizabeth Dior Sy", "Sales Manager"],
-  ["A. Chaker Diouf", "Logistics Manager"], ["Ousmane D. Faye", "Travel Coordinator"],
-  ["Fatoumata B. Diallo", "Ticketing Agent"], ["Fatou Kane Wathie", "Sales & Marketing Assistant"],
-  ["Cheikh Faye", "Client Relations"], ["Yaram Kane", "Admin & Logistics Assistant"],
-  ["Seydou Traoré", "Graphic Designer"], ["Abdou Diouf", "Web Developer"],
+  ["Aminata Mbaye Thiam", "Managing Director", "aminata-mbaye-thiam"],
+  ["Mouhamed Bachir Lô", "Co-founder", "mouhamed-bachir-lo"],
+  ["Abdoulaye Chaker Diouf", "Logistics Manager", "abdoulaye-chaker-diouf"],
+  ["Khady Mboup", "Head of Finance (DAF)", "khady-mboup"],
+  ["Salamat Athie", "Marketing Manager", "salamat-athie"],
+  ["Elizabeth Dior Sy", "Customer Relations Manager", "elizabeth-dior-sy"],
+  ["Ousmane Doudou Faye", "Travel Coordinator", "ousmane-doudou-faye"],
+  ["Fatoumata Binetou Diallo", "Ticketing Agent", "fatoumata-binetou-diallo"],
+  ["Fatou Kane Wathie", "Sales & Marketing Assistant", "fatou-kane-wathie"],
+  ["Abdou Karim Dieng", "Parking & Fleet Manager", "abdou-karim-dieng"],
+  ["Seydou Traoré", "Graphic Designer", "seydou-traore"],
+  ["Abdou Diouf", "Web Developer", "abdou-diouf"],
 ];
+// Team member photo (bucket site/team/<slug>.webp) with initials fallback.
+function TeamPhoto({ slug, name, ratio = "4 / 5", radius = 0 }) {
+  const [ok, setOk] = useState(!!slug);
+  const url = slug ? supabase.storage.from(PHOTO_BUCKET).getPublicUrl(`site/team/${slug}.webp`).data.publicUrl : null;
+  return (
+    <div style={{ aspectRatio: ratio, width: "100%", height: "100%", borderRadius: radius, overflow: "hidden", background: "linear-gradient(140deg,#EFF3EF,#fff)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      {ok && url
+        ? <img src={url} alt={name} loading="lazy" onError={() => setOk(false)} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+        : <span className="disp" style={{ fontWeight: 800, fontSize: 24, color: "#9AA79F" }}>{name.split(" ").map((w) => w[0]).slice(0, 2).join("")}</span>}
+    </div>
+  );
+}
 const DOTS=[[57.3,92.3],[59.2,92.3],[61.2,92.3],[57.3,90.3],[59.2,90.3],[61.2,90.3],[63.2,90.3],[65.2,90.3],[67.1,90.3],[69.1,90.3],[55.3,88.3],[57.3,88.3],[59.2,88.3],[61.2,88.3],[63.2,88.3],[65.2,88.3],[67.1,88.3],[69.1,88.3],[71.1,88.3],[55.3,86.4],[57.3,86.4],[59.2,86.4],[61.2,86.4],[63.2,86.4],[65.2,86.4],[67.1,86.4],[69.1,86.4],[71.1,86.4],[73.1,86.4],[53.3,84.4],[55.3,84.4],[57.3,84.4],[59.2,84.4],[61.2,84.4],[63.2,84.4],[65.2,84.4],[67.1,84.4],[69.1,84.4],[71.1,84.4],[73.1,84.4],[75.0,84.4],[53.3,82.4],[55.3,82.4],[57.3,82.4],[59.2,82.4],[61.2,82.4],[63.2,82.4],[65.2,82.4],[67.1,82.4],[69.1,82.4],[71.1,82.4],[73.1,82.4],[75.0,82.4],[51.3,80.4],[53.3,80.4],[55.3,80.4],[57.3,80.4],[59.2,80.4],[61.2,80.4],[63.2,80.4],[65.2,80.4],[67.1,80.4],[69.1,80.4],[71.1,80.4],[73.1,80.4],[75.0,80.4],[77.0,80.4],[88.9,80.4],[90.8,80.4],[92.8,80.4],[51.3,78.5],[53.3,78.5],[55.3,78.5],[57.3,78.5],[59.2,78.5],[61.2,78.5],[63.2,78.5],[65.2,78.5],[67.1,78.5],[69.1,78.5],[71.1,78.5],[73.1,78.5],[75.0,78.5],[77.0,78.5],[79.0,78.5],[88.9,78.5],[90.8,78.5],[92.8,78.5],[51.3,76.5],[53.3,76.5],[55.3,76.5],[57.3,76.5],[59.2,76.5],[61.2,76.5],[63.2,76.5],[65.2,76.5],[67.1,76.5],[69.1,76.5],[71.1,76.5],[73.1,76.5],[75.0,76.5],[77.0,76.5],[79.0,76.5],[88.9,76.5],[90.8,76.5],[92.8,76.5],[94.8,76.5],[49.4,74.5],[51.3,74.5],[53.3,74.5],[55.3,74.5],[57.3,74.5],[59.2,74.5],[61.2,74.5],[63.2,74.5],[65.2,74.5],[67.1,74.5],[69.1,74.5],[71.1,74.5],[73.1,74.5],[75.0,74.5],[77.0,74.5],[88.9,74.5],[90.8,74.5],[92.8,74.5],[94.8,74.5],[49.4,72.5],[51.3,72.5],[53.3,72.5],[55.3,72.5],[57.3,72.5],[59.2,72.5],[61.2,72.5],[63.2,72.5],[65.2,72.5],[67.1,72.5],[69.1,72.5],[71.1,72.5],[73.1,72.5],[75.0,72.5],[77.0,72.5],[79.0,72.5],[88.9,72.5],[90.8,72.5],[92.8,72.5],[94.8,72.5],[47.4,70.6],[49.4,70.6],[51.3,70.6],[53.3,70.6],[55.3,70.6],[57.3,70.6],[59.2,70.6],[61.2,70.6],[63.2,70.6],[65.2,70.6],[67.1,70.6],[69.1,70.6],[71.1,70.6],[73.1,70.6],[75.0,70.6],[77.0,70.6],[79.0,70.6],[81.0,70.6],[82.9,70.6],[88.9,70.6],[90.8,70.6],[92.8,70.6],[94.8,70.6],[96.8,70.6],[49.4,68.6],[51.3,68.6],[53.3,68.6],[55.3,68.6],[57.3,68.6],[59.2,68.6],[61.2,68.6],[63.2,68.6],[65.2,68.6],[67.1,68.6],[69.1,68.6],[71.1,68.6],[73.1,68.6],[75.0,68.6],[77.0,68.6],[79.0,68.6],[81.0,68.6],[82.9,68.6],[84.9,68.6],[90.8,68.6],[92.8,68.6],[94.8,68.6],[96.8,68.6],[49.4,66.6],[51.3,66.6],[53.3,66.6],[55.3,66.6],[57.3,66.6],[59.2,66.6],[61.2,66.6],[63.2,66.6],[65.2,66.6],[67.1,66.6],[69.1,66.6],[71.1,66.6],[73.1,66.6],[75.0,66.6],[77.0,66.6],[79.0,66.6],[81.0,66.6],[82.9,66.6],[84.9,66.6],[94.8,66.6],[96.8,66.6],[49.4,64.6],[51.3,64.6],[53.3,64.6],[55.3,64.6],[57.3,64.6],[59.2,64.6],[61.2,64.6],[63.2,64.6],[65.2,64.6],[67.1,64.6],[69.1,64.6],[71.1,64.6],[73.1,64.6],[75.0,64.6],[77.0,64.6],[79.0,64.6],[81.0,64.6],[82.9,64.6],[84.9,64.6],[94.8,64.6],[96.8,64.6],[51.3,62.7],[53.3,62.7],[55.3,62.7],[57.3,62.7],[59.2,62.7],[61.2,62.7],[63.2,62.7],[65.2,62.7],[67.1,62.7],[69.1,62.7],[71.1,62.7],[73.1,62.7],[75.0,62.7],[77.0,62.7],[79.0,62.7],[81.0,62.7],[82.9,62.7],[84.9,62.7],[49.4,60.7],[51.3,60.7],[53.3,60.7],[55.3,60.7],[57.3,60.7],[59.2,60.7],[61.2,60.7],[63.2,60.7],[65.2,60.7],[67.1,60.7],[69.1,60.7],[71.1,60.7],[73.1,60.7],[75.0,60.7],[77.0,60.7],[79.0,60.7],[81.0,60.7],[82.9,60.7],[49.4,58.7],[51.3,58.7],[53.3,58.7],[55.3,58.7],[57.3,58.7],[59.2,58.7],[61.2,58.7],[63.2,58.7],[65.2,58.7],[67.1,58.7],[69.1,58.7],[71.1,58.7],[73.1,58.7],[75.0,58.7],[77.0,58.7],[79.0,58.7],[81.0,58.7],[82.9,58.7],[49.4,56.8],[51.3,56.8],[53.3,56.8],[55.3,56.8],[57.3,56.8],[59.2,56.8],[61.2,56.8],[63.2,56.8],[65.2,56.8],[67.1,56.8],[69.1,56.8],[71.1,56.8],[73.1,56.8],[75.0,56.8],[77.0,56.8],[79.0,56.8],[81.0,56.8],[82.9,56.8],[47.4,54.8],[49.4,54.8],[51.3,54.8],[53.3,54.8],[55.3,54.8],[57.3,54.8],[59.2,54.8],[61.2,54.8],[63.2,54.8],[65.2,54.8],[67.1,54.8],[69.1,54.8],[71.1,54.8],[73.1,54.8],[75.0,54.8],[77.0,54.8],[79.0,54.8],[81.0,54.8],[82.9,54.8],[47.4,52.8],[49.4,52.8],[51.3,52.8],[53.3,52.8],[55.3,52.8],[57.3,52.8],[59.2,52.8],[61.2,52.8],[63.2,52.8],[65.2,52.8],[67.1,52.8],[69.1,52.8],[71.1,52.8],[73.1,52.8],[75.0,52.8],[77.0,52.8],[79.0,52.8],[81.0,52.8],[82.9,52.8],[45.4,50.8],[47.4,50.8],[49.4,50.8],[51.3,50.8],[53.3,50.8],[55.3,50.8],[57.3,50.8],[59.2,50.8],[61.2,50.8],[63.2,50.8],[65.2,50.8],[67.1,50.8],[69.1,50.8],[71.1,50.8],[73.1,50.8],[75.0,50.8],[77.0,50.8],[79.0,50.8],[81.0,50.8],[82.9,50.8],[84.9,50.8],[45.4,48.9],[47.4,48.9],[49.4,48.9],[51.3,48.9],[53.3,48.9],[55.3,48.9],[57.3,48.9],[59.2,48.9],[61.2,48.9],[63.2,48.9],[65.2,48.9],[67.1,48.9],[69.1,48.9],[71.1,48.9],[73.1,48.9],[75.0,48.9],[77.0,48.9],[79.0,48.9],[81.0,48.9],[82.9,48.9],[84.9,48.9],[86.9,48.9],[45.4,46.9],[47.4,46.9],[49.4,46.9],[51.3,46.9],[53.3,46.9],[55.3,46.9],[57.3,46.9],[59.2,46.9],[61.2,46.9],[63.2,46.9],[65.2,46.9],[67.1,46.9],[69.1,46.9],[71.1,46.9],[73.1,46.9],[75.0,46.9],[77.0,46.9],[79.0,46.9],[81.0,46.9],[82.9,46.9],[84.9,46.9],[86.9,46.9],[88.9,46.9],[45.4,44.9],[47.4,44.9],[49.4,44.9],[51.3,44.9],[53.3,44.9],[55.3,44.9],[57.3,44.9],[59.2,44.9],[61.2,44.9],[63.2,44.9],[65.2,44.9],[67.1,44.9],[69.1,44.9],[71.1,44.9],[73.1,44.9],[75.0,44.9],[77.0,44.9],[79.0,44.9],[81.0,44.9],[82.9,44.9],[84.9,44.9],[86.9,44.9],[88.9,44.9],[90.8,44.9],[92.8,44.9],[21.7,42.9],[23.7,42.9],[41.5,42.9],[43.4,42.9],[45.4,42.9],[47.4,42.9],[49.4,42.9],[51.3,42.9],[53.3,42.9],[55.3,42.9],[57.3,42.9],[59.2,42.9],[61.2,42.9],[63.2,42.9],[65.2,42.9],[67.1,42.9],[69.1,42.9],[71.1,42.9],[73.1,42.9],[75.0,42.9],[77.0,42.9],[79.0,42.9],[81.0,42.9],[82.9,42.9],[84.9,42.9],[86.9,42.9],[88.9,42.9],[90.8,42.9],[92.8,42.9],[94.8,42.9],[19.7,41.0],[21.7,41.0],[23.7,41.0],[25.7,41.0],[27.6,41.0],[29.6,41.0],[31.6,41.0],[33.6,41.0],[35.5,41.0],[37.5,41.0],[39.5,41.0],[41.5,41.0],[43.4,41.0],[45.4,41.0],[47.4,41.0],[49.4,41.0],[51.3,41.0],[53.3,41.0],[55.3,41.0],[57.3,41.0],[59.2,41.0],[61.2,41.0],[63.2,41.0],[65.2,41.0],[67.1,41.0],[69.1,41.0],[71.1,41.0],[73.1,41.0],[75.0,41.0],[77.0,41.0],[79.0,41.0],[81.0,41.0],[82.9,41.0],[84.9,41.0],[86.9,41.0],[88.9,41.0],[90.8,41.0],[92.8,41.0],[94.8,41.0],[17.8,39.0],[19.7,39.0],[21.7,39.0],[23.7,39.0],[25.7,39.0],[27.6,39.0],[29.6,39.0],[31.6,39.0],[33.6,39.0],[35.5,39.0],[37.5,39.0],[39.5,39.0],[41.5,39.0],[43.4,39.0],[45.4,39.0],[47.4,39.0],[49.4,39.0],[51.3,39.0],[53.3,39.0],[55.3,39.0],[57.3,39.0],[59.2,39.0],[61.2,39.0],[63.2,39.0],[65.2,39.0],[67.1,39.0],[69.1,39.0],[71.1,39.0],[73.1,39.0],[75.0,39.0],[77.0,39.0],[79.0,39.0],[81.0,39.0],[82.9,39.0],[84.9,39.0],[86.9,39.0],[88.9,39.0],[90.8,39.0],[92.8,39.0],[94.8,39.0],[96.8,39.0],[15.8,37.0],[17.8,37.0],[19.7,37.0],[21.7,37.0],[23.7,37.0],[25.7,37.0],[27.6,37.0],[29.6,37.0],[31.6,37.0],[33.6,37.0],[35.5,37.0],[37.5,37.0],[39.5,37.0],[41.5,37.0],[43.4,37.0],[45.4,37.0],[47.4,37.0],[49.4,37.0],[51.3,37.0],[53.3,37.0],[55.3,37.0],[57.3,37.0],[59.2,37.0],[61.2,37.0],[63.2,37.0],[65.2,37.0],[67.1,37.0],[69.1,37.0],[71.1,37.0],[73.1,37.0],[75.0,37.0],[77.0,37.0],[79.0,37.0],[81.0,37.0],[82.9,37.0],[84.9,37.0],[86.9,37.0],[88.9,37.0],[90.8,37.0],[94.8,37.0],[96.8,37.0],[13.8,35.0],[15.8,35.0],[17.8,35.0],[19.7,35.0],[21.7,35.0],[23.7,35.0],[25.7,35.0],[27.6,35.0],[29.6,35.0],[31.6,35.0],[33.6,35.0],[35.5,35.0],[37.5,35.0],[39.5,35.0],[41.5,35.0],[43.4,35.0],[45.4,35.0],[47.4,35.0],[49.4,35.0],[51.3,35.0],[53.3,35.0],[55.3,35.0],[57.3,35.0],[59.2,35.0],[61.2,35.0],[63.2,35.0],[65.2,35.0],[67.1,35.0],[69.1,35.0],[71.1,35.0],[73.1,35.0],[75.0,35.0],[77.0,35.0],[79.0,35.0],[81.0,35.0],[82.9,35.0],[84.9,35.0],[86.9,35.0],[94.8,35.0],[96.8,35.0],[98.7,35.0],[11.8,33.1],[13.8,33.1],[15.8,33.1],[17.8,33.1],[19.7,33.1],[21.7,33.1],[23.7,33.1],[25.7,33.1],[27.6,33.1],[29.6,33.1],[31.6,33.1],[33.6,33.1],[35.5,33.1],[37.5,33.1],[39.5,33.1],[41.5,33.1],[43.4,33.1],[45.4,33.1],[47.4,33.1],[49.4,33.1],[51.3,33.1],[53.3,33.1],[55.3,33.1],[57.3,33.1],[59.2,33.1],[61.2,33.1],[63.2,33.1],[65.2,33.1],[67.1,33.1],[69.1,33.1],[71.1,33.1],[73.1,33.1],[75.0,33.1],[77.0,33.1],[79.0,33.1],[81.0,33.1],[82.9,33.1],[84.9,33.1],[86.9,33.1],[88.9,33.1],[96.8,33.1],[98.7,33.1],[11.8,31.1],[13.8,31.1],[15.8,31.1],[17.8,31.1],[19.7,31.1],[21.7,31.1],[23.7,31.1],[25.7,31.1],[27.6,31.1],[29.6,31.1],[31.6,31.1],[33.6,31.1],[35.5,31.1],[37.5,31.1],[39.5,31.1],[41.5,31.1],[43.4,31.1],[45.4,31.1],[47.4,31.1],[49.4,31.1],[51.3,31.1],[53.3,31.1],[55.3,31.1],[57.3,31.1],[59.2,31.1],[61.2,31.1],[63.2,31.1],[65.2,31.1],[67.1,31.1],[69.1,31.1],[71.1,31.1],[73.1,31.1],[75.0,31.1],[77.0,31.1],[79.0,31.1],[81.0,31.1],[82.9,31.1],[84.9,31.1],[86.9,31.1],[11.8,29.1],[13.8,29.1],[15.8,29.1],[17.8,29.1],[19.7,29.1],[21.7,29.1],[23.7,29.1],[25.7,29.1],[27.6,29.1],[29.6,29.1],[31.6,29.1],[33.6,29.1],[35.5,29.1],[37.5,29.1],[39.5,29.1],[41.5,29.1],[43.4,29.1],[45.4,29.1],[47.4,29.1],[49.4,29.1],[51.3,29.1],[53.3,29.1],[55.3,29.1],[57.3,29.1],[59.2,29.1],[61.2,29.1],[63.2,29.1],[65.2,29.1],[67.1,29.1],[69.1,29.1],[71.1,29.1],[73.1,29.1],[75.0,29.1],[77.0,29.1],[79.0,29.1],[81.0,29.1],[82.9,29.1],[84.9,29.1],[11.8,27.1],[13.8,27.1],[15.8,27.1],[17.8,27.1],[19.7,27.1],[21.7,27.1],[23.7,27.1],[25.7,27.1],[27.6,27.1],[29.6,27.1],[31.6,27.1],[33.6,27.1],[35.5,27.1],[37.5,27.1],[39.5,27.1],[41.5,27.1],[43.4,27.1],[45.4,27.1],[47.4,27.1],[49.4,27.1],[51.3,27.1],[53.3,27.1],[55.3,27.1],[57.3,27.1],[59.2,27.1],[61.2,27.1],[63.2,27.1],[65.2,27.1],[67.1,27.1],[69.1,27.1],[71.1,27.1],[73.1,27.1],[75.0,27.1],[77.0,27.1],[79.0,27.1],[81.0,27.1],[82.9,27.1],[11.8,25.2],[13.8,25.2],[15.8,25.2],[17.8,25.2],[19.7,25.2],[21.7,25.2],[23.7,25.2],[25.7,25.2],[27.6,25.2],[29.6,25.2],[31.6,25.2],[33.6,25.2],[35.5,25.2],[37.5,25.2],[39.5,25.2],[41.5,25.2],[43.4,25.2],[45.4,25.2],[47.4,25.2],[49.4,25.2],[51.3,25.2],[53.3,25.2],[55.3,25.2],[57.3,25.2],[59.2,25.2],[61.2,25.2],[63.2,25.2],[65.2,25.2],[67.1,25.2],[69.1,25.2],[71.1,25.2],[73.1,25.2],[75.0,25.2],[77.0,25.2],[79.0,25.2],[81.0,25.2],[11.8,23.2],[13.8,23.2],[15.8,23.2],[17.8,23.2],[19.7,23.2],[21.7,23.2],[23.7,23.2],[25.7,23.2],[27.6,23.2],[29.6,23.2],[31.6,23.2],[33.6,23.2],[35.5,23.2],[37.5,23.2],[39.5,23.2],[41.5,23.2],[43.4,23.2],[45.4,23.2],[47.4,23.2],[49.4,23.2],[51.3,23.2],[53.3,23.2],[55.3,23.2],[57.3,23.2],[59.2,23.2],[61.2,23.2],[63.2,23.2],[65.2,23.2],[67.1,23.2],[69.1,23.2],[71.1,23.2],[73.1,23.2],[75.0,23.2],[77.0,23.2],[79.0,23.2],[81.0,23.2],[11.8,21.2],[13.8,21.2],[15.8,21.2],[17.8,21.2],[19.7,21.2],[21.7,21.2],[23.7,21.2],[25.7,21.2],[27.6,21.2],[29.6,21.2],[31.6,21.2],[33.6,21.2],[35.5,21.2],[37.5,21.2],[39.5,21.2],[41.5,21.2],[43.4,21.2],[45.4,21.2],[47.4,21.2],[49.4,21.2],[51.3,21.2],[53.3,21.2],[55.3,21.2],[57.3,21.2],[59.2,21.2],[61.2,21.2],[63.2,21.2],[65.2,21.2],[67.1,21.2],[69.1,21.2],[71.1,21.2],[73.1,21.2],[75.0,21.2],[77.0,21.2],[79.0,21.2],[81.0,21.2],[11.8,19.2],[13.8,19.2],[15.8,19.2],[17.8,19.2],[19.7,19.2],[21.7,19.2],[23.7,19.2],[25.7,19.2],[27.6,19.2],[29.6,19.2],[31.6,19.2],[33.6,19.2],[35.5,19.2],[37.5,19.2],[39.5,19.2],[41.5,19.2],[43.4,19.2],[45.4,19.2],[47.4,19.2],[49.4,19.2],[51.3,19.2],[53.3,19.2],[55.3,19.2],[57.3,19.2],[59.2,19.2],[61.2,19.2],[63.2,19.2],[65.2,19.2],[67.1,19.2],[69.1,19.2],[71.1,19.2],[73.1,19.2],[75.0,19.2],[77.0,19.2],[79.0,19.2],[13.8,17.3],[15.8,17.3],[17.8,17.3],[19.7,17.3],[21.7,17.3],[23.7,17.3],[25.7,17.3],[27.6,17.3],[29.6,17.3],[31.6,17.3],[33.6,17.3],[35.5,17.3],[37.5,17.3],[39.5,17.3],[41.5,17.3],[43.4,17.3],[45.4,17.3],[47.4,17.3],[49.4,17.3],[51.3,17.3],[53.3,17.3],[55.3,17.3],[57.3,17.3],[59.2,17.3],[61.2,17.3],[63.2,17.3],[65.2,17.3],[67.1,17.3],[69.1,17.3],[71.1,17.3],[73.1,17.3],[75.0,17.3],[77.0,17.3],[13.8,15.3],[15.8,15.3],[17.8,15.3],[19.7,15.3],[21.7,15.3],[23.7,15.3],[25.7,15.3],[27.6,15.3],[29.6,15.3],[31.6,15.3],[33.6,15.3],[35.5,15.3],[37.5,15.3],[39.5,15.3],[41.5,15.3],[43.4,15.3],[45.4,15.3],[47.4,15.3],[49.4,15.3],[51.3,15.3],[53.3,15.3],[55.3,15.3],[57.3,15.3],[59.2,15.3],[61.2,15.3],[63.2,15.3],[65.2,15.3],[67.1,15.3],[69.1,15.3],[71.1,15.3],[73.1,15.3],[75.0,15.3],[77.0,15.3],[15.8,13.3],[17.8,13.3],[19.7,13.3],[21.7,13.3],[23.7,13.3],[25.7,13.3],[27.6,13.3],[29.6,13.3],[31.6,13.3],[33.6,13.3],[35.5,13.3],[37.5,13.3],[39.5,13.3],[41.5,13.3],[43.4,13.3],[45.4,13.3],[47.4,13.3],[49.4,13.3],[51.3,13.3],[53.3,13.3],[55.3,13.3],[57.3,13.3],[59.2,13.3],[61.2,13.3],[63.2,13.3],[65.2,13.3],[67.1,13.3],[69.1,13.3],[71.1,13.3],[73.1,13.3],[75.0,13.3],[77.0,13.3],[19.7,11.3],[21.7,11.3],[23.7,11.3],[25.7,11.3],[27.6,11.3],[29.6,11.3],[31.6,11.3],[33.6,11.3],[35.5,11.3],[37.5,11.3],[39.5,11.3],[41.5,11.3],[43.4,11.3],[45.4,11.3],[47.4,11.3],[49.4,11.3],[51.3,11.3],[53.3,11.3],[55.3,11.3],[57.3,11.3],[59.2,11.3],[61.2,11.3],[63.2,11.3],[65.2,11.3],[67.1,11.3],[69.1,11.3],[71.1,11.3],[73.1,11.3],[75.0,11.3],[77.0,11.3],[21.7,9.4],[23.7,9.4],[25.7,9.4],[27.6,9.4],[29.6,9.4],[31.6,9.4],[33.6,9.4],[35.5,9.4],[37.5,9.4],[39.5,9.4],[41.5,9.4],[43.4,9.4],[45.4,9.4],[47.4,9.4],[49.4,9.4],[51.3,9.4],[53.3,9.4],[55.3,9.4],[57.3,9.4],[59.2,9.4],[61.2,9.4],[63.2,9.4],[65.2,9.4],[67.1,9.4],[69.1,9.4],[71.1,9.4],[73.1,9.4],[75.0,9.4],[77.0,9.4],[21.7,7.4],[23.7,7.4],[25.7,7.4],[27.6,7.4],[29.6,7.4],[31.6,7.4],[33.6,7.4],[35.5,7.4],[37.5,7.4],[39.5,7.4],[41.5,7.4],[43.4,7.4],[45.4,7.4],[47.4,7.4],[49.4,7.4],[51.3,7.4],[53.3,7.4],[59.2,7.4],[61.2,7.4],[63.2,7.4],[65.2,7.4],[23.7,5.4],[25.7,5.4],[27.6,5.4],[29.6,5.4],[31.6,5.4],[33.6,5.4],[35.5,5.4],[37.5,5.4],[39.5,5.4],[41.5,5.4],[43.4,5.4],[45.4,5.4],[47.4,5.4],[25.7,3.4],[27.6,3.4],[29.6,3.4],[31.6,3.4],[33.6,3.4],[35.5,3.4],[37.5,3.4],[39.5,3.4],[41.5,3.4],[43.4,3.4],[45.4,3.4],[47.4,3.4],[35.5,1.5],[37.5,1.5],[39.5,1.5],[41.5,1.5],[43.4,1.5],[45.4,1.5],[47.4,1.5],[1.1,26.6],[2.0,27.3],[3.1,29.2],[3.6,28.9],[1.7,29.4],[3.9,27.9],[88.3,63.3],[88.9,63.9],[83.2,56.2],[83.8,55.0],[41.5,48.0],[42.5,46.4],[12.9,34.0]];
 
 // ---------------- SHARED UI ----------------
@@ -83,7 +113,7 @@ const btnCircle = { width: 30, height: 30, borderRadius: "50%", border: `1px sol
 const btnGold = { background: T.gold, color: T.ink, border: "none", borderRadius: 999, padding: "11px 22px", fontWeight: 700, fontSize: 15, cursor: "pointer" };
 const btnGreen = { ...btnGold, background: T.green, color: "#fff" };
 const input = { width: "100%", boxSizing: "border-box", padding: "11px 13px", borderRadius: 10, border: `1px solid ${T.line}`, background: "#fff", fontSize: 14.5, fontFamily: "inherit", color: T.ink };
-const label = { fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".07em", color: T.laterite, display: "block", marginBottom: 5 };
+const label = { fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".07em", color: "#1A1A1A", display: "block", marginBottom: 7 };
 // ---------------- RANGE DATE PICKER (single calendar, from → to, past disabled) ----------------
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const WD = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
@@ -231,6 +261,27 @@ export default function ATSPlatformPreview() {
   const [chat, setChat] = useState(false);
   const [filters, setFilters] = useState({ pole: "All", tag: "All" });
 
+  // ---- Display currency (XOF | USD | EUR). Prices are stored in XOF. ----
+  const [currency, setCurrency] = useState(() => { try { return localStorage.getItem("ats_cur") || null; } catch { return null; } });
+  setActiveCurrency(currency); // apply on every render so all price formatters use it
+  useEffect(() => { if (currency) { try { localStorage.setItem("ats_cur", currency); } catch { /* */ } } }, [currency]);
+  // Auto-detect default currency by geolocation on first visit (no stored choice).
+  useEffect(() => {
+    if (currency) return;
+    let alive = true;
+    const XOF_CC = ["SN", "CI", "ML", "BF", "BJ", "NE", "TG", "GW"];
+    const EUR_CC = ["FR", "BE", "DE", "ES", "IT", "PT", "NL", "LU", "IE", "AT", "FI", "GR", "SK", "SI", "EE", "LV", "LT", "MT", "CY", "HR"];
+    fetch("https://ipwho.is/?fields=country_code")
+      .then((r) => r.json())
+      .then((d) => {
+        if (!alive) return;
+        const cc = (d && d.country_code) || "";
+        setCurrency(XOF_CC.includes(cc) ? "XOF" : EUR_CC.includes(cc) ? "EUR" : cc ? "USD" : "XOF");
+      })
+      .catch(() => { if (alive) setCurrency("XOF"); });
+    return () => { alive = false; };
+  }, []);
+
   const notify = (msg) => { setToast(msg); };
   useEffect(() => { if (!toast) return; const t = setTimeout(() => setToast(null), 3200); return () => clearTimeout(t); }, [toast]);
 
@@ -375,7 +426,7 @@ export default function ATSPlatformPreview() {
     }
   }, []);
 
-  const ctx = { go, notify, setBooking, user, setUser, bookings, filters, setFilters, setSignin, setChat, signOut, saveRecord, patchBooking, cancelBooking, payInstallment };
+  const ctx = { go, notify, setBooking, user, setUser, bookings, filters, setFilters, setSignin, setChat, signOut, saveRecord, patchBooking, cancelBooking, payInstallment, currency, setCurrency };
 
   return (
     <div style={{ background: T.paper, color: T.ink, fontFamily: "'Century Gothic','Poppins',system-ui,sans-serif", minHeight: "100vh" }}>
@@ -413,7 +464,9 @@ export default function ATSPlatformPreview() {
 
       {/* Floating WhatsApp + AI */}
       <div style={{ position: "fixed", right: 16, bottom: 16, display: "flex", flexDirection: "column", gap: 10, zIndex: 50 }}>
-        <button onClick={() => notify("Opening WhatsApp chat with ATS: +221 77 480 78 78 (demo)")} aria-label="WhatsApp" style={{ width: 52, height: 52, borderRadius: "50%", border: "none", background: "#25D366", color: "#fff", cursor: "pointer", boxShadow: "0 8px 20px rgba(0,0,0,.25)", display: "flex", alignItems: "center", justifyContent: "center" }}><MessageCircle size={24} /></button>
+        <a href="https://wa.me/221774807878?text=Bonjour%20ATS%2C%20j'aimerais%20plus%20d'informations." target="_blank" rel="noopener noreferrer" aria-label="Chat on WhatsApp" style={{ width: 52, height: 52, borderRadius: "50%", border: "none", background: "#25D366", color: "#fff", cursor: "pointer", boxShadow: "0 8px 20px rgba(0,0,0,.25)", display: "flex", alignItems: "center", justifyContent: "center", textDecoration: "none" }}>
+          <svg viewBox="0 0 24 24" width="27" height="27" fill="currentColor" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        </a>
         <button onClick={() => setChat(true)} aria-label="AI assistant" style={{ width: 52, height: 52, borderRadius: "50%", border: "none", background: T.indigo, color: "#fff", cursor: "pointer", boxShadow: "0 8px 20px rgba(0,0,0,.25)", display: "flex", alignItems: "center", justifyContent: "center" }}><Bot size={24} /></button>
       </div>
 
@@ -429,38 +482,74 @@ export default function ATSPlatformPreview() {
 // ---------------- NAV ----------------
 const GLASS = { background: "rgba(255,255,255,.45)", backdropFilter: "blur(14px)", WebkitBackdropFilter: "blur(14px)", border: "1px solid rgba(255,255,255,.55)", boxShadow: "0 6px 22px rgba(11,46,27,.12)" };
 
-function Nav({ go, page, user, setSignin, bookings }) {
+// Compact custom dropdown for the nav (language / currency)
+function NavSelect({ value, options, onChange, trigger, full }) {
   const [open, setOpen] = useState(false);
+  return (
+    <div style={{ position: "relative", width: full ? "100%" : "auto" }}>
+      {open && <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 41 }} />}
+      <button onClick={() => setOpen((o) => !o)} aria-haspopup="listbox" aria-expanded={open}
+        style={{ display: "inline-flex", alignItems: "center", justifyContent: full ? "space-between" : "center", gap: 8, width: full ? "100%" : "auto", background: "#fff", border: `1px solid ${T.line}`, borderRadius: 999, padding: "7px 12px 7px 14px", cursor: "pointer", color: T.ink, fontFamily: "inherit" }}>
+        {trigger}
+        <ChevronDown size={15} color={T.ink} style={{ marginLeft: 4, flexShrink: 0 }} />
+      </button>
+      {open && (
+        <div role="listbox" style={{ position: "absolute", top: "calc(100% + 6px)", right: 0, left: full ? 0 : "auto", zIndex: 42, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 12, boxShadow: "0 14px 34px rgba(0,0,0,.16)", overflow: "hidden", minWidth: 130 }}>
+          {options.map((o) => (
+            <button key={o} onClick={() => { onChange(o); setOpen(false); }} style={{ display: "block", width: "100%", textAlign: "left", padding: "10px 16px", border: "none", background: value === o ? T.paperDark : "#fff", color: T.ink, fontWeight: value === o ? 700 : 600, fontSize: 13, cursor: "pointer", whiteSpace: "nowrap" }}>{o}</button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Nav({ go, page, user, setSignin, bookings, currency, setCurrency }) {
+  const [open, setOpen] = useState(false);
+  const [logoOk, setLogoOk] = useState(true);
+  const logoUrl = supabase.storage.from(PHOTO_BUCKET).getPublicUrl("site/logo.png").data.publicUrl;
   const links = [
     ["home", "Home"], ["tours", "Tours"], ["builder", "Trip Builder"], ["transport", "Transports"], ["flights", "Flights"],
     ["events", "MICE"], ["corporate", "Corporate"], ["agents", "Agents"], ["about", "About Us"],
   ];
   const nav = (k) => { go(k); setOpen(false); };
+  // Language UI state (translation wired separately). Currency comes from the app (drives all prices).
+  const [lang, setLang] = useState(() => { try { return localStorage.getItem("ats_lang") || "EN"; } catch { return "EN"; } });
+  useEffect(() => { try { localStorage.setItem("ats_lang", lang); } catch { /* */ } }, [lang]);
+  const cur = currency || "XOF";
+  const prefs = (full) => (
+    <div style={{ display: "flex", alignItems: "center", gap: full ? 10 : 8, flexWrap: "wrap", width: full ? "100%" : "auto" }}>
+      <NavSelect full={full} value={lang} options={["EN", "FR"]} onChange={setLang} trigger={<Globe size={17} color="#111" strokeWidth={2} />} />
+      <NavSelect full={full} value={cur} options={["XOF", "USD", "EUR"]} onChange={setCurrency} trigger={<span style={{ fontWeight: 700, fontSize: 12.5 }}>{cur}</span>} />
+    </div>
+  );
   const accountBtn = (full) => user ? (
-    <button onClick={() => nav("account")} style={{ color: "#fff", background: T.green, padding: full ? "11px 16px" : "8px 16px", borderRadius: full ? 12 : 999, border: "none", cursor: "pointer", fontWeight: 700, width: full ? "100%" : "auto", textAlign: full ? "left" : "center", boxShadow: full ? "none" : "0 4px 14px rgba(0,146,69,.35)" }}>
-      {user.name.split(" ")[0]} {bookings.length > 0 && `· ${bookings.length}`}
+    <button onClick={() => nav("account")} style={{ display: "inline-flex", alignItems: "center", gap: 7, justifyContent: full ? "flex-start" : "center", color: "#fff", background: T.green, padding: full ? "11px 16px" : "8px 16px", borderRadius: full ? 12 : 999, border: "none", cursor: "pointer", fontWeight: 700, width: full ? "100%" : "auto", boxShadow: full ? "none" : "0 4px 14px rgba(0,146,69,.35)" }}>
+      <UserRound size={17} strokeWidth={2.2} /> {user.name.split(" ")[0]} {bookings.length > 0 && `· ${bookings.length}`}
     </button>
   ) : (
-    <button onClick={() => { setSignin(true); setOpen(false); }} style={{ color: "#fff", background: T.green, padding: full ? "11px 16px" : "8px 18px", borderRadius: full ? 12 : 999, border: "none", cursor: "pointer", fontWeight: 700, width: full ? "100%" : "auto", textAlign: full ? "left" : "center", boxShadow: full ? "none" : "0 4px 14px rgba(0,146,69,.35)" }}>Sign in</button>
+    <button onClick={() => { setSignin(true); setOpen(false); }} style={{ display: "inline-flex", alignItems: "center", gap: 7, justifyContent: full ? "flex-start" : "center", color: "#fff", background: T.green, padding: full ? "11px 16px" : "8px 18px", borderRadius: full ? 12 : 999, border: "none", cursor: "pointer", fontWeight: 700, width: full ? "100%" : "auto", boxShadow: full ? "none" : "0 4px 14px rgba(0,146,69,.35)" }}><UserRound size={17} strokeWidth={2.2} /> Sign in</button>
   );
 
   return (
     <nav style={{ position: "sticky", top: 0, zIndex: 40, background: "transparent" }}>
       <style>{`
         .nav-desktop{display:flex}
-        .nav-burger{display:none}
+        .nav-burger{display:none !important}
         .nav-drawer{display:none}
         .nav-link:hover{background:rgba(0,146,69,.10)}
         @media(max-width:980px){
-          .nav-desktop{display:none}
-          .nav-burger{display:flex}
+          .nav-desktop{display:none !important}
+          .nav-burger{display:flex !important;align-items:center;justify-content:center}
           .nav-drawer{display:block}
         }
       `}</style>
       <div style={{ maxWidth: 1240, margin: "0 auto", padding: "12px 16px", display: "flex", alignItems: "center", gap: 12 }}>
-        {/* Logo pill */}
-        <button onClick={() => nav("home")} className="disp" style={{ ...GLASS, display: "flex", alignItems: "center", fontWeight: 800, fontSize: 18, letterSpacing: "-0.02em", cursor: "pointer", padding: "10px 18px", borderRadius: 999, color: T.ink }}>
-          <span style={{ color: T.green }}>Africa</span>&nbsp;Tourism&nbsp;<span style={{ color: "#C9A902" }}>Solutions</span>
+        {/* Logo pill — solid white rounded */}
+        <button onClick={() => nav("home")} aria-label="Africa Tourism Solutions — home" className="disp" style={{ background: "#fff", border: "1px solid rgba(11,46,27,.06)", boxShadow: "0 6px 22px rgba(11,46,27,.12)", display: "flex", alignItems: "center", fontWeight: 800, fontSize: 18, letterSpacing: "-0.02em", cursor: "pointer", padding: logoOk ? "7px 18px" : "10px 18px", borderRadius: 999, color: T.ink }}>
+          {logoOk
+            ? <img src={logoUrl} alt="Africa Tourism Solutions" onError={() => setLogoOk(false)} style={{ height: 34, display: "block" }} />
+            : <><span style={{ color: T.green }}>Africa</span>&nbsp;Tourism&nbsp;<span style={{ color: "#C9A902" }}>Solutions</span></>}
         </button>
 
         {/* Desktop links pill */}
@@ -470,12 +559,15 @@ function Nav({ go, page, user, setSignin, bookings }) {
           ))}
         </div>
 
+        {/* Language + currency (desktop) */}
+        <div className="nav-desktop">{prefs(false)}</div>
+
         {/* Account (desktop) */}
         <div className="nav-desktop">{accountBtn(false)}</div>
 
         {/* Mobile hamburger */}
         <button className="nav-burger" aria-label={open ? "Close menu" : "Open menu"} aria-expanded={open} onClick={() => setOpen((o) => !o)}
-          style={{ ...GLASS, marginLeft: "auto", width: 46, height: 46, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 14, cursor: "pointer", color: T.ink }}>
+          style={{ ...GLASS, marginLeft: "auto", width: 46, height: 46, borderRadius: 14, cursor: "pointer", color: T.ink }}>
           {open ? <X size={22} /> : <Menu size={22} />}
         </button>
       </div>
@@ -488,7 +580,8 @@ function Nav({ go, page, user, setSignin, bookings }) {
               <button key={k} onClick={() => nav(k)} style={{ background: page.name === k ? T.green : "transparent", border: "none", cursor: "pointer", color: page.name === k ? "#fff" : T.ink, padding: "12px 12px", borderRadius: 10, fontWeight: page.name === k ? 700 : 600, fontSize: 15, textAlign: "left" }}>{l}</button>
             ))}
           </div>
-          <div style={{ marginTop: 10 }}>{accountBtn(true)}</div>
+          <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${T.line}` }}>{prefs(true)}</div>
+          <div style={{ marginTop: 12 }}>{accountBtn(true)}</div>
         </div>
       )}
     </nav>
@@ -620,9 +713,9 @@ function Home({ go, notify, setBooking, filters, setFilters, setChat, addBooking
             [Plane, "Flights", "IATA-accredited ticketing: domestic, international, multi-city and corporate.", "flights"],
             [Hotel, "Accommodation", "Hotels, resorts, villas, eco-lodges and camps — vetted and contracted by ATS.", "builder"],
             [Car, "Transport", "Airport transfers and vehicle hire at fixed rates — book instantly, no quote needed.", "transport"],
-            [Mic, "Events & MICE", "Conferences, incentives, team building, destination weddings, government events.", "events"],
-            [Package, "ATS Logistics", "Event logistics, group movement and corporate transport coordination.", "corporate"],
-            [UserRound, "Concierge", "Meet & greet, visa assistance, VIP services, private guides, translation.", "tours"],
+            [Mic, "MICE", "Conferences, incentives, team building, destination weddings, government events.", "events"],
+            [Package, "ATS Logistics", "Event logistics, group movement and corporate transport coordination.", "transport"],
+            [UserRound, "Concierge", "Meet & greet, visa assistance, VIP services, private guides, translation.", "corporate"],
           ].map(([Icon, name, body, dest]) => (
             <button key={name} className="card-hover" onClick={() => go(dest)} style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 16, padding: 20, textAlign: "left", cursor: "pointer", fontFamily: "inherit", color: T.ink }}>
               <Icon size={30} color={T.green} strokeWidth={1.7} />
@@ -647,8 +740,8 @@ function Home({ go, notify, setBooking, filters, setFilters, setChat, addBooking
           </div>
           <div style={{ background: "rgba(255,255,255,.08)", border: "1px solid rgba(255,255,255,.2)", borderRadius: 18, padding: 22 }}>
             <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: ".1em", textTransform: "uppercase", color: T.gold }}>Example payment plan</div>
-            <div className="disp" style={{ fontSize: 21, fontWeight: 700, margin: "8px 0 14px" }}>Teranga Package 7 days · 865,000 XOF pp</div>
-            {[["Today — 20% deposit", "173,000 XOF", true], ["Month 1", "230,700 XOF"], ["Month 2", "230,700 XOF"], ["Month 3 — before departure", "230,600 XOF"]].map(([l, v, hot]) => (
+            <div className="disp" style={{ fontSize: 21, fontWeight: 700, margin: "8px 0 14px" }}>Teranga Package 7 days · {fmtXOF(865000)} pp</div>
+            {[["Today — 20% deposit", fmtXOF(173000), true], ["Month 1", fmtXOF(230700)], ["Month 2", fmtXOF(230700)], ["Month 3 — before departure", fmtXOF(230600)]].map(([l, v, hot]) => (
               <div key={l} style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid rgba(255,255,255,.15)", fontSize: 14.5 }}>
                 <span style={{ opacity: 0.9 }}>{l}</span><strong style={{ color: hot ? T.gold : T.paper }}>{v}</strong>
               </div>
@@ -793,7 +886,7 @@ function TourGrid({ tours, go, setBooking }) {
                 ) : (
                   <>
                     <div style={{ fontWeight: 700, fontSize: 14, color: "#1A1A1A" }}>from {fmtXOF(fromPrice(t))} <span style={{ fontWeight: 500, fontSize: 11.5, color: "#888" }}>pp</span></div>
-                    <div style={{ fontSize: 11, color: "#888" }}>group rate · {fmtUSD(fromPrice(t))} · 1–2 pax: {fmtXOF(t.grid.p12.a)}</div>
+                    <div style={{ fontSize: 11, color: "#888" }}>group rate · 1–2 pax: {fmtXOF(t.grid.p12.a)}</div>
                   </>
                 )}
               </div>
@@ -868,8 +961,18 @@ const REVIEWS = [
   { who: "Caroline", txt: "Merci pour ce moment mémorable, tout était fluide du début à la fin." },
 ];
 
+// Approx coordinates per zone for the interactive map (lat, lon)
+const ZONE_COORDS = {
+  dakar: [14.6928, -17.4467], bandia: [14.5833, -17.0000], joal: [14.1667, -16.8333],
+  ndangane: [14.0389, -16.7561], palmarin: [14.0667, -16.7667], toubacouta: [13.7897, -16.4711],
+  ziguinchor: [12.5833, -16.2719], capskirring: [12.3956, -16.7469], stlouis: [16.0179, -16.4896],
+  lompoul: [15.4500, -16.6800], kedougou: [12.5556, -12.1806],
+};
+const tourCoords = (t) => ZONE_COORDS[t.zone] || [14.4974, -14.4524];
+
 function TourDetail({ tourId, go, setBooking }) {
   const t = TOURS.find((x) => x.id === tourId) || TOURS[0];
+  const [mlat, mlon] = tourCoords(t);
   const [fav, setFav] = useState(false);
   const [pax, setPax] = useState(2);
   const [extras, setExtras] = useState([]);
@@ -961,7 +1064,8 @@ function TourDetail({ tourId, go, setBooking }) {
         <div style={{ fontSize: 12, opacity: 0.55, marginTop: 6 }}>Photos coming soon — tap any tile to preview (swipe on mobile). Real imagery will replace these placeholders.</div>
       </Wrap>
 
-      <Wrap style={{ paddingTop: 0, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 32 }}>
+      <Wrap style={{ paddingTop: 0 }}>
+       <div className="tour-cols">
         <div style={{ minWidth: 0 }}>
           {highlights.length > 0 && (
             <Section title="Highlights">
@@ -1020,6 +1124,17 @@ function TourDetail({ tourId, go, setBooking }) {
             </Section>
           )}
 
+          <Section title="Location">
+            <div style={{ border: `1px solid ${T.line}`, borderRadius: 14, overflow: "hidden" }}>
+              <iframe title={`Map — ${t.name}`} loading="lazy" width="100%" height="320" style={{ border: 0, display: "block" }}
+                src={`https://www.openstreetmap.org/export/embed.html?bbox=${mlon - 0.09}%2C${mlat - 0.06}%2C${mlon + 0.09}%2C${mlat + 0.06}&layer=mapnik&marker=${mlat}%2C${mlon}`} />
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 8, fontSize: 12.5, color: "#6B7A72" }}>
+              <MapPin size={14} color={T.green} /> {t.pole}, Senegal ·{" "}
+              <a href={`https://www.openstreetmap.org/?mlat=${mlat}&mlon=${mlon}#map=12/${mlat}/${mlon}`} target="_blank" rel="noopener noreferrer" style={{ color: T.green, fontWeight: 600, textDecoration: "none" }}>View larger map →</a>
+            </div>
+          </Section>
+
           <Section title="FAQ">
             <div style={{ display: "flex", flexDirection: "column", gap: 12, fontSize: 14.5, lineHeight: 1.6 }}>
               <div><strong>Why do prices change with group size?</strong><br />ATS prices per person by basis — Private 1–2, Private 3–4, or Group 5+ — so bigger groups pay less per person.</div>
@@ -1048,14 +1163,14 @@ function TourDetail({ tourId, go, setBooking }) {
         <aside className="tour-aside">
           <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 16, padding: 22, position: "sticky", top: 80 }}>
             {t.quote ? (
-              <div className="disp" style={{ fontWeight: 800, fontSize: 22, color: T.indigo }}>Price on request</div>
+              <div className="disp" style={{ fontWeight: 800, fontSize: 22, color: "#1A1A1A" }}>Price on request</div>
             ) : (
               <>
                 <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-                  <span className="disp" style={{ fontWeight: 800, fontSize: 26, color: T.green }}>{fmtXOF(ppUnit)}</span>
+                  <span className="disp" style={{ fontWeight: 800, fontSize: 26, color: "#1A1A1A" }}>{fmtXOF(ppUnit)}</span>
                   <span style={{ fontSize: 13, opacity: 0.6 }}>/ person</span>
                 </div>
-                <div style={{ fontSize: 12.5, opacity: 0.6 }}>{fmtUSD(ppUnit)} · {tierLabel[tier]}</div>
+                <div style={{ fontSize: 12.5, opacity: 0.6 }}>{fmtXOF(ppUnit)} · {tierLabel[tier]}</div>
 
                 <div style={{ marginTop: 14 }}>
                   <label style={label}>Travelers</label>
@@ -1071,8 +1186,8 @@ function TourDetail({ tourId, go, setBooking }) {
                   <label style={label}>Travel dates</label>
                   <RangeDate from={dateFrom} to={dateTo} onChange={(f, tt) => { setDateFrom(f); setDateTo(tt); }} triggerStyle={input} />
                   {dateOk && (
-                    <div style={{ fontSize: 12, marginTop: 5, color: T.green, fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}>
-                      <Check size={14} /> {tontinePossible ? "Ma Tontine eligible" : "Available · full payment only (under 15 days)"}
+                    <div style={{ fontSize: 12, marginTop: 5, color: "#5A6B61", fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}>
+                      <Check size={14} color={T.green} /> {tontinePossible ? "Ma Tontine eligible" : "Available · full payment only (under 15 days)"}
                     </div>
                   )}
                 </div>
@@ -1094,8 +1209,8 @@ function TourDetail({ tourId, go, setBooking }) {
                   <span style={{ opacity: 0.7 }}>Estimated total</span>
                   <strong style={{ marginLeft: "auto" }}>{fmtXOF(estTotal)}</strong>
                 </div>
-                <div style={{ background: T.paperDark, borderRadius: 10, padding: "10px 12px", fontSize: 12.5, lineHeight: 1.6, marginTop: 10 }}>
-                  <strong style={{ color: T.laterite }}>Ma Tontine Voyage:</strong> reserve with {fmtXOF(estTotal * 0.2)} (20%), balance in instalments before departure.
+                <div style={{ background: "#F8F5EF", border: "1px solid #ECE7DD", borderRadius: 10, padding: "10px 12px", fontSize: 12.5, lineHeight: 1.6, marginTop: 10, color: "#3B4A42" }}>
+                  <strong style={{ color: "#1A1A1A" }}>Ma Tontine Voyage:</strong> reserve with {fmtXOF(estTotal * 0.2)} (20%), balance in instalments before departure.
                 </div>
               </>
             )}
@@ -1105,25 +1220,28 @@ function TourDetail({ tourId, go, setBooking }) {
             ) : (
               <>
                 <button disabled={!dateOk} style={{ ...btnGold, width: "100%", marginTop: 14, borderRadius: 12, opacity: dateOk ? 1 : 0.5, cursor: dateOk ? "pointer" : "not-allowed" }} onClick={() => dateOk && openBooking("full")}>Pay in full</button>
-                <button disabled={!tontinePossible} style={{ width: "100%", marginTop: 8, background: T.laterite, color: "#fff", border: "none", borderRadius: 12, padding: "12px 14px", fontWeight: 800, cursor: tontinePossible ? "pointer" : "not-allowed", fontSize: 15, opacity: tontinePossible ? 1 : 0.5 }} onClick={() => tontinePossible && openBooking("deposit")}>Pay with Ma Tontine (20%)</button>
-                {!dateOk && <div style={{ fontSize: 12.5, color: T.laterite, marginTop: 8, textAlign: "center" }}>Choose a travel date to book.</div>}
+                <button disabled={!tontinePossible} style={{ width: "100%", marginTop: 8, background: "#1A1A1A", color: "#fff", border: "none", borderRadius: 12, padding: "12px 14px", fontWeight: 800, cursor: tontinePossible ? "pointer" : "not-allowed", fontSize: 15, opacity: tontinePossible ? 1 : 0.5 }} onClick={() => tontinePossible && openBooking("deposit")}>Pay with Ma Tontine (20%)</button>
+                {!dateOk && <div style={{ fontSize: 12.5, color: "#8A968E", marginTop: 8, textAlign: "center" }}>Choose a travel date to book.</div>}
               </>
             )}
-            <button style={{ width: "100%", marginTop: 8, background: "#fff", color: T.green, border: `1.5px solid ${T.green}`, borderRadius: 12, padding: "11px 14px", fontWeight: 700, cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }} onClick={() => go("builder")}>
+            <button style={{ width: "100%", marginTop: 8, background: "#fff", color: "#1A1A1A", border: "1.5px solid #1A1A1A", borderRadius: 12, padding: "11px 14px", fontWeight: 700, cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }} onClick={() => go("builder")}>
               <Sparkles size={16} /> Build a 100% custom trip
             </button>
-            <button style={{ background: "none", border: "none", cursor: "pointer", marginTop: 10, fontWeight: 600, color: fav ? T.laterite : T.ink, fontSize: 14, width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }} onClick={() => setFav(!fav)}>
-              <Heart size={16} fill={fav ? T.laterite : "none"} /> {fav ? "Saved to favorites" : "Save to favorites"}
+            <button style={{ background: "none", border: "none", cursor: "pointer", marginTop: 10, fontWeight: 600, color: "#1A1A1A", fontSize: 14, width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }} onClick={() => setFav(!fav)}>
+              <Heart size={16} fill={fav ? "#C0392B" : "none"} color={fav ? "#C0392B" : "#1A1A1A"} /> {fav ? "Saved to favorites" : "Save to favorites"}
             </button>
             <div style={{ fontSize: 12, opacity: 0.6, marginTop: 10, lineHeight: 1.5, textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}><Shield size={13} /> Instalments available · free cancellation 48h</div>
           </div>
         </aside>
+       </div>
       </Wrap>
 
       {/* Fixed booking bar (mobile only) */}
       <style>{`
+        .tour-cols{display:grid;grid-template-columns:minmax(0,2fr) minmax(280px,1fr);gap:32px}
         .tour-bottombar{display:none}
         @media(max-width:900px){
+          .tour-cols{grid-template-columns:1fr}
           .tour-aside{display:none}
           .tour-bottombar{display:block}
         }
@@ -1135,7 +1253,7 @@ function TourDetail({ tourId, go, setBooking }) {
           <>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontWeight: 800, fontSize: 18, color: T.green }} className="disp">{fmtXOF(estTotal)}</div>
+                <div style={{ fontWeight: 800, fontSize: 18, color: "#1A1A1A" }} className="disp">{fmtXOF(estTotal)}</div>
                 <div style={{ fontSize: 11.5, opacity: 0.6 }}>{fmtXOF(ppUnit)} /pers · {pax} pax</div>
               </div>
               <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
@@ -1149,9 +1267,9 @@ function TourDetail({ tourId, go, setBooking }) {
             </div>
             <div style={{ display: "flex", gap: 8 }}>
               <button disabled={!dateOk} style={{ ...btnGold, flex: 1, borderRadius: 12, fontSize: 14, padding: "12px 8px", opacity: dateOk ? 1 : 0.5 }} onClick={() => dateOk && openBooking("full")}>Pay in full</button>
-              <button disabled={!tontinePossible} style={{ flex: 1, background: T.laterite, color: "#fff", border: "none", borderRadius: 12, padding: "12px 8px", fontWeight: 800, cursor: tontinePossible ? "pointer" : "not-allowed", fontSize: 14, opacity: tontinePossible ? 1 : 0.5 }} onClick={() => tontinePossible && openBooking("deposit")}>Ma Tontine</button>
+              <button disabled={!tontinePossible} style={{ flex: 1, background: "#1A1A1A", color: "#fff", border: "none", borderRadius: 12, padding: "12px 8px", fontWeight: 800, cursor: tontinePossible ? "pointer" : "not-allowed", fontSize: 14, opacity: tontinePossible ? 1 : 0.5 }} onClick={() => tontinePossible && openBooking("deposit")}>Ma Tontine</button>
             </div>
-            {!dateOk && <div style={{ fontSize: 11.5, color: T.laterite, marginTop: 6, textAlign: "center" }}>Choose a travel date above to book.</div>}
+            {!dateOk && <div style={{ fontSize: 11.5, color: "#8A968E", marginTop: 6, textAlign: "center" }}>Choose a travel date above to book.</div>}
           </>
         )}
       </div>
@@ -1212,7 +1330,16 @@ const WEB3FORMS_KEY = import.meta.env.VITE_WEB3FORMS_KEY || "ebabe71e-99df-4752-
 
 function TripBuilder({ notify, go, user, saveRecord }) {
   const [step, setStep] = useState(0);
-  const [trip, setTrip] = useState({ dest: "Senegal", days: 7, pax: 2, hotel: "3★ Standard hotel", tours: [], transport: "Standard SUV (≤4)" });
+  const [trip, setTrip] = useState({ dest: "Senegal", days: 7, pax: 2, hotel: "3★ Standard hotel", tours: [], addons: {}, transport: "Standard SUV (≤4)" });
+  const toggleTour = (id) => setTrip((tr) => {
+    if (tr.tours.includes(id)) { const a = { ...tr.addons }; delete a[id]; return { ...tr, tours: tr.tours.filter((x) => x !== id), addons: a }; }
+    return { ...tr, tours: [...tr.tours, id] };
+  });
+  const toggleAddon = (id, name) => setTrip((tr) => {
+    const cur = { ...(tr.addons || {}) }; const list = cur[id] ? [...cur[id]] : [];
+    cur[id] = list.includes(name) ? list.filter((n) => n !== name) : [...list, name];
+    return { ...tr, addons: cur };
+  });
   const [contact, setContact] = useState({ name: "", email: "", phone: "", notes: "" });
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
@@ -1235,6 +1362,7 @@ function TripBuilder({ notify, go, user, saveRecord }) {
       Hotel_category: trip.hotel,
       Transport: trip.transport,
       Experiences: tourNames,
+      Add_ons: addonNames.join(" | ") || "—",
       Estimated_budget_XOF: total,
       Customer_notes: contact.notes || "—",
       Account: user ? `Signed in (${user.email})` : "Guest",
@@ -1253,7 +1381,7 @@ function TripBuilder({ notify, go, user, saveRecord }) {
           tour: { emoji: "🗺️", name: `Custom ${trip.days}-day ${trip.dest} itinerary`, pole: "Trip Builder", dur: `${trip.days} days` },
           date: "", adults: trip.pax, children: 0, infants: 0,
           plan: "itinerary", months: 0, total, deposit: 0,
-          itinerary: { dest: trip.dest, days: trip.days, pax: trip.pax, hotel: trip.hotel, transport: trip.transport, tours: tourNames, notes: contact.notes },
+          itinerary: { dest: trip.dest, days: trip.days, pax: trip.pax, hotel: trip.hotel, transport: trip.transport, tours: tourNames, addons: addonNames.join(" | "), notes: contact.notes },
           contact,
         });
         // Confirmation email to the client (fire-and-forget)
@@ -1267,9 +1395,14 @@ function TripBuilder({ notify, go, user, saveRecord }) {
   const HOTEL = { "2★ Eco-lodge / guesthouse": 35000, "3★ Standard hotel": 55000, "4★ Boutique / charme": 90000, "5★ Luxury / resort": 160000 };
   const TRANSPORT = { "No transport": 0, "Standard Sedan (≤3)": 85000, "Premium Sedan (≤3)": 100000, "Standard SUV (≤4)": 95000, "Premium SUV (≤4)": 150000, "Luxury SUV (≤4)": 350000, "Standard Minivan (≤14)": 150000, "Coaster coach (≤22)": 115000 };
   const toursCost = trip.tours.reduce((s, id) => s + (fromPrice(TOURS.find((t) => t.id === id)) || 0), 0) * trip.pax;
+  const addonsCost = trip.tours.reduce((s, id) => {
+    const t = TOURS.find((x) => x.id === id); const sel = (trip.addons && trip.addons[id]) || [];
+    return s + (t ? t.addons.filter((a) => sel.includes(a.name) && a.price).reduce((ss, a) => ss + (a.per === "person" ? a.price * trip.pax : a.price), 0) : 0);
+  }, 0);
   const hotelCost = HOTEL[trip.hotel] * trip.days * Math.ceil(trip.pax / 2);
   const transCost = TRANSPORT[trip.transport] * trip.days;
-  const total = toursCost + hotelCost + transCost;
+  const total = toursCost + addonsCost + hotelCost + transCost;
+  const addonNames = trip.tours.flatMap((id) => ((trip.addons && trip.addons[id]) || []).map((n) => `${TOURS.find((t) => t.id === id)?.name.split(" —")[0]}: ${n}`));
   const steps = ["Basics", "Hotel", "Experiences", "Transport", "Summary"];
 
   return (
@@ -1310,16 +1443,43 @@ function TripBuilder({ notify, go, user, saveRecord }) {
           {step === 2 && (
             <>
               <label style={label}>Pick your experiences ({trip.tours.length} selected)</label>
-              <div style={{ maxHeight: 320, overflowY: "auto" }}>
+              <div style={{ maxHeight: 300, overflowY: "auto" }}>
                 {TOURS.map((t) => (
                   <label key={t.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 4px", borderBottom: `1px solid ${T.line}`, cursor: "pointer", fontSize: 14 }}>
-                    <input type="checkbox" checked={trip.tours.includes(t.id)} style={{ width: 16, height: 16, accentColor: T.green }}
-                      onChange={() => setTrip({ ...trip, tours: trip.tours.includes(t.id) ? trip.tours.filter((x) => x !== t.id) : [...trip.tours, t.id] })} />
+                    <input type="checkbox" checked={trip.tours.includes(t.id)} style={{ width: 16, height: 16, accentColor: T.green }} onChange={() => toggleTour(t.id)} />
                     <span style={{ flex: 1, display: "flex", alignItems: "center", gap: 8 }}><CatIcon tour={t} size={17} color={T.green} /> {t.name}</span>
                     <strong style={{ fontSize: 13 }}>{fromPrice(t) ? fmtXOF(fromPrice(t)) : "on request"}</strong>
                   </label>
                 ))}
               </div>
+
+              {/* Add-ons per selected tour */}
+              {trip.tours.some((id) => TOURS.find((t) => t.id === id)?.addons?.length) && (
+                <div style={{ marginTop: 16 }}>
+                  <div style={sect}>Add-ons (optional)</div>
+                  {trip.tours.map((id) => {
+                    const t = TOURS.find((x) => x.id === id);
+                    if (!t || !t.addons?.length) return null;
+                    const sel = (trip.addons && trip.addons[id]) || [];
+                    return (
+                      <div key={id} style={{ border: `1px solid ${T.line}`, borderRadius: 12, padding: "10px 12px", marginBottom: 10 }}>
+                        <div style={{ fontWeight: 700, fontSize: 13.5, marginBottom: 4, display: "flex", alignItems: "center", gap: 7 }}><CatIcon tour={t} size={15} color={T.green} /> {t.name.split(" —")[0]}</div>
+                        {t.addons.map((a) => {
+                          const on = sel.includes(a.name);
+                          return (
+                            <label key={a.name} style={{ display: "flex", gap: 9, alignItems: "flex-start", padding: "6px 0", fontSize: 13, cursor: "pointer", lineHeight: 1.4 }}>
+                              <input type="checkbox" checked={on} onChange={() => toggleAddon(id, a.name)} style={{ width: 15, height: 15, accentColor: T.green, marginTop: 2, flexShrink: 0 }} />
+                              <span style={{ flex: 1, color: "#3B4A42" }}>{a.name}</span>
+                              <strong style={{ whiteSpace: "nowrap", fontSize: 12.5 }}>{a.price ? fmtXOF(a.price) + (a.per === "person" ? " /pp" : "") : "on request"}</strong>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
               <button style={{ ...btnGold, marginTop: 16 }} onClick={() => setStep(3)}>Next: transport →</button>
             </>
           )}
@@ -1329,7 +1489,7 @@ function TripBuilder({ notify, go, user, saveRecord }) {
               <select style={{ ...input, fontWeight: 600 }} value={trip.transport} onChange={(e) => setTrip({ ...trip, transport: e.target.value })}>
                 {Object.entries(TRANSPORT).map(([k, v]) => <option key={k} value={k}>{k}{v ? ` — ${fmtXOF(v)} / day` : ""}</option>)}
               </select>
-              <div style={{ fontSize: 12.5, opacity: 0.65, marginTop: 6 }}>Driver per-diem for multi-day circuits (8,000 XOF/night) added at confirmation.</div>
+              <div style={{ fontSize: 12.5, opacity: 0.65, marginTop: 6 }}>Driver per-diem for multi-day circuits ({fmtXOF(8000)}/night) added at confirmation.</div>
               <button style={{ ...btnGold, marginTop: 16 }} onClick={() => setStep(4)}>See summary →</button>
             </>
           )}
@@ -1339,6 +1499,7 @@ function TripBuilder({ notify, go, user, saveRecord }) {
               <p style={{ fontSize: 14.5, lineHeight: 1.6, opacity: 0.85 }}>
                 {trip.pax} traveler{trip.pax > 1 ? "s" : ""} · {trip.hotel} hotel · {trip.transport} · {trip.tours.length} experience{trip.tours.length !== 1 ? "s" : ""}: {trip.tours.map((id) => TOURS.find((t) => t.id === id)?.name.split(" —")[0]).join(", ") || "none yet"}
               </p>
+              {addonNames.length > 0 && <p style={{ fontSize: 13.5, lineHeight: 1.55, color: "#5A6B61", marginTop: -4 }}><strong>Add-ons:</strong> {addonNames.join(" · ")}</p>}
               {sent ? (
                 <div style={{ background: T.paperDark, border: `1px solid ${T.line}`, borderRadius: 12, padding: 16, fontSize: 14.5, lineHeight: 1.6 }}>
                   <CircleCheck size={18} color={T.green} style={{ verticalAlign: "middle", marginRight: 4 }} /> <strong>Request received.</strong> An ATS advisor will email you at <strong>{contact.email}</strong> to confirm availability and your final quote.
@@ -1362,15 +1523,16 @@ function TripBuilder({ notify, go, user, saveRecord }) {
           )}
         </div>
         <aside>
-          <div style={{ background: T.ink, color: T.paper, borderRadius: 16, padding: 22, position: "sticky", top: 80 }}>
-            <div style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".1em", color: T.gold }}>Live estimated budget</div>
-            <div className="disp" style={{ fontSize: 30, fontWeight: 800, margin: "6px 0 12px" }}>{fmtXOF(total)} <span style={{ fontSize: 14, fontWeight: 500, opacity: 0.7 }}>{fmtUSD(total)}</span></div>
+          <div style={{ background: "#fff", color: T.ink, border: `1px solid ${T.line}`, borderRadius: 16, padding: 22, position: "sticky", top: 80 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".1em", color: T.green }}>Live estimated budget</div>
+            <div className="disp" style={{ fontSize: 30, fontWeight: 800, margin: "6px 0 12px", color: "#1A1A1A" }}>{fmtXOF(total)} <span style={{ fontSize: 14, fontWeight: 500, color: "#888" }}>{fmtUSD(total)}</span></div>
             <Row l={`Hotel · ${trip.days} nights`} v={fmtXOF(hotelCost)} />
             <Row l={`Experiences × ${trip.pax} pax`} v={fmtXOF(toursCost)} />
+            {addonsCost > 0 && <Row l="Add-ons" v={fmtXOF(addonsCost)} />}
             <Row l="Transport" v={fmtXOF(transCost)} />
-            <div style={{ fontSize: 11.5, opacity: 0.65, marginTop: 6 }}>Experiences at group per-person rates; 'on request' items excluded from the estimate.</div>
-            <div style={{ borderTop: "1px solid rgba(255,255,255,.2)", marginTop: 10, paddingTop: 10, fontSize: 13.5, lineHeight: 1.6 }}>
-              <strong style={{ color: T.gold }}>Ma Tontine Voyage:</strong> reserve today with {fmtXOF(total * 0.2)} (20%), balance in instalments before departure.
+            <div style={{ fontSize: 11.5, color: "#8A968E", marginTop: 6 }}>Experiences at group per-person rates; 'on request' items excluded from the estimate.</div>
+            <div style={{ borderTop: `1px solid ${T.line}`, marginTop: 10, paddingTop: 10, fontSize: 13.5, lineHeight: 1.6, color: "#3B4A42" }}>
+              <strong style={{ color: T.green }}>Ma Tontine Voyage:</strong> reserve today with {fmtXOF(total * 0.2)} (20%), balance in instalments before departure.
             </div>
           </div>
         </aside>
@@ -1843,8 +2005,8 @@ function MiceWorkPage({ go }) {
       {/* Aggregate figures — white cards with border, taller */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 16, margin: "30px 0 8px" }}>
         {MICE_STATS.map(([n, l]) => (
-          <div key={l} style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 16, padding: "32px 20px", textAlign: "center", minHeight: 132, display: "flex", flexDirection: "column", justifyContent: "center" }}>
-            <div className="disp" style={{ fontSize: "clamp(26px,3.2vw,36px)", fontWeight: 800, color: T.green }}>{n}</div>
+          <div key={l} style={{ background: "#F8F5EF", border: "1px solid #ECE7DD", borderRadius: 16, padding: "32px 20px", textAlign: "center", minHeight: 132, display: "flex", flexDirection: "column", justifyContent: "center" }}>
+            <div className="disp" style={{ fontSize: "clamp(26px,3.2vw,36px)", fontWeight: 800, color: "#1A1A1A" }}>{n}</div>
             <div style={{ fontSize: 13, fontWeight: 600, marginTop: 8, color: "#5A6B61", lineHeight: 1.4 }}>{l}</div>
           </div>
         ))}
@@ -1951,55 +2113,60 @@ function AgentsPage({ notify }) {
 function AboutPage({ notify }) {
   return (
     <>
-      <div style={{ background: `linear-gradient(160deg, ${T.ink}, ${T.green})`, color: T.paper }}>
-        <Wrap style={{ padding: "56px 20px" }}>
-          <Eyebrow><span style={{ color: T.gold }}>Qui sommes-nous</span></Eyebrow>
-          <h1 className="disp" style={{ fontSize: "clamp(26px,4vw,40px)", fontWeight: 700, margin: "10px 0 14px", letterSpacing: "-0.02em" }}>About Africa Tourism Solutions</h1>
-          <p style={{ maxWidth: 680, fontSize: 17, lineHeight: 1.6, opacity: 0.92 }}>
+      <div style={{ background: "linear-gradient(180deg, #FFFFFF 0%, #F8F5EF 100%)", color: T.ink, borderBottom: "1px solid #ECE7DD" }}>
+        <Wrap style={{ padding: "64px 20px", textAlign: "center" }}>
+          <p style={{ color: T.green, fontWeight: 600, letterSpacing: ".14em", fontSize: 12, textTransform: "uppercase", margin: 0 }}>Qui sommes-nous</p>
+          <h1 className="disp" style={{ fontSize: "clamp(26px,4vw,40px)", fontWeight: 700, margin: "10px 0 14px", letterSpacing: "-0.02em", color: "#1A1A1A" }}>About Africa Tourism Solutions</h1>
+          <p style={{ maxWidth: 680, margin: "0 auto", fontSize: 17, lineHeight: 1.6, color: "#3B4A42" }}>
             Founded by two young Senegalese entrepreneurs, ATS is the expression of an Africa revalued — historically, touristically and culturally. We exist to break the stereotype of a continent defined by poverty and danger, with a rich, authentic offer that shows its true, majestic beauty.
           </p>
         </Wrap>
       </div>
       <Wrap>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(290px, 1fr))", gap: 28 }}>
-          <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 16, padding: 24 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-              <div style={{ width: 60, height: 60, borderRadius: "50%", background: `linear-gradient(140deg, ${T.green}, ${T.indigo})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26, color: "#fff" }} className="disp">AM</div>
+          <div style={{ background: "#fff", border: "1px solid #EEE", borderRadius: 16, padding: 24 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+              <div style={{ width: 76, height: 76, borderRadius: "50%", overflow: "hidden", flexShrink: 0, border: "1px solid #EEE" }}>
+                <TeamPhoto slug="alioune-mboup" name="Alioune Mboup" ratio="1 / 1" />
+              </div>
               <div>
-                <div className="disp" style={{ fontWeight: 800, fontSize: 19 }}>Alioune Mboup</div>
-                <div style={{ fontSize: 13, color: T.laterite, fontWeight: 700 }}>CEO & Co-founder</div>
+                <div className="disp" style={{ fontWeight: 800, fontSize: 19, color: "#1A1A1A" }}>Alioune Mboup</div>
+                <div style={{ fontSize: 13, color: "#6B7A72", fontWeight: 700 }}>CEO &amp; Co-founder</div>
               </div>
             </div>
-            <p style={{ lineHeight: 1.65, fontSize: 15, marginTop: 14, marginBottom: 0 }}>
+            <p style={{ lineHeight: 1.65, fontSize: 15, marginTop: 16, marginBottom: 0, color: "#3B4A42" }}>
               "Through inclusive and innovative solutions, we want to offer locals and visitors a unique experience on African soil. We hope to inspire African youth to discover the grand, majestic beauty of the continent — because educating this generation is essential to preserving our culture and heritage."
             </p>
           </div>
           <div>
-            <h3 className="disp" style={{ fontWeight: 800, fontSize: 21, marginTop: 0 }}>The ATS Group</h3>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: 10 }}>
+            <h3 className="disp" style={{ fontWeight: 800, fontSize: 21, marginTop: 0, color: "#1A1A1A" }}>The ATS Group</h3>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: 12 }}>
               {[["ATS Travel", "Flights & ticketing"], ["ATS Events", "MICE & celebrations"], ["ATS Business", "Corporate & team building"], ["ATS Logistics", "Fleet & group movement"], ["ATS Evasion", "Leisure escapes"], ["ATS School", "Educational travel"]].map(([n, d]) => (
-                <div key={n} style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 12, padding: "12px 14px" }}>
-                  <div style={{ fontWeight: 700, fontSize: 14 }}>{n}</div>
-                  <div style={{ fontSize: 12, opacity: 0.7 }}>{d}</div>
+                <div key={n} style={{ background: "#fff", border: "1px solid #EEE", borderRadius: 14, padding: "14px 16px" }}>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: "#1A1A1A" }}>{n}</div>
+                  <div style={{ fontSize: 12, color: "#7A867E", marginTop: 2 }}>{d}</div>
                 </div>
               ))}
             </div>
-            <div style={{ marginTop: 16, background: T.paperDark, borderRadius: 12, padding: "14px 16px", fontSize: 14, lineHeight: 1.6 }}>
-              <strong>Contact:</strong> +221 77 480 78 78 · +221 33 825 12 79 · infos@africatourismsolutions.com<br />
+            <div style={{ marginTop: 16, background: "#FAFAFA", border: "1px solid #EEE", borderRadius: 14, padding: "16px 18px", fontSize: 14, lineHeight: 1.7, color: "#3B4A42" }}>
+              <strong style={{ color: "#1A1A1A" }}>Contact:</strong>{" "}
+              <a href="tel:+221774807878" style={{ color: T.green, fontWeight: 600, textDecoration: "none" }}>+221 77 480 78 78</a> ·{" "}
+              <a href="tel:+221338251279" style={{ color: T.green, fontWeight: 600, textDecoration: "none" }}>+221 33 825 12 79</a> ·{" "}
+              <a href="mailto:infos@africatourismsolutions.com" style={{ color: T.green, fontWeight: 600, textDecoration: "none", wordBreak: "break-all" }}>infos@africatourismsolutions.com</a><br />
               Immeuble SICAP, Point E, Lot 8, apt A · Hann Maristes 2, Dakar
             </div>
           </div>
         </div>
 
         <h3 className="disp" style={{ fontWeight: 800, fontSize: 22, margin: "36px 0 14px" }}>Our team</h3>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))", gap: 12 }}>
-          {TEAM.map(([n, r]) => (
-            <div key={n} className="card-hover" style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 14, padding: 16, textAlign: "center" }}>
-              <div style={{ width: 52, height: 52, borderRadius: "50%", margin: "0 auto 8px", background: `linear-gradient(140deg, ${T.gold}, ${T.laterite})`, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800 }} className="disp">
-                {n.split(" ").map((w) => w[0]).slice(0, 2).join("")}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))", gap: 16 }}>
+          {TEAM.map(([n, r, slug]) => (
+            <div key={n} className="card-hover" style={{ background: "#fff", border: "1px solid #EEE", borderRadius: 16, overflow: "hidden" }}>
+              <TeamPhoto slug={slug} name={n} ratio="4 / 5" />
+              <div style={{ padding: "12px 14px", textAlign: "center" }}>
+                <div style={{ fontWeight: 700, fontSize: 14, color: "#1A1A1A" }}>{n}</div>
+                <div style={{ fontSize: 12, color: "#7A867E", marginTop: 2 }}>{r}</div>
               </div>
-              <div style={{ fontWeight: 700, fontSize: 14 }}>{n}</div>
-              <div style={{ fontSize: 12, opacity: 0.7 }}>{r}</div>
             </div>
           ))}
         </div>
@@ -2446,12 +2613,13 @@ function BookingModal({ tour, user, onClose, onConfirm }) {
   );
 
   return (
-    <div role="dialog" aria-modal="true" style={{ position: "fixed", inset: 0, zIndex: 60, background: "rgba(11,46,27,.55)", display: "flex", alignItems: "flex-end", justifyContent: "center", padding: 12 }} onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()} style={{ background: T.paper, borderRadius: 20, width: "100%", maxWidth: 560, maxHeight: "92vh", overflowY: "auto", padding: 22, color: T.ink }}>
-        <div style={{ display: "flex", alignItems: "start", gap: 12 }}>
+    <div role="dialog" aria-modal="true" className="bk-overlay" style={{ position: "fixed", inset: 0, zIndex: 60, background: "rgba(17,24,20,.5)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={onClose}>
+      <style>{`@media(max-width:640px){.bk-overlay{align-items:flex-end !important;padding:0 !important}.bk-modal{max-width:none !important;border-radius:20px 20px 0 0 !important;max-height:94vh !important;padding:20px 18px !important}}`}</style>
+      <div className="bk-modal" onClick={(e) => e.stopPropagation()} style={{ background: "#fff", borderRadius: 20, width: "100%", maxWidth: 680, maxHeight: "90vh", overflowY: "auto", padding: "28px 32px", color: T.ink }}>
+        <div style={{ display: "flex", alignItems: "start", gap: 12, marginBottom: 6 }}>
           <div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: T.laterite, textTransform: "uppercase", letterSpacing: ".1em" }}>{tour.pole} · {tour.dur}</div>
-            <h3 className="disp" style={{ fontSize: 20, fontWeight: 800, lineHeight: 1.2, margin: "4px 0 0" }}>{tour.name}</h3>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#8A968E", textTransform: "uppercase", letterSpacing: ".1em" }}>{tour.pole} · {tour.dur}</div>
+            <h3 className="disp" style={{ fontSize: 22, fontWeight: 800, lineHeight: 1.2, margin: "6px 0 0", color: "#1A1A1A" }}>{tour.name}</h3>
           </div>
           <button onClick={onClose} aria-label="Close" style={{ ...btnCircle, marginLeft: "auto" }}><X size={16} /></button>
         </div>
@@ -2464,8 +2632,8 @@ function BookingModal({ tour, user, onClose, onConfirm }) {
         <Counter label="Children (3–12)" sub={tour.quote ? "" : tg.c ? `${fmtXOF(tg.c)} each` : "child rate confirmed at booking"} value={children} set={setChildren} />
         <Counter label="Infants (under 3)" sub="Free" value={infants} set={setInfants} />
         {!tour.quote && (
-          <div style={{ marginTop: 8, background: T.paperDark, borderRadius: 10, padding: "9px 12px", fontSize: 13.5 }}>
-            Basis applied: <strong style={{ color: T.indigo }}>{tierLabel[tier]}</strong> — {tier !== "grp" ? "add travelers to unlock lower per-person rates." : "best per-person rate unlocked."}
+          <div style={{ marginTop: 10, background: "#F8F5EF", border: "1px solid #ECE7DD", borderRadius: 10, padding: "10px 13px", fontSize: 13.5, color: "#3B4A42" }}>
+            Basis applied: <strong style={{ color: "#1A1A1A" }}>{tierLabel[tier]}</strong> — {tier !== "grp" ? "add travelers to unlock lower per-person rates." : "best per-person rate unlocked."}
           </div>
         )}
 
@@ -2518,7 +2686,7 @@ function BookingModal({ tour, user, onClose, onConfirm }) {
               </button>
             </div>
             {!tontineAvailable && (
-              <div style={{ marginTop: 10, background: "#FFF7E0", border: `1px solid ${T.gold}`, borderRadius: 10, padding: "10px 12px", fontSize: 13, lineHeight: 1.5, color: T.laterite }}>
+              <div style={{ marginTop: 10, background: "#F8F5EF", border: "1px solid #ECE7DD", borderRadius: 10, padding: "10px 12px", fontSize: 13, lineHeight: 1.5, color: "#5A6B61" }}>
                 {!date
                   ? "Select a travel date above to unlock Ma Tontine Voyage instalment plans."
                   : `⏳ Your travel date is in ${daysUntil} day${daysUntil > 1 ? "s" : ""} — too soon for instalments (minimum 15 days). Please pay in full, or pick a later date.`}
@@ -2558,8 +2726,8 @@ function BookingModal({ tour, user, onClose, onConfirm }) {
                 </div>
               )}
               {plan === "deposit" && tontineAvailable && (
-                <div style={{ marginTop: 10, background: T.paperDark, borderRadius: 10, padding: "10px 12px", fontSize: 13.5, lineHeight: 1.6 }}>
-                  <strong style={{ color: T.laterite }}>Due today: {fmtXOF(calc.deposit)}</strong> (20% deposit)<br />
+                <div style={{ marginTop: 10, background: "#F7F7F7", border: "1px solid #EEE", borderRadius: 10, padding: "10px 12px", fontSize: 13.5, lineHeight: 1.6, color: "#3B4A42" }}>
+                  <strong style={{ color: "#1A1A1A" }}>Due today: {fmtXOF(calc.deposit)}</strong> (20% deposit)<br />
                   Then <strong>{months} × {fmtXOF(calc.installment)}</strong> over {selectedOpt.label} (balance {fmtXOF(calc.total - calc.deposit)}).<br />
                   Fully settled before your travel date{date ? ` (${date})` : ""}. Reminders by email, SMS and WhatsApp.
                 </div>
@@ -2575,16 +2743,13 @@ function BookingModal({ tour, user, onClose, onConfirm }) {
               onClick={() => onConfirm({ tour, date: `${dateFrom} → ${dateTo}`, dateFrom, dateTo, adults, children, infants, plan, months, schedule: plan === "deposit" ? selectedOpt.label : "", total: calc.total, deposit: calc.deposit, contact: { ...bill, name: `${bill.firstName} ${bill.lastName}`.trim() }, addons: chosenAddons })}>
               {plan === "deposit" ? `Reserve with ${fmtXOF(calc.deposit)} deposit` : `Pay in full — ${fmtXOF(calc.total)}`}
             </button>
-            <div style={{ marginTop: 10, fontSize: 12, opacity: 0.6, textAlign: "center" }}>
-              Visa · Mastercard · PayPal · Orange Money · Wave · Free Money · M-Pesa · Bank transfer — demo, no real charge
-            </div>
           </>
         )}
       </div>
     </div>
   );
 }
-const sect = { margin: "18px 0 8px", fontWeight: 700, fontSize: 13, textTransform: "uppercase", letterSpacing: ".08em", color: T.green };
+const sect = { margin: "22px 0 9px", fontWeight: 700, fontSize: 12.5, textTransform: "uppercase", letterSpacing: ".08em", color: T.green };
 
 const COUNTRY_LIST = ["Senegal", "Gambia", "Mali", "Mauritania", "Guinea", "Ivory Coast", "France", "Morocco", "United States", "United Kingdom", "Canada", "Other"];
 const billValid = (b) => b.firstName && b.lastName && b.email && b.phone && b.address && b.city && b.country;
@@ -2592,27 +2757,27 @@ const billValid = (b) => b.firstName && b.lastName && b.email && b.phone && b.ad
 function BillingFields({ bill, setBill }) {
   const set = (k) => (e) => setBill({ ...bill, [k]: e.target.value });
   return (
-    <>
-      <div style={{ display: "flex", gap: 10 }}>
-        <div style={{ flex: 1 }}><label style={label}>First name *</label><input style={input} value={bill.firstName || ""} onChange={set("firstName")} autoComplete="given-name" /></div>
-        <div style={{ flex: 1 }}><label style={label}>Last name *</label><input style={input} value={bill.lastName || ""} onChange={set("lastName")} autoComplete="family-name" /></div>
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
+        <div style={{ flex: 1, minWidth: 160 }}><label style={label}>First name *</label><input style={input} value={bill.firstName || ""} onChange={set("firstName")} autoComplete="given-name" /></div>
+        <div style={{ flex: 1, minWidth: 160 }}><label style={label}>Last name *</label><input style={input} value={bill.lastName || ""} onChange={set("lastName")} autoComplete="family-name" /></div>
       </div>
-      <div style={{ display: "flex", gap: 10 }}>
-        <div style={{ flex: 1 }}><label style={label}>Email *</label><input style={input} type="email" value={bill.email || ""} onChange={set("email")} autoComplete="email" /></div>
-        <div style={{ flex: 1 }}><label style={label}>Phone / WhatsApp *</label><input style={input} value={bill.phone || ""} onChange={set("phone")} placeholder="+221 …" autoComplete="tel" /></div>
+      <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
+        <div style={{ flex: 1, minWidth: 160 }}><label style={label}>Email *</label><input style={input} type="email" value={bill.email || ""} onChange={set("email")} autoComplete="email" /></div>
+        <div style={{ flex: 1, minWidth: 160 }}><label style={label}>Phone / WhatsApp *</label><input style={input} value={bill.phone || ""} onChange={set("phone")} placeholder="+221 …" autoComplete="tel" /></div>
       </div>
-      <label style={label}>Address *</label>
-      <input style={input} value={bill.address || ""} onChange={set("address")} placeholder="Street, building, apt" autoComplete="street-address" />
-      <div style={{ display: "flex", gap: 10 }}>
-        <div style={{ flex: 1 }}><label style={label}>City *</label><input style={input} value={bill.city || ""} onChange={set("city")} autoComplete="address-level2" /></div>
-        <div style={{ flex: 1 }}><label style={label}>Country *</label>
+      <div><label style={label}>Address *</label>
+      <input style={input} value={bill.address || ""} onChange={set("address")} placeholder="Street, building, apt" autoComplete="street-address" /></div>
+      <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
+        <div style={{ flex: 1, minWidth: 160 }}><label style={label}>City *</label><input style={input} value={bill.city || ""} onChange={set("city")} autoComplete="address-level2" /></div>
+        <div style={{ flex: 1, minWidth: 160 }}><label style={label}>Country *</label>
           <select style={input} value={bill.country || ""} onChange={set("country")}>
             <option value="">Select…</option>
             {COUNTRY_LIST.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
         </div>
       </div>
-    </>
+    </div>
   );
 }
 
@@ -2797,7 +2962,7 @@ function TransferWidget({ addBooking, compact, user }) {
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 14, flexWrap: "wrap" }}>
         <div>
           <div className="disp" style={{ fontWeight: 800, fontSize: 22, color: T.green }}>{fmtXOF(price)}</div>
-          <div style={{ fontSize: 12, opacity: 0.6 }}>{fmtUSD(price)} · per vehicle · fixed rate</div>
+          <div style={{ fontSize: 12, opacity: 0.6 }}>per vehicle · fixed rate</div>
         </div>
         <button disabled={!complete} style={{ ...btnGold, marginLeft: "auto", opacity: complete ? 1 : 0.5, cursor: complete ? "pointer" : "not-allowed" }} onClick={() => complete && openCheckout()}>
           Continue →
@@ -2964,34 +3129,34 @@ function TransportPage({ addBooking, notify, user }) {
 function Footer({ go, notify }) {
   const [email, setEmail] = useState("");
   return (
-    <footer style={{ background: T.ink, color: T.paper, padding: "44px 20px", marginTop: 20 }}>
+    <footer style={{ background: "#F8F5EF", color: "#1A1A1A", borderTop: "1px solid #ECE7DD", padding: "44px 20px", marginTop: 20 }}>
       <div style={{ maxWidth: 1200, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px,1fr))", gap: 24, fontSize: 14 }}>
         <div>
-          <div className="disp" style={{ fontWeight: 800, fontSize: 18, marginBottom: 8 }}>Africa Tourism Solutions</div>
-          <p style={{ opacity: 0.7, lineHeight: 1.6 }}>Tourism · DMC · Events · Logistics · Travel management. Dakar, Senegal. IATA-accredited.</p>
-          <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
+          <div className="disp" style={{ fontWeight: 800, fontSize: 18, marginBottom: 8, color: "#1A1A1A" }}>Africa Tourism Solutions</div>
+          <p style={{ color: "#6B7A72", lineHeight: 1.6 }}>Tourism · DMC · Events · Logistics · Travel management. Dakar, Senegal. IATA-accredited.</p>
+          <div style={{ display: "flex", gap: 10, marginTop: 8, flexWrap: "wrap" }}>
             {["Facebook", "Instagram", "X", "LinkedIn"].map((s) => (
-              <button key={s} onClick={() => notify(`Opening ATS ${s} (demo)`)} style={{ background: "rgba(255,255,255,.1)", border: "none", color: T.paper, borderRadius: 8, padding: "6px 10px", cursor: "pointer", fontSize: 12.5, fontWeight: 600 }}>{s}</button>
+              <button key={s} onClick={() => notify(`Opening ATS ${s} (demo)`)} style={{ background: "#F2F2F2", border: "none", color: "#1A1A1A", borderRadius: 8, padding: "6px 10px", cursor: "pointer", fontSize: 12.5, fontWeight: 600 }}>{s}</button>
             ))}
           </div>
         </div>
         <div>
-          <div style={{ fontWeight: 700, marginBottom: 8, color: T.gold }}>Explore</div>
+          <div style={{ fontWeight: 700, marginBottom: 8, color: "#1A1A1A" }}>Explore</div>
           {[["tours", "Tours & experiences"], ["builder", "Trip Builder"], ["transport", "Transfers & car hire"], ["flights", "Flights"], ["events", "Events & MICE"], ["about", "About Us"]].map(([k, l]) => (
-            <button key={k} onClick={() => go(k)} style={{ display: "block", background: "none", border: "none", color: T.paper, opacity: 0.75, cursor: "pointer", padding: "4px 0", fontSize: 14, fontFamily: "inherit" }}>{l}</button>
+            <button key={k} onClick={() => go(k)} style={{ display: "block", background: "none", border: "none", color: "#5A6B61", cursor: "pointer", padding: "4px 0", fontSize: 14, fontFamily: "inherit" }}>{l}</button>
           ))}
         </div>
         <div>
-          <div style={{ fontWeight: 700, marginBottom: 8, color: T.gold }}>ATS Group</div>
-          <p style={{ opacity: 0.7, lineHeight: 1.9 }}>ATS Travel · ATS Events · ATS Business · ATS Logistics · ATS Evasion · ATS School</p>
+          <div style={{ fontWeight: 700, marginBottom: 8, color: "#1A1A1A" }}>ATS Group</div>
+          <p style={{ color: "#6B7A72", lineHeight: 1.9 }}>ATS Travel · ATS Events · ATS Business · ATS Logistics · ATS Evasion · ATS School</p>
         </div>
         <div>
-          <div style={{ fontWeight: 700, marginBottom: 8, color: T.gold }}>Newsletter</div>
-          <input style={{ ...input, background: "rgba(255,255,255,.1)", border: "1px solid rgba(255,255,255,.25)", color: T.paper }} placeholder="you@email.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <div style={{ fontWeight: 700, marginBottom: 8, color: "#1A1A1A" }}>Newsletter</div>
+          <input style={{ ...input }} placeholder="you@email.com" value={email} onChange={(e) => setEmail(e.target.value)} />
           <button style={{ ...btnGold, marginTop: 8, fontSize: 13.5, padding: "9px 18px" }} onClick={() => { notify(email ? "Subscribed — welcome to the ATS newsletter (demo)" : "Enter your email first"); setEmail(""); }}>Subscribe</button>
         </div>
       </div>
-      <div style={{ maxWidth: 1200, margin: "22px auto 0", fontSize: 12.5, opacity: 0.5 }}>© 2026 Africa Tourism Solutions · Interactive preview — demo data, no real payments</div>
+      <div style={{ maxWidth: 1200, margin: "22px auto 0", fontSize: 12.5, color: "#9AA79F" }}>© 2026 Africa Tourism Solutions</div>
     </footer>
   );
 }
