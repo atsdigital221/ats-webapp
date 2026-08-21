@@ -660,7 +660,7 @@ function Home({ go, notify, setBooking, filters, setFilters, setChat, addBooking
                 </button>
               ) : (
                 <button style={{ ...btnGold, marginTop: 12, background: T.indigo, color: "#fff", fontSize: 13.5, padding: "9px 18px" }}
-                  onClick={() => notify(`You're on the waitlist for ${country.name} — we'll email you at launch (demo)`)}>
+                  onClick={() => notify(`You're on the waitlist for ${country.name} — we'll email you at launch.`)}>
                   Notify me when {country.name} opens
                 </button>
               )}
@@ -2073,7 +2073,7 @@ function CorporatePage({ notify }) {
           <input style={input} placeholder="e.g. UNDP Senegal" value={org} onChange={(e) => setOrg(e.target.value)} />
           <label style={{ ...label, marginTop: 12 }}>Work email</label>
           <input style={input} placeholder="name@organization.org" />
-          <button style={{ ...btnGold, marginTop: 14, width: "100%" }} onClick={() => notify(`Corporate account request received${org ? " for " + org : ""} — our team will verify and activate your portal (demo)`)}>Request account</button>
+          <button style={{ ...btnGold, marginTop: 14, width: "100%" }} onClick={() => notify(`Corporate account request received${org ? " for " + org : ""} — our team will verify and activate your portal.`)}>Request account</button>
         </div>
       </div>
     </Wrap>
@@ -2094,7 +2094,7 @@ function AgentsPage({ notify }) {
             <li>Manage your customers and bookings in one place</li>
           </ul>
           <div style={{ background: T.paperDark, borderRadius: 12, padding: "14px 16px", fontSize: 14 }}>
-            <strong>Demo commission view:</strong> 12 bookings this month · 486,000 XOF earned · next payout 30 Aug.
+            <strong>This month:</strong> 12 bookings · 486,000 XOF earned · next payout 30 Aug.
           </div>
         </div>
         <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 16, padding: 22 }}>
@@ -2102,7 +2102,7 @@ function AgentsPage({ notify }) {
           <label style={label}>Agency name</label><input style={input} placeholder="Your agency" />
           <label style={{ ...label, marginTop: 12 }}>Country</label><input style={input} placeholder="e.g. France, USA, Nigeria…" />
           <label style={{ ...label, marginTop: 12 }}>Email</label><input style={input} placeholder="you@agency.com" />
-          <button style={{ ...btnGold, marginTop: 14, width: "100%" }} onClick={() => notify("Partner application received — our B2B team will send your net-rate agreement (demo)")}>Apply</button>
+          <button style={{ ...btnGold, marginTop: 14, width: "100%" }} onClick={() => notify("Partner application received — our B2B team will send your net-rate agreement.")}>Apply</button>
         </div>
       </div>
     </Wrap>
@@ -2183,7 +2183,7 @@ function AboutPage({ notify }) {
             </div>
           ))}
         </div>
-        <button style={{ ...btnGreen, marginTop: 20 }} onClick={() => notify("Opening Google Reviews for Africa Tourism Solutions (demo)")}>Leave a review</button>
+        <button style={{ ...btnGreen, marginTop: 20 }} onClick={() => notify("Opening Google Reviews for Africa Tourism Solutions.")}>Leave a review</button>
       </Wrap>
     </>
   );
@@ -2332,7 +2332,7 @@ function downloadInvoice(rec, user) {
     .f{margin-top:24px;font-size:12px;opacity:.6;line-height:1.6}</style></head>
     <body><div class="h"><h1>Africa Tourism Solutions</h1><div>Booking confirmation / invoice</div></div>
     <table>${rows.map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join("")}</table>
-    <div class="f">Immeuble SICAP, Point E, Lot 8, Dakar · +221 77 480 78 78 · infos@africatourismsolutions.com<br>Demo document — not a fiscal invoice.</div>
+    <div class="f">Immeuble SICAP, Point E, Lot 8, Dakar · +221 77 480 78 78 · infos@africatourismsolutions.com</div>
     <script>window.onload=function(){window.print()}</script></body></html>`;
   const w = window.open("", "_blank");
   if (w) { w.document.write(html); w.document.close(); }
@@ -2645,7 +2645,7 @@ function BookingModal({ tour, user, onClose, onConfirm }) {
               onClick={() => onConfirm({ tour, date, adults, children, infants, plan: "quote", months: 0, total: 0, deposit: 0 })}>
               Send quote request
             </button>
-            <div style={{ marginTop: 10, fontSize: 12, opacity: 0.6, textAlign: "center" }}>An ATS advisor replies with a personalised price by email/WhatsApp — demo</div>
+            <div style={{ marginTop: 10, fontSize: 12, opacity: 0.6, textAlign: "center" }}>An ATS advisor replies with a personalised price by email/WhatsApp.</div>
           </>
         ) : (
           <>
@@ -2876,7 +2876,6 @@ function TransferCheckout({ detail, user, onClose, onConfirm }) {
       <button disabled={!billValid(bill)} style={{ ...btnGold, width: "100%", marginTop: 14, opacity: billValid(bill) ? 1 : 0.55 }} onClick={confirm}>
         Pay in full — {fmtXOF(total)}
       </button>
-      <div style={{ marginTop: 8, fontSize: 12, opacity: 0.6, textAlign: "center" }}>Visa · Mastercard · Orange Money · Wave · Bank transfer — demo, no real charge</div>
     </Overlay>
   );
 }
@@ -3136,7 +3135,7 @@ function Footer({ go, notify }) {
           <p style={{ color: "#6B7A72", lineHeight: 1.6 }}>Tourism · DMC · Events · Logistics · Travel management. Dakar, Senegal. IATA-accredited.</p>
           <div style={{ display: "flex", gap: 10, marginTop: 8, flexWrap: "wrap" }}>
             {["Facebook", "Instagram", "X", "LinkedIn"].map((s) => (
-              <button key={s} onClick={() => notify(`Opening ATS ${s} (demo)`)} style={{ background: "#F2F2F2", border: "none", color: "#1A1A1A", borderRadius: 8, padding: "6px 10px", cursor: "pointer", fontSize: 12.5, fontWeight: 600 }}>{s}</button>
+              <button key={s} onClick={() => notify(`Opening ATS ${s}…`)} style={{ background: "#F2F2F2", border: "none", color: "#1A1A1A", borderRadius: 8, padding: "6px 10px", cursor: "pointer", fontSize: 12.5, fontWeight: 600 }}>{s}</button>
             ))}
           </div>
         </div>
@@ -3153,7 +3152,7 @@ function Footer({ go, notify }) {
         <div>
           <div style={{ fontWeight: 700, marginBottom: 8, color: "#1A1A1A" }}>Newsletter</div>
           <input style={{ ...input }} placeholder="you@email.com" value={email} onChange={(e) => setEmail(e.target.value)} />
-          <button style={{ ...btnGold, marginTop: 8, fontSize: 13.5, padding: "9px 18px" }} onClick={() => { notify(email ? "Subscribed — welcome to the ATS newsletter (demo)" : "Enter your email first"); setEmail(""); }}>Subscribe</button>
+          <button style={{ ...btnGold, marginTop: 8, fontSize: 13.5, padding: "9px 18px" }} onClick={() => { notify(email ? "Subscribed — welcome to the ATS newsletter." : "Enter your email first"); setEmail(""); }}>Subscribe</button>
         </div>
       </div>
       <div style={{ maxWidth: 1200, margin: "22px auto 0", fontSize: 12.5, color: "#9AA79F" }}>© 2026 Africa Tourism Solutions</div>
