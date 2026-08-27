@@ -2896,7 +2896,16 @@ function AdminConsole({ user, isAdmin, isSuper, setSignin }) {
                         <td style={td}>{custOf(b)}</td>
                         <td style={td}><span style={{ fontSize: 11.5, fontWeight: 700, textTransform: "capitalize", color: ch === "agent" ? T.green : ch === "corporate" ? T.indigo : "#8A968E" }}>{ch}</span></td>
                         <td style={td}>{planLabel(d.plan)}</td>
-                        <td style={td}>{d.plan === "quote" || d.plan === "itinerary" ? "—" : fmtXOF(d.total)}</td>
+                        <td style={td}>{(() => {
+                          if (d.plan === "quote" || d.plan === "itinerary") return "—";
+                          if (d.plan === "deposit") {
+                            const ts = tontineState({ ...d, _status: b.status });
+                            return ts.settled
+                              ? <span style={{ color: T.green, fontWeight: 700 }}>100%</span>
+                              : <span>{ts.payCount}/{ts.plannedTotal} <span style={{ opacity: 0.55, fontWeight: 500 }}>· {fmtXOF(d.total)}</span></span>;
+                          }
+                          return fmtXOF(d.total);
+                        })()}</td>
                         <td style={td}><span style={{ fontSize: 12, fontWeight: 700, color: statusColor(b.status) }}>● {statusLabel[b.status] || b.status}</span></td>
                         <td style={td}>{new Date(b.created_at).toLocaleDateString()}</td>
                       </tr>
