@@ -809,14 +809,16 @@ function Nav({ go, page, user, setSignin, bookings, currency, setCurrency }) {
     <nav style={{ position: "sticky", top: 0, zIndex: 40, background: "transparent" }}>
       <style>{`
         .nav-desktop{display:flex}
-        .nav-burger{display:none !important}
-        .nav-drawer{display:none}
-        .nav-link:hover{background:rgba(0,146,69,.10)}
+        .nav-mobileonly{display:none}
         @media(max-width:980px){
           .nav-desktop{display:none !important}
-          .nav-burger{display:flex !important;align-items:center;justify-content:center}
-          .nav-drawer{display:block}
+          .nav-mobileonly{display:block}
         }
+        .nav-menu-link{position:relative;transition:background .18s ease,color .18s ease,transform .18s ease}
+        .nav-menu-link:hover{background:rgba(0,146,69,.10) !important;transform:translateX(4px)}
+        .nav-menu-link::before{content:"";position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:0;background:${T.green};border-radius:3px;transition:height .2s ease}
+        .nav-menu-link:hover::before{height:60%}
+        @media(prefers-reduced-motion:reduce){.nav-menu-link,.nav-menu-link::before{transition:none}.nav-menu-link:hover{transform:none}}
       `}</style>
       <div style={{ maxWidth: 1240, margin: "0 auto", padding: "12px 16px", display: "flex", alignItems: "center", gap: 12 }}>
         {/* Logo pill — solid white rounded */}
@@ -826,37 +828,35 @@ function Nav({ go, page, user, setSignin, bookings, currency, setCurrency }) {
             : <><span style={{ color: T.green }}>Africa</span>&nbsp;Tourism&nbsp;<span style={{ color: "#C9A902" }}>Solutions</span></>}
         </button>
 
-        {/* Desktop links pill */}
-        <div className="nav-desktop" style={{ ...GLASS, marginLeft: "auto", gap: 2, fontSize: 13, fontWeight: 600, alignItems: "center", padding: "6px 8px", borderRadius: 999 }}>
-          {links.map(([k, l]) => (
-            <button key={k} onClick={() => nav(k)} className="nav-link" style={{ background: page.name === k ? T.green : "transparent", border: "none", cursor: "pointer", color: page.name === k ? "#fff" : T.ink, padding: "8px 12px", borderRadius: 999, fontWeight: page.name === k ? 700 : 600, transition: "background .15s", whiteSpace: "nowrap" }}>{l}</button>
-          ))}
+        {/* Right cluster: language + currency + account (desktop) then hamburger (all sizes, far right) */}
+        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 }}>
+          <div className="nav-desktop" style={{ alignItems: "center", gap: 12 }}>
+            {prefs(false)}
+            {accountBtn(false)}
+          </div>
+          <button aria-label={open ? "Close menu" : "Open menu"} aria-expanded={open} onClick={() => setOpen((o) => !o)}
+            style={{ ...GLASS, display: "flex", alignItems: "center", justifyContent: "center", width: 46, height: 46, borderRadius: 14, cursor: "pointer", color: T.ink }}>
+            {open ? <X size={22} /> : <Menu size={22} />}
+          </button>
         </div>
-
-        {/* Language + currency (desktop) */}
-        <div className="nav-desktop">{prefs(false)}</div>
-
-        {/* Account (desktop) */}
-        <div className="nav-desktop">{accountBtn(false)}</div>
-
-        {/* Mobile hamburger */}
-        <button className="nav-burger" aria-label={open ? "Close menu" : "Open menu"} aria-expanded={open} onClick={() => setOpen((o) => !o)}
-          style={{ ...GLASS, marginLeft: "auto", width: 46, height: 46, borderRadius: 14, cursor: "pointer", color: T.ink }}>
-          {open ? <X size={22} /> : <Menu size={22} />}
-        </button>
       </div>
 
-      {/* Mobile drawer */}
+      {/* Menu drawer (all sizes). Links always; prefs + account only on mobile (desktop keeps them in the bar). */}
       {open && (
-        <div className="nav-drawer" style={{ ...GLASS, margin: "0 16px", borderRadius: 18, padding: "10px 12px 14px" }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-            {links.map(([k, l]) => (
-              <button key={k} onClick={() => nav(k)} style={{ background: page.name === k ? T.green : "transparent", border: "none", cursor: "pointer", color: page.name === k ? "#fff" : T.ink, padding: "12px 12px", borderRadius: 10, fontWeight: page.name === k ? 700 : 600, fontSize: 15, textAlign: "left" }}>{l}</button>
-            ))}
+        <>
+          <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 39 }} />
+          <div style={{ ...GLASS, position: "absolute", top: "calc(100% - 2px)", right: 16, zIndex: 41, width: "min(300px, calc(100vw - 32px))", borderRadius: 18, padding: "10px 12px 14px" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              {links.map(([k, l]) => (
+                <button key={k} onClick={() => nav(k)} className={page.name === k ? "" : "nav-menu-link"} style={{ background: page.name === k ? T.green : "transparent", border: "none", cursor: "pointer", color: page.name === k ? "#fff" : T.ink, padding: "11px 12px", borderRadius: 10, fontWeight: page.name === k ? 700 : 600, fontSize: 15, textAlign: "left" }}>{l}</button>
+              ))}
+            </div>
+            <div className="nav-mobileonly">
+              <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${T.line}` }}>{prefs(true)}</div>
+              <div style={{ marginTop: 12 }}>{accountBtn(true)}</div>
+            </div>
           </div>
-          <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${T.line}` }}>{prefs(true)}</div>
-          <div style={{ marginTop: 12 }}>{accountBtn(true)}</div>
-        </div>
+        </>
       )}
     </nav>
   );
