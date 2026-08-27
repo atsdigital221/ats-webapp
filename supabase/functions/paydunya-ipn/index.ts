@@ -60,16 +60,19 @@ serve(async (req) => {
       // Idempotency: never apply the same PayDunya invoice twice
       if (seen.includes(token)) return new Response("already processed", { status: 200 });
 
-      const months = d.months || 1;
+      const total = Number(d.total) || 0;
+      const amt = Number(cd.amount) || 0;
       let body: Record<string, unknown>;
       if (kind === "installment") {
-        const already = (d.paid || 0) + 1;
-        const done = already >= months;
-        body = { data: { ...d, paid: already, paidTokens: [...seen, token] }, status: done ? "settled" : "confirmed" };
+        const prevPaid = Number(d.paidAmount ?? d.deposit ?? 0);
+        const newPaid = prevPaid + amt;
+        const newCount = Number(d.payCount ?? 1) + 1;
+        const done = newPaid >= total - 1;
+        body = { data: { ...d, paidAmount: newPaid, payCount: newCount, paidTokens: [...seen, token] }, status: done ? "settled" : "confirmed" };
       } else if (kind === "deposit") {
-        body = { data: { ...d, paidTokens: [...seen, token] }, status: "confirmed" }; // deposit received, instalments remaining
+        body = { data: { ...d, paidAmount: Number(d.deposit ?? amt), payCount: 1, paidTokens: [...seen, token] }, status: "confirmed" };
       } else {
-        body = { data: { ...d, paidTokens: [...seen, token] }, status: "paid" }; // full payment
+        body = { data: { ...d, paidAmount: total, payCount: 1, paidTokens: [...seen, token] }, status: "paid" };
       }
 
       await fetch(`${url}/rest/v1/bookings?id=eq.${bId}`, {

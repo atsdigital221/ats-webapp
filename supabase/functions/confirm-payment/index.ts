@@ -49,15 +49,18 @@ serve(async (req) => {
     const seen = Array.isArray(d.paidTokens) ? d.paidTokens : [];
     if (seen.includes(token)) return json({ ok: true, already: true });
 
-    const months = d.months || 1;
+    const total = Number(d.total) || 0;
+    const amt = Number(cd.amount) || 0;
     let body: Record<string, unknown>;
     if (kind === "installment") {
-      const already = (d.paid || 0) + 1;
-      body = { data: { ...d, paid: already, paidTokens: [...seen, token] }, status: already >= months ? "settled" : "confirmed" };
+      const prevPaid = Number(d.paidAmount ?? d.deposit ?? 0);
+      const newPaid = prevPaid + amt;
+      const newCount = Number(d.payCount ?? 1) + 1;
+      body = { data: { ...d, paidAmount: newPaid, payCount: newCount, paidTokens: [...seen, token] }, status: newPaid >= total - 1 ? "settled" : "confirmed" };
     } else if (kind === "deposit") {
-      body = { data: { ...d, paidTokens: [...seen, token] }, status: "confirmed" };
+      body = { data: { ...d, paidAmount: Number(d.deposit ?? amt), payCount: 1, paidTokens: [...seen, token] }, status: "confirmed" };
     } else {
-      body = { data: { ...d, paidTokens: [...seen, token] }, status: "paid" };
+      body = { data: { ...d, paidAmount: total, payCount: 1, paidTokens: [...seen, token] }, status: "paid" };
     }
 
     await fetch(`${url}/rest/v1/bookings?id=eq.${bId}`, {

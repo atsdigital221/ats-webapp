@@ -53,7 +53,7 @@ serve(async (req) => {
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${Deno.env.get("RESEND_API_KEY") ?? ""}` },
       body: JSON.stringify({
         from, to: [to],
-        reply_to: "adiouf@africatourismsolutions.com",
+        reply_to: "sales@africatourismsolutions.com",
         subject: "Your request has been received — Africa Tourism Solutions",
         html,
       }),

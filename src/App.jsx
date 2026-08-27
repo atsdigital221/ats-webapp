@@ -7,7 +7,7 @@ import {
   Calendar, Check, X, Star, MessageCircle, Bot, ChevronLeft, ChevronRight, ChevronDown, Heart,
   Menu, Search, Shield, ArrowRight, Package, Globe, Sparkles, Hotel, UserRound, Gift, Trophy,
   Mic, Dumbbell, Languages, CircleCheck, Building2, Ship, Waves,
-  CalendarCheck, Newspaper, Video, ConciergeBell, PenTool,
+  CalendarCheck, Newspaper, Video, ConciergeBell, PenTool, Info,
 } from "lucide-react";
 
 // Category icon for a tour / booking record (replaces per-item emojis)
@@ -39,6 +39,9 @@ const XOF_EUR = 655.957;   // fixed CFA peg
 // Active display currency — reassigned by the app on each render from state.
 let ACTIVE_CUR = "XOF";
 const setActiveCurrency = (c) => { ACTIVE_CUR = c || "XOF"; };
+// Corporate preferential discount (%) for the signed-in corporate member — set by the app.
+let CORP_DISCOUNT = 0;
+const setCorpDiscount = (n) => { CORP_DISCOUNT = Number(n) || 0; };
 const nf = (loc) => new Intl.NumberFormat(loc);
 // All prices are stored in XOF; fmtXOF renders them in the active currency.
 const fmtXOF = (n) => {
@@ -49,6 +52,31 @@ const fmtXOF = (n) => {
 };
 // Secondary international USD reference next to a main price. Hidden when USD is the active currency (would be redundant).
 const fmtUSD = (n) => ACTIVE_CUR === "USD" ? "" : "≈ $" + Math.round((n || 0) / XOF_USD);
+
+// ---- Ma Tontine Voyage : flexible-instalment state for a deposit booking ----
+// Model: paidAmount = cumulative XOF paid (incl. deposit); payCount = number of
+// payments made incl. the deposit. `months` = number of instalments planned at
+// booking (deposit excluded). Legacy records (paid/months only) are supported.
+function tontineState(b) {
+  const total = Number(b.total) || 0;
+  const deposit = Number(b.deposit) || 0;
+  const months = Math.max(1, Number(b.months) || 1);
+  const legacyPer = (total - deposit) / months;
+  const paidAmount = b.paidAmount != null
+    ? Number(b.paidAmount)
+    : deposit + legacyPer * (Number(b.paid) || 0);
+  const payCount = b.payCount != null
+    ? Number(b.payCount)
+    : 1 + (Number(b.paid) || 0);
+  const plannedTotal = months + 1;              // deposit + planned instalments
+  const remaining = Math.max(0, Math.round(total - paidAmount));
+  const settled = b._status === "settled" || remaining <= 1;
+  const pct = total ? Math.min(100, Math.round((paidAmount / total) * 100)) : 0;
+  // instalments still planned (excludes payments already made)
+  const leftPlanned = Math.max(1, plannedTotal - payCount);
+  const minNext = Math.min(remaining, Math.max(1, Math.ceil(remaining / leftPlanned)));
+  return { total, deposit, months, paidAmount, payCount, plannedTotal, remaining, settled, pct, minNext };
+}
 
 // ---------------- DATA ----------------
 // ---- DATA generated from ATS Senegal Operations Manual v15 (price & rate tables) ----
@@ -113,22 +141,24 @@ const btnCircle = { width: 30, height: 30, borderRadius: "50%", border: `1px sol
 const btnGold = { background: T.gold, color: T.ink, border: "none", borderRadius: 999, padding: "11px 22px", fontWeight: 700, fontSize: 15, cursor: "pointer" };
 const btnGreen = { ...btnGold, background: T.green, color: "#fff" };
 const input = { width: "100%", boxSizing: "border-box", padding: "11px 13px", borderRadius: 10, border: `1px solid ${T.line}`, background: "#fff", fontSize: 14.5, fontFamily: "inherit", color: T.ink };
-const label = { fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".07em", color: "#1A1A1A", display: "block", marginBottom: 7 };
+const label = { fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".07em", color: "#1A1A1A", display: "block", marginTop: 14, marginBottom: 7 };
 // ---------------- RANGE DATE PICKER (single calendar, from → to, past disabled) ----------------
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const WD = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
 const iso = (y, m, d) => `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 
-function RangeDate({ from, to, onChange, triggerStyle }) {
+function RangeDate({ from, to, onChange, triggerStyle, minDate }) {
   const [open, setOpen] = useState(false);
   const now = new Date();
   const todayStr = iso(now.getFullYear(), now.getMonth(), now.getDate());
-  const start = from ? new Date(from + "T00:00:00") : now;
+  const minStr = minDate || todayStr; // earliest selectable day
+  const start = from ? new Date(from + "T00:00:00") : new Date(minStr + "T00:00:00");
   const [view, setView] = useState({ y: start.getFullYear(), m: start.getMonth() });
 
   const daysInMonth = new Date(view.y, view.m + 1, 0).getDate();
   const firstDow = (new Date(view.y, view.m, 1).getDay() + 6) % 7; // Mon=0
-  const canPrev = new Date(view.y, view.m, 1) > new Date(now.getFullYear(), now.getMonth(), 1);
+  const minD = new Date(minStr + "T00:00:00");
+  const canPrev = new Date(view.y, view.m, 1) > new Date(minD.getFullYear(), minD.getMonth(), 1);
 
   const pick = (ds) => {
     if (!from || (from && to)) { onChange(ds, ""); return; }
@@ -165,7 +195,7 @@ function RangeDate({ from, to, onChange, triggerStyle }) {
               {cells.map((d, i) => {
                 if (!d) return <div key={i} />;
                 const ds = iso(view.y, view.m, d);
-                const past = ds < todayStr;
+                const past = ds < minStr;
                 const isFrom = ds === from, isTo = ds === to;
                 const inRange = from && to && ds > from && ds < to;
                 const sel = isFrom || isTo;
@@ -235,6 +265,194 @@ function AddressInput({ value, onChange, placeholder }) {
   );
 }
 
+// ---------------- LIVE AIRPORT AUTOCOMPLETE (worldwide, keyless — TravelPayouts) ----------------
+function AirportInput({ value, onChange, placeholder }) {
+  const [q, setQ] = useState(value || "");
+  const [results, setResults] = useState([]);
+  const [open, setOpen] = useState(false);
+  useEffect(() => { setQ(value || ""); }, [value]);
+  useEffect(() => {
+    if (!q || q.trim().length < 2) { setResults([]); return; }
+    const id = setTimeout(async () => {
+      try {
+        const res = await fetch(`https://autocomplete.travelpayouts.com/places2?locale=en&types[]=airport&types[]=city&term=${encodeURIComponent(q)}`, { headers: { Accept: "application/json" } });
+        const data = await res.json();
+        setResults(Array.isArray(data) ? data.slice(0, 7) : []);
+        setOpen(true);
+      } catch { setResults([]); }
+    }, 300);
+    return () => clearTimeout(id);
+  }, [q]);
+  const labelOf = (r) => `${r.city_name || r.name} (${r.code})`;
+  const contextOf = (r) => [r.name && r.name !== r.city_name ? r.name : null, r.country_name].filter(Boolean).join(" · ");
+  const choose = (r) => { const p = labelOf(r); onChange(p); setQ(p); setOpen(false); setResults([]); };
+  return (
+    <div style={{ position: "relative" }}>
+      <input style={input} value={q} placeholder={placeholder} autoComplete="off"
+        onChange={(e) => { setQ(e.target.value); onChange(e.target.value); }}
+        onFocus={() => results.length && setOpen(true)} />
+      {open && results.length > 0 && (
+        <>
+          <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 40 }} />
+          <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, zIndex: 41, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 12, boxShadow: "0 14px 34px rgba(0,0,0,.18)", overflow: "hidden", maxHeight: 280, overflowY: "auto" }}>
+            {results.map((r, i) => (
+              <button key={i} onClick={() => choose(r)} style={{ display: "flex", gap: 8, width: "100%", textAlign: "left", background: "none", border: "none", borderBottom: `1px solid ${T.line}`, padding: "10px 12px", cursor: "pointer", lineHeight: 1.35, color: T.ink, alignItems: "flex-start" }}>
+                <Plane size={15} style={{ flexShrink: 0, marginTop: 2, color: T.green }} />
+                <span style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 600 }}>{r.city_name || r.name} <span style={{ fontWeight: 700, color: T.indigo }}>({r.code})</span></div>
+                  <div style={{ fontSize: 11.5, opacity: 0.6, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{contextOf(r)}</div>
+                </span>
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ---------------- TERMS & CANCELLATION POLICY (from ATS General Terms of Sale) ----------------
+const TERMS_SECTIONS = [
+  { h: "Payment terms", items: [
+    "A minimum deposit of 30% of the total amount is required to confirm any reservation.",
+    "The balance must be paid no later than 7 days before the start of the service. Beyond this deadline the reservation may be automatically cancelled without notice, unless otherwise agreed.",
+    "For reservations made less than 7 days before departure, full payment is required.",
+    "Ma Tontine Voyage (installment plan): available through our internal system. The reservation is only confirmed once the full agreed amount has been paid. If the payment deadlines are not met, ATS reserves the right to cancel the reservation without refunding the amounts already paid.",
+  ] },
+  { h: "Accepted payment methods", items: [
+    "Bank transfer.",
+    "Credit card (Visa, MasterCard, etc.) — 3.75% bank fee (applicable to payments made via foreign payment methods).",
+    "Mobile payments (Wave, Orange Money).",
+    "Secure online payment solutions (PayPal, Stripe, Zelle…) for specific cases.",
+    "Cash payment — 1% fee in accordance with Law No. 2025-17 of 27 September 2025, for any payment exceeding 20,000 FCFA.",
+    "All transactions are processed through secure platforms compliant with data-protection standards.",
+  ] },
+  { h: "Cancellation policy (strict)", note: "The following applies unless otherwise specified by a third-party product or supplier:", items: [
+    "Less than 30 days before departure: 10% retained.",
+    "Less than 10 days before departure: 30% retained.",
+    "Less than 7 days before departure: 50% retained.",
+    "Less than 3 days before departure: 100% retained (no refund).",
+    "Refunds are processed within 3 to 5 days.",
+    "Airfare: subject to airline fare conditions — some tickets are non-refundable and non-changeable after issuance.",
+    "Other activities (hotels, tours, excursions, visa assistance, events): the partner providers' penalties apply in full.",
+  ] },
+  { h: "Force majeure", items: [
+    "In the event of force majeure (natural disaster, government decision, health crisis, social unrest…), ATS will, together with the client, reschedule the service or offer a voucher valid for 6 months.",
+    "No immediate refund can be required if the service providers impose restrictions.",
+  ] },
+  { h: "Liability", items: [
+    "Africa Tourism Solutions acts as an intermediary between the client and airlines, hotels and other providers, and cannot be held responsible for delays, cancellations or changes attributable to those providers. ATS remains committed to quality service and continuous customer satisfaction.",
+  ] },
+];
+
+function TermsContent() {
+  return (
+    <div>
+      <p style={{ fontSize: 13.5, color: "#6B7A72", marginTop: 0 }}>General Terms & Conditions of Sale, Payment and Cancellation.</p>
+      {TERMS_SECTIONS.map((s) => (
+        <div key={s.h} style={{ marginTop: 18 }}>
+          <h4 style={{ fontSize: 14, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".05em", color: T.green, margin: "0 0 8px" }}>{s.h}</h4>
+          {s.note && <p style={{ fontSize: 13.5, color: "#3B4A42", margin: "0 0 8px" }}>{s.note}</p>}
+          <ul style={{ margin: 0, paddingLeft: 18, display: "flex", flexDirection: "column", gap: 7 }}>
+            {s.items.map((it, i) => <li key={i} style={{ fontSize: 13.5, lineHeight: 1.6, color: "#3B4A42" }}>{it}</li>)}
+          </ul>
+        </div>
+      ))}
+      <div style={{ marginTop: 20, background: "#f8f8f8", border: "1px solid #ECECEC", borderRadius: 12, padding: "12px 14px", fontSize: 13, lineHeight: 1.6, color: "#3B4A42" }}>
+        By making a reservation with Africa Tourism Solutions, the client acknowledges having read, understood and accepted these payment and cancellation terms.
+      </div>
+      <div style={{ marginTop: 12, fontSize: 12, color: "#8A968E" }}>Africa Tourism Solutions · Immeuble SICAP, Point E, Lot 8 Apt A, Dakar, Senegal · +221 33 825 12 79 · infos@africatourismsolutions.com</div>
+    </div>
+  );
+}
+
+// Inline link that opens the terms in a modal (keeps the current form intact).
+function TermsLink({ style, children }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button type="button" onClick={() => setOpen(true)} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: T.green, fontWeight: 700, textDecoration: "underline", fontSize: "inherit", fontFamily: "inherit", ...style }}>
+        {children || "Terms & Cancellation Policy"}
+      </button>
+      {open && (
+        <div role="dialog" aria-modal="true" onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(20,32,26,.55)", display: "flex", alignItems: "center", justifyContent: "center", padding: 14 }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ background: "#fff", borderRadius: 18, width: "100%", maxWidth: 640, maxHeight: "88vh", overflowY: "auto", padding: "24px 26px", color: T.ink }}>
+            <div style={{ display: "flex", alignItems: "center", marginBottom: 4 }}>
+              <h3 className="disp" style={{ fontWeight: 800, fontSize: 20, margin: 0, flex: 1 }}>Terms & Cancellation Policy</h3>
+              <button onClick={() => setOpen(false)} aria-label="Close" style={{ ...btnCircle }}><X size={16} /></button>
+            </div>
+            <TermsContent />
+            <button onClick={() => setOpen(false)} style={{ ...btnGold, width: "100%", marginTop: 18 }}>Close</button>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+function TermsPage() {
+  useEffect(() => { window.scrollTo({ top: 0 }); }, []);
+  return (
+    <Wrap style={{ maxWidth: 820 }}>
+      <Eyebrow>Africa Tourism Solutions</Eyebrow>
+      <H2>Terms & Cancellation Policy</H2>
+      <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 16, padding: "24px 26px" }}>
+        <TermsContent />
+      </div>
+    </Wrap>
+  );
+}
+
+// Mandatory acceptance checkbox — must be ticked before a paid booking can proceed.
+const TermsCheck = ({ checked, onChange }) => (
+  <label style={{ display: "flex", alignItems: "flex-start", gap: 9, fontSize: 12.5, color: "#3B4A42", marginTop: 12, lineHeight: 1.5, cursor: "pointer" }}>
+    <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} style={{ width: 17, height: 17, accentColor: T.green, flexShrink: 0, marginTop: 1, cursor: "pointer" }} />
+    <span>I have read and accept the <TermsLink /> (payment & cancellation conditions).</span>
+  </label>
+);
+
+// ---- Promo / ambassador code (shared) — server validates the discount % ----
+function usePromo(total) {
+  const [code, setCode] = useState(() => { try { return (localStorage.getItem("ats_ref") || "").toUpperCase(); } catch { return ""; } });
+  const [promo, setPromo] = useState(null);
+  const [checking, setChecking] = useState(false);
+  useEffect(() => {
+    const c = code.trim();
+    if (!c || !total) { setPromo(null); setChecking(false); return; }
+    setChecking(true);
+    const id = setTimeout(async () => {
+      try {
+        const { data } = await supabase.functions.invoke("validate-promo", { body: { code: c, amount: total } });
+        setPromo(data && data.valid ? data : { valid: false });
+      } catch { setPromo({ valid: false }); }
+      finally { setChecking(false); }
+    }, 400);
+    return () => clearTimeout(id);
+  }, [code, total]);
+  const valid = !!(promo && promo.valid);
+  const corporate = CORP_DISCOUNT > 0;          // corporate rate takes priority over codes
+  const pct = corporate ? CORP_DISCOUNT : (valid ? Number(promo.discount_percent) || 0 : 0);
+  const payTotal = Math.round((total || 0) * (1 - pct / 100));
+  const label = corporate ? "Corporate rate" : (valid ? `Promo ${promo.code}` : "");
+  return { code, setCode, promo, checking, valid, corporate, pct, payTotal, label, active: corporate || valid };
+}
+
+function PromoField({ p }) {
+  return (
+    <div style={{ marginTop: 12 }}>
+      <label style={{ ...label, marginTop: 0 }}>Promo / ambassador code (optional)</label>
+      <input style={input} value={p.code} onChange={(e) => p.setCode(e.target.value.toUpperCase())} placeholder="e.g. AWA10" autoComplete="off" />
+      {p.code.trim() && (
+        p.checking
+          ? <div style={{ fontSize: 12.5, opacity: 0.6, marginTop: 6 }}>Checking…</div>
+          : p.valid
+            ? <div style={{ fontSize: 12.5, color: T.green, fontWeight: 700, marginTop: 6, display: "flex", alignItems: "center", gap: 5 }}><Check size={14} /> Code applied — {p.pct}% off</div>
+            : <div style={{ fontSize: 12.5, color: "#B3261E", marginTop: 6 }}>Invalid or expired code.</div>
+      )}
+    </div>
+  );
+}
+
 const Eyebrow = ({ children }) => <p style={{ color: T.laterite, fontWeight: 600, letterSpacing: ".14em", fontSize: 12, textTransform: "uppercase", margin: 0 }}>{children}</p>;
 const H2 = ({ children }) => <h2 className="disp" style={{ fontSize: "clamp(22px,3.2vw,30px)", fontWeight: 700, letterSpacing: "-0.01em", margin: "8px 0 14px" }}>{children}</h2>;
 const Wrap = ({ children, style }) => <div style={{ maxWidth: 1200, margin: "0 auto", padding: "48px 20px", ...style }}>{children}</div>;
@@ -245,6 +463,21 @@ const Section = ({ title, children }) => (
   </section>
 );
 function Row({ l, v }) { return <div style={{ display: "flex", padding: "4px 0" }}><span style={{ opacity: 0.75 }}>{l}</span><span style={{ marginLeft: "auto", fontWeight: 600 }}>{v}</span></div>; }
+
+// Corporate preferential price on cards: shows the base struck-through + the discounted price.
+const corpPrice = (n) => Math.round((n || 0) * (1 - CORP_DISCOUNT / 100));
+function PrefPrice({ base, prefix = "from ", pp = true }) {
+  if (base == null) return null;
+  const disc = CORP_DISCOUNT > 0;
+  return (
+    <span>
+      {prefix}
+      {disc && <span style={{ textDecoration: "line-through", opacity: 0.45, fontWeight: 500, marginRight: 5 }}>{fmtXOF(base)}</span>}
+      <span style={{ color: disc ? T.green : "inherit" }}>{fmtXOF(disc ? corpPrice(base) : base)}</span>
+      {pp && <span style={{ fontWeight: 500, fontSize: 11.5, color: "#888" }}> pp</span>}
+    </span>
+  );
+}
 
 // ============================================================
 export default function ATSPlatformPreview() {
@@ -298,6 +531,25 @@ export default function ATSPlatformPreview() {
     return () => sub.subscription.unsubscribe();
   }, []);
 
+  // ---- Account role (client | agent | corporate | admin) + corporate rate ----
+  const [role, setRole] = useState(null);
+  const [corpDiscount, setCorpDiscountState] = useState(0);
+  useEffect(() => {
+    if (!user?.id) { setRole(null); setCorpDiscountState(0); return; }
+    let alive = true;
+    supabase.from("profiles").select("role, org_id").eq("id", user.id).single()
+      .then(async ({ data }) => {
+        if (!alive) return;
+        setRole(data?.role || "client");
+        if (data?.role === "corporate" && data?.org_id) {
+          const { data: org } = await supabase.from("organizations").select("discount_percent, active").eq("id", data.org_id).single();
+          if (alive) setCorpDiscountState(org && org.active ? (Number(org.discount_percent) || 0) : 0);
+        } else if (alive) setCorpDiscountState(0);
+      });
+    return () => { alive = false; };
+  }, [user?.id]);
+  setCorpDiscount(role === "corporate" ? corpDiscount : 0);
+
   // ---- Load this user's bookings from the database (and save any made before sign-in) ----
   const [pending, setPending] = useState([]);
   const mapRow = (r) => ({ ...r.data, _id: r.id, _status: r.status || "pending", _created: r.created_at });
@@ -348,26 +600,29 @@ export default function ATSPlatformPreview() {
         customer: b.contact || {},
         siteUrl: window.location.origin,
         meta: { kind: b.plan === "deposit" ? "deposit" : "full" },
+        promoCode: b.promoCode || "",
       },
     });
     if (error || !data?.url) { notify("Payment could not be started. Please try again."); return; }
     window.location.href = data.url;
   };
 
-  // ---- Pay one Ma Tontine instalment via PayDunya ----
-  const payInstallment = async (rec) => {
+  // ---- Pay one Ma Tontine instalment via PayDunya (client-chosen amount) ----
+  const payInstallment = async (rec, amountArg) => {
     if (!rec._id) { notify("This booking can't be paid online yet."); return; }
-    const amount = Math.round((rec.total - rec.deposit) / rec.months);
-    const nextNo = (rec.paid || 0) + 1;
+    const st = tontineState(rec);
+    const amount = Math.round(amountArg != null ? amountArg : st.minNext);
+    if (!amount || amount <= 0) { notify("Nothing left to pay on this booking."); return; }
+    const nextNo = st.payCount + 1;
     notify("Redirecting to secure payment…");
     const { data, error } = await supabase.functions.invoke("create-payment", {
       body: {
         amount,
-        description: `${rec.tour?.name || "ATS booking"} — instalment ${nextNo}/${rec.months}`,
+        description: `${rec.tour?.name || "ATS booking"} — payment ${nextNo}/${st.plannedTotal}`,
         bookingId: rec._id,
         customer: rec.contact || {},
         siteUrl: window.location.origin,
-        meta: { kind: "installment" },
+        meta: { kind: "installment", amount },
       },
     });
     if (error || !data?.url) { notify("Payment could not be started. Please try again."); return; }
@@ -409,6 +664,18 @@ export default function ATSPlatformPreview() {
     if (user && pendingPay) { const b = pendingPay; setPendingPay(null); startPayment(b); }
   }, [user?.id]);
 
+  // Capture an ambassador referral link (?ref=CODE) → remember it to prefill the promo field
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get("ref");
+    if (ref) {
+      try { localStorage.setItem("ats_ref", ref.toUpperCase()); } catch { /* ignore */ }
+      params.delete("ref");
+      const qs = params.toString();
+      window.history.replaceState({}, "", window.location.pathname + (qs ? `?${qs}` : ""));
+    }
+  }, []);
+
   // Handle return from PayDunya (?payment=success|cancel[&token=…]) → confirm + show page
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -426,7 +693,7 @@ export default function ATSPlatformPreview() {
     }
   }, []);
 
-  const ctx = { go, notify, setBooking, user, setUser, bookings, filters, setFilters, setSignin, setChat, signOut, saveRecord, patchBooking, cancelBooking, payInstallment, currency, setCurrency };
+  const ctx = { go, notify, setBooking, user, setUser, role, isAdmin: role === "admin" || role === "super_admin", isSuper: role === "super_admin", bookings, filters, setFilters, setSignin, setChat, signOut, saveRecord, patchBooking, cancelBooking, payInstallment, currency, setCurrency };
 
   return (
     <div style={{ background: T.paper, color: T.ink, fontFamily: "'Century Gothic','Poppins',system-ui,sans-serif", minHeight: "100vh" }}>
@@ -443,22 +710,29 @@ export default function ATSPlatformPreview() {
       `}</style>
 
       <Nav {...ctx} page={page} />
-      {page.name === "home" && <Home {...ctx} addBookingHome={confirmBooking} />}
-      {page.name === "tours" && <ToursPage {...ctx} />}
-      {page.name === "tour" && <TourDetail {...ctx} tourId={page.id} />}
-      {page.name === "builder" && <TripBuilder {...ctx} />}
-      {page.name === "flights" && <FlightsPage {...ctx} />}
-      {page.name === "transport" && <TransportPage addBooking={confirmBooking} notify={notify} user={user} />}
-      {page.name === "events" && <EventsPage {...ctx} />}
-      {page.name === "micework" && <MiceWorkPage {...ctx} service={page.service} />}
-      {page.name === "corporate" && <CorporatePage {...ctx} />}
-      {page.name === "agents" && <AgentsPage {...ctx} />}
-      {page.name === "about" && <AboutPage {...ctx} />}
-      {page.name === "account" && <AccountPage {...ctx} />}
-      {page.name === "payment" && <PaymentResult status={page.status} {...ctx} />}
+      {booking ? (
+        <BookingModal tour={booking} user={user} onClose={() => setBooking(null)} onConfirm={confirmBooking} />
+      ) : (
+        <>
+          {page.name === "home" && <Home {...ctx} addBookingHome={confirmBooking} />}
+          {page.name === "tours" && <ToursPage {...ctx} />}
+          {page.name === "tour" && <TourDetail {...ctx} tourId={page.id} />}
+          {page.name === "builder" && <TripBuilder {...ctx} />}
+          {page.name === "flights" && <FlightsPage {...ctx} />}
+          {page.name === "transport" && <TransportPage addBooking={confirmBooking} notify={notify} user={user} />}
+          {page.name === "events" && <EventsPage {...ctx} />}
+          {page.name === "micework" && <MiceWorkPage {...ctx} service={page.service} />}
+          {page.name === "corporate" && <CorporatePage {...ctx} />}
+          {page.name === "agents" && <AgentsPage {...ctx} />}
+          {page.name === "agent" && <AgentPortal {...ctx} />}
+          {page.name === "admin" && <AdminConsole {...ctx} />}
+          {page.name === "about" && <AboutPage {...ctx} />}
+          {page.name === "account" && <AccountPage {...ctx} />}
+          {page.name === "payment" && <PaymentResult status={page.status} {...ctx} />}
+          {page.name === "terms" && <TermsPage />}
+        </>
+      )}
       <Footer {...ctx} />
-
-      {booking && <BookingModal tour={booking} user={user} onClose={() => setBooking(null)} onConfirm={confirmBooking} />}
       {signin && <SignInModal onClose={() => setSignin(false)} notify={notify} onDone={(msg) => { setSignin(false); if (msg) notify(msg); }} />}
       {chat && <AIChat onClose={() => setChat(false)} go={go} />}
 
@@ -885,7 +1159,7 @@ function TourGrid({ tours, go, setBooking }) {
                   <div style={{ fontWeight: 700, fontSize: 14, color: "#1A1A1A" }}>Price on request</div>
                 ) : (
                   <>
-                    <div style={{ fontWeight: 700, fontSize: 14, color: "#1A1A1A" }}>from {fmtXOF(fromPrice(t))} <span style={{ fontWeight: 500, fontSize: 11.5, color: "#888" }}>pp</span></div>
+                    <div style={{ fontWeight: 700, fontSize: 14, color: "#1A1A1A" }}><PrefPrice base={fromPrice(t)} /></div>
                     <div style={{ fontSize: 11, color: "#888" }}>group rate · 1–2 pax: {fmtXOF(t.grid.p12.a)}</div>
                   </>
                 )}
@@ -901,12 +1175,35 @@ function TourGrid({ tours, go, setBooking }) {
 const pill = () => ({ fontSize: 10, fontWeight: 500, color: "#1A1A1A", background: "#F2F2F2", border: "none", padding: "3px 9px", borderRadius: 999, whiteSpace: "nowrap", flexShrink: 0 });
 
 function ToursPage({ go, setBooking, filters, setFilters }) {
+  const [q, setQ] = useState("");
   const tags = ["All", ...new Set(TOURS.map((t) => t.tag))];
-  const tours = TOURS.filter((t) => (filters.pole === "All" || t.pole === filters.pole) && (filters.tag === "All" || t.tag === filters.tag));
+  const query = q.trim().toLowerCase();
+  const tours = TOURS.filter((t) =>
+    (filters.pole === "All" || t.pole === filters.pole) &&
+    (filters.tag === "All" || t.tag === filters.tag) &&
+    (!query || `${t.name} ${t.desc || ""} ${t.tag || ""} ${t.pole || ""}`.toLowerCase().includes(query))
+  );
   return (
     <Wrap>
       <Eyebrow>Senegal · 6 regions · transport quoted separately</Eyebrow>
       <H2>All tours & experiences</H2>
+
+      <div style={{ position: "relative", maxWidth: 560, margin: "6px 0 18px" }}>
+        <Search size={19} style={{ position: "absolute", left: 16, top: "50%", transform: "translateY(-50%)", color: "#8A968E", pointerEvents: "none" }} />
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Search a tour by name or description…"
+          aria-label="Search tours"
+          style={{ width: "100%", boxSizing: "border-box", padding: "13px 44px 13px 46px", borderRadius: 999, border: `1px solid ${T.line}`, background: "#fff", fontSize: 15, fontFamily: "inherit", color: T.ink, boxShadow: "0 2px 10px rgba(20,32,26,.05)" }}
+        />
+        {q && (
+          <button onClick={() => setQ("")} aria-label="Clear search" style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "#F2F2F2", border: "none", borderRadius: "50%", width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#1A1A1A" }}>
+            <X size={15} />
+          </button>
+        )}
+      </div>
+
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
         {POLES.map((p) => {
           const on = p === filters.pole;
@@ -921,7 +1218,7 @@ function ToursPage({ go, setBooking, filters, setFilters }) {
       </div>
       {tours.length === 0 ? (
         <div style={{ marginTop: 30, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 14, padding: 24 }}>
-          No tours match these filters yet. <button style={{ ...btnGreen, marginLeft: 8, fontSize: 13, padding: "8px 14px" }} onClick={() => setFilters({ pole: "All", tag: "All" })}>Reset filters</button>
+          No tours match {query ? "your search" : "these filters"} yet. <button style={{ ...btnGreen, marginLeft: 8, fontSize: 13, padding: "8px 14px" }} onClick={() => { setFilters({ pole: "All", tag: "All" }); setQ(""); }}>Reset</button>
         </div>
       ) : <TourGrid tours={tours} go={go} setBooking={setBooking} />}
     </Wrap>
@@ -979,8 +1276,10 @@ function TourDetail({ tourId, go, setBooking }) {
   const [vehicle, setVehicle] = useState(-1);      // -1 = no transport
   const [preview, setPreview] = useState(null);   // gallery lightbox index
   const todayStr = new Date().toISOString().slice(0, 10);
+  const minDate = new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10); // earliest = day after tomorrow
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const setTripDate = (v) => { setDateFrom(v); setDateTo(v); }; // single date for trips
   const daysUntil = dateFrom ? Math.ceil((new Date(dateFrom + "T00:00:00") - new Date(todayStr + "T00:00:00")) / 86400000) : null;
   const dateOk = daysUntil != null && daysUntil >= 0 && !!dateTo && dateTo >= dateFrom;
   const tontinePossible = dateOk && daysUntil >= 15;
@@ -1166,11 +1465,12 @@ function TourDetail({ tourId, go, setBooking }) {
               <div className="disp" style={{ fontWeight: 800, fontSize: 22, color: "#1A1A1A" }}>Price on request</div>
             ) : (
               <>
-                <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-                  <span className="disp" style={{ fontWeight: 800, fontSize: 26, color: "#1A1A1A" }}>{fmtXOF(ppUnit)}</span>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
+                  {CORP_DISCOUNT > 0 && <span className="disp" style={{ fontWeight: 600, fontSize: 17, color: "#1A1A1A", textDecoration: "line-through", opacity: 0.45 }}>{fmtXOF(ppUnit)}</span>}
+                  <span className="disp" style={{ fontWeight: 800, fontSize: 26, color: CORP_DISCOUNT > 0 ? T.green : "#1A1A1A" }}>{fmtXOF(CORP_DISCOUNT > 0 ? corpPrice(ppUnit) : ppUnit)}</span>
                   <span style={{ fontSize: 13, opacity: 0.6 }}>/ person</span>
                 </div>
-                <div style={{ fontSize: 12.5, opacity: 0.6 }}>{fmtXOF(ppUnit)} · {tierLabel[tier]}</div>
+                <div style={{ fontSize: 12.5, opacity: 0.6 }}>{tierLabel[tier]}{CORP_DISCOUNT > 0 ? ` · corporate rate −${CORP_DISCOUNT}% (paid in full)` : ""}</div>
 
                 <div style={{ marginTop: 14 }}>
                   <label style={label}>Travelers</label>
@@ -1183,8 +1483,8 @@ function TourDetail({ tourId, go, setBooking }) {
                 </div>
 
                 <div style={{ marginTop: 12 }}>
-                  <label style={label}>Travel dates</label>
-                  <RangeDate from={dateFrom} to={dateTo} onChange={(f, tt) => { setDateFrom(f); setDateTo(tt); }} triggerStyle={input} />
+                  <label style={label}>Travel date</label>
+                  <input type="date" min={minDate} value={dateFrom} onChange={(e) => setTripDate(e.target.value)} style={input} />
                   {dateOk && (
                     <div style={{ fontSize: 12, marginTop: 5, color: "#5A6B61", fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}>
                       <Check size={14} color={T.green} /> {tontinePossible ? "Ma Tontine eligible" : "Available · full payment only (under 15 days)"}
@@ -1206,11 +1506,14 @@ function TourDetail({ tourId, go, setBooking }) {
                 )}
 
                 <div style={{ borderTop: `1px solid ${T.line}`, marginTop: 14, paddingTop: 12, display: "flex", fontSize: 15 }}>
-                  <span style={{ opacity: 0.7 }}>Estimated total</span>
-                  <strong style={{ marginLeft: "auto" }}>{fmtXOF(estTotal)}</strong>
+                  <span style={{ opacity: 0.7 }}>Estimated total {CORP_DISCOUNT > 0 ? "(paid in full)" : ""}</span>
+                  <strong style={{ marginLeft: "auto" }}>
+                    {CORP_DISCOUNT > 0 && <span style={{ fontWeight: 500, opacity: 0.45, textDecoration: "line-through", marginRight: 6 }}>{fmtXOF(estTotal)}</span>}
+                    <span style={{ color: CORP_DISCOUNT > 0 ? T.green : "inherit" }}>{fmtXOF(CORP_DISCOUNT > 0 ? corpPrice(estTotal) : estTotal)}</span>
+                  </strong>
                 </div>
                 <div style={{ background: "#F8F5EF", border: "1px solid #ECE7DD", borderRadius: 10, padding: "10px 12px", fontSize: 12.5, lineHeight: 1.6, marginTop: 10, color: "#3B4A42" }}>
-                  <strong style={{ color: "#1A1A1A" }}>Ma Tontine Voyage:</strong> reserve with {fmtXOF(estTotal * 0.2)} (20%), balance in instalments before departure.
+                  <strong style={{ color: "#1A1A1A" }}>Ma Tontine Voyage:</strong> reserve with {fmtXOF(estTotal * 0.2)} (20%), balance in instalments before departure{CORP_DISCOUNT > 0 ? " (corporate rate applies to full payment)" : ""}.
                 </div>
               </>
             )}
@@ -1263,7 +1566,7 @@ function TourDetail({ tourId, go, setBooking }) {
               </div>
             </div>
             <div style={{ marginBottom: 8 }}>
-              <RangeDate from={dateFrom} to={dateTo} onChange={(f, tt) => { setDateFrom(f); setDateTo(tt); }} triggerStyle={input} />
+              <input type="date" min={minDate} value={dateFrom} onChange={(e) => setTripDate(e.target.value)} style={input} />
             </div>
             <div style={{ display: "flex", gap: 8 }}>
               <button disabled={!dateOk} style={{ ...btnGold, flex: 1, borderRadius: 12, fontSize: 14, padding: "12px 8px", opacity: dateOk ? 1 : 0.5 }} onClick={() => dateOk && openBooking("full")}>Pay in full</button>
@@ -1299,7 +1602,7 @@ function TourDetail({ tourId, go, setBooking }) {
                   <h4 className="disp" style={{ fontSize: 14.5, fontWeight: 700, lineHeight: 1.2, margin: 0, color: "#1A1A1A" }}>{s.name}</h4>
                   <div style={{ fontSize: 11.5, color: "#777", margin: "6px 0 8px" }}>{s.dur}</div>
                   <div style={{ marginTop: "auto", display: "flex", alignItems: "center", gap: 10 }}>
-                    <div style={{ fontWeight: 700, fontSize: 13.5, color: "#1A1A1A" }}>{s.quote ? "Price on request" : <>from {fmtXOF(fromPrice(s))}</>}</div>
+                    <div style={{ fontWeight: 700, fontSize: 13.5, color: "#1A1A1A" }}>{s.quote ? "Price on request" : <PrefPrice base={fromPrice(s)} pp={false} />}</div>
                     <button onClick={(e) => { e.stopPropagation(); setBooking(s); }} style={{ marginLeft: "auto", background: s.quote ? "#1A1A1A" : T.gold, color: s.quote ? "#fff" : T.ink, border: "none", borderRadius: 10, padding: "7px 13px", fontWeight: 700, fontSize: 13, cursor: "pointer", flexShrink: 0 }}>{s.quote ? "Get quote" : "Book"}</button>
                   </div>
                 </div>
@@ -1327,6 +1630,26 @@ function TourDetail({ tourId, go, setBooking }) {
 
 // ---------------- TRIP BUILDER ----------------
 const WEB3FORMS_KEY = import.meta.env.VITE_WEB3FORMS_KEY || "050f6709-6ca3-40c2-a2a5-d38b33da8142";
+// Dedicated inboxes (each Web3Forms access key is bound to one recipient).
+// Flights -> travel2@ ; Transport (transfers + car rental) -> logistics@.
+// Falls back to the main key until the dedicated keys are provided.
+// For now everything routes to sales@ (main key). Set these env vars later to split:
+//   VITE_WEB3FORMS_KEY_FLIGHTS  -> travel2@ ;  VITE_WEB3FORMS_KEY_LOGISTICS -> logistics@
+const WEB3FORMS_KEY_FLIGHTS = import.meta.env.VITE_WEB3FORMS_KEY_FLIGHTS || WEB3FORMS_KEY;
+const WEB3FORMS_KEY_LOGISTICS = import.meta.env.VITE_WEB3FORMS_KEY_LOGISTICS || WEB3FORMS_KEY;
+
+// Fire-and-forget Web3Forms submit (agency notification). Skips placeholder keys.
+async function sendAgencyEmail(payload) {
+  if (!payload.access_key || String(payload.access_key).startsWith("REPLACE_WITH_")) return;
+  try {
+    await fetch("https://api.web3forms.com/submit", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify(payload),
+    });
+  } catch { /* ignore */ }
+}
+const rowsToFields = (rows) => Object.fromEntries((rows || []).map(([l, v]) => [String(l).replace(/[^\w]+/g, "_"), v]));
 
 function TripBuilder({ notify, go, user, saveRecord }) {
   const [step, setStep] = useState(0);
@@ -1392,7 +1715,7 @@ function TripBuilder({ notify, go, user, saveRecord }) {
       notify("Network error — please try again or contact us on WhatsApp.");
     } finally { setSending(false); }
   };
-  const HOTEL = { "2★ Eco-lodge / guesthouse": 35000, "3★ Standard hotel": 55000, "4★ Boutique / charme": 90000, "5★ Luxury / resort": 160000 };
+  const HOTEL = { "No hotel — I'll arrange my own": 0, "2★ Eco-lodge / guesthouse": 35000, "3★ Standard hotel": 55000, "4★ Boutique / charme": 90000, "5★ Luxury / resort": 160000, "Airbnb / serviced apartment": 60000, "Private villa": 130000 };
   const TRANSPORT = { "No transport": 0, "Standard Sedan (≤3)": 85000, "Premium Sedan (≤3)": 100000, "Standard SUV (≤4)": 95000, "Premium SUV (≤4)": 150000, "Luxury SUV (≤4)": 350000, "Standard Minivan (≤14)": 150000, "Coaster coach (≤22)": 115000 };
   const toursCost = trip.tours.reduce((s, id) => s + (fromPrice(TOURS.find((t) => t.id === id)) || 0), 0) * trip.pax;
   const addonsCost = trip.tours.reduce((s, id) => {
@@ -1432,11 +1755,11 @@ function TripBuilder({ notify, go, user, saveRecord }) {
           )}
           {step === 1 && (
             <>
-              <label style={label}>Hotel category</label>
+              <label style={label}>Accommodation</label>
               <select style={{ ...input, fontWeight: 600 }} value={trip.hotel} onChange={(e) => setTrip({ ...trip, hotel: e.target.value })}>
                 {Object.keys(HOTEL).map((k) => <option key={k} value={k}>{k}</option>)}
               </select>
-              <div style={{ fontSize: 12.5, opacity: 0.65, marginTop: 6 }}>ATS confirms the exact property from its contracted inventory at your chosen star level.</div>
+              <div style={{ fontSize: 12.5, opacity: 0.65, marginTop: 6 }}>{trip.hotel.startsWith("No hotel") ? "No problem — you handle your own accommodation and we plan everything else. It won't be added to your estimate." : "ATS confirms the exact property from its contracted inventory at your chosen level."}</div>
               <button style={{ ...btnGold, marginTop: 16 }} onClick={() => setStep(2)}>Next: experiences →</button>
             </>
           )}
@@ -1497,7 +1820,7 @@ function TripBuilder({ notify, go, user, saveRecord }) {
             <>
               <h3 className="disp" style={{ fontWeight: 800, fontSize: 20, marginTop: 0 }}>Your {trip.days}-day {trip.dest} trip</h3>
               <p style={{ fontSize: 14.5, lineHeight: 1.6, opacity: 0.85 }}>
-                {trip.pax} traveler{trip.pax > 1 ? "s" : ""} · {trip.hotel} hotel · {trip.transport} · {trip.tours.length} experience{trip.tours.length !== 1 ? "s" : ""}: {trip.tours.map((id) => TOURS.find((t) => t.id === id)?.name.split(" —")[0]).join(", ") || "none yet"}
+                {trip.pax} traveler{trip.pax > 1 ? "s" : ""} · {trip.hotel} · {trip.transport} · {trip.tours.length} experience{trip.tours.length !== 1 ? "s" : ""}: {trip.tours.map((id) => TOURS.find((t) => t.id === id)?.name.split(" —")[0]).join(", ") || "none yet"}
               </p>
               {addonNames.length > 0 && <p style={{ fontSize: 13.5, lineHeight: 1.55, color: "#5A6B61", marginTop: -4 }}><strong>Add-ons:</strong> {addonNames.join(" · ")}</p>}
               {sent ? (
@@ -1526,7 +1849,7 @@ function TripBuilder({ notify, go, user, saveRecord }) {
           <div style={{ background: "#fff", color: T.ink, border: `1px solid ${T.line}`, borderRadius: 16, padding: 22, position: "sticky", top: 80 }}>
             <div style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".1em", color: T.green }}>Live estimated budget</div>
             <div className="disp" style={{ fontSize: 30, fontWeight: 800, margin: "6px 0 12px", color: "#1A1A1A" }}>{fmtXOF(total)} <span style={{ fontSize: 14, fontWeight: 500, color: "#888" }}>{fmtUSD(total)}</span></div>
-            <Row l={`Hotel · ${trip.days} nights`} v={fmtXOF(hotelCost)} />
+            {trip.hotel.startsWith("No hotel") ? <Row l="Accommodation" v="Self-arranged" /> : <Row l={`Accommodation · ${trip.days} nights`} v={fmtXOF(hotelCost)} />}
             <Row l={`Experiences × ${trip.pax} pax`} v={fmtXOF(toursCost)} />
             {addonsCost > 0 && <Row l="Add-ons" v={fmtXOF(addonsCost)} />}
             <Row l="Transport" v={fmtXOF(transCost)} />
@@ -1544,8 +1867,8 @@ function TripBuilder({ notify, go, user, saveRecord }) {
 // ---------------- FLIGHTS ----------------
 function FlightsPage({ notify, user }) {
   const todayStr = new Date().toISOString().slice(0, 10);
-  const [f, setF] = useState({ type: "Round trip", from: "Dakar (DSS)", to: "", dep: "", ret: "", pax: 1, cls: "Economy" });
-  const [legs, setLegs] = useState([{ from: "Dakar (DSS)", to: "", dep: "" }, { from: "", to: "", dep: "" }]);
+  const [f, setF] = useState({ type: "Round trip", from: "", to: "", dep: "", ret: "", pax: 1, cls: "Economy" });
+  const [legs, setLegs] = useState([{ from: "", to: "", dep: "" }, { from: "", to: "", dep: "" }]);
   const [contact, setContact] = useState({ name: user?.name || "", email: user?.email || "", phone: "", notes: "" });
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
@@ -1570,7 +1893,7 @@ function FlightsPage({ notify, user }) {
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
         body: JSON.stringify({
-          access_key: WEB3FORMS_KEY,
+          access_key: WEB3FORMS_KEY_FLIGHTS,
           subject: `Flight request — ${f.type} · ${multi ? `${legs.length} legs` : `${f.from} → ${f.to}`} · ${f.pax} pax ${f.cls}`,
           from_name: "ATS Flights",
           name: contact.name, email: contact.email, phone: contact.phone,
@@ -1608,7 +1931,7 @@ function FlightsPage({ notify, user }) {
               <p style={{ fontSize: 14.5, lineHeight: 1.6, color: "#3B4A42", maxWidth: 420, margin: "0 auto" }}>
                 Our ticketing team is searching the best available fares and will reply to <strong>{contact.email}</strong> shortly.
               </p>
-              <button style={{ ...btnGreen, marginTop: 18 }} onClick={() => { setSent(false); setF({ type: "Round trip", from: "Dakar (DSS)", to: "", dep: "", ret: "", pax: 1, cls: "Economy" }); setLegs([{ from: "Dakar (DSS)", to: "", dep: "" }, { from: "", to: "", dep: "" }]); }}>New request</button>
+              <button style={{ ...btnGreen, marginTop: 18 }} onClick={() => { setSent(false); setF({ type: "Round trip", from: "", to: "", dep: "", ret: "", pax: 1, cls: "Economy" }); setLegs([{ from: "", to: "", dep: "" }, { from: "", to: "", dep: "" }]); }}>New request</button>
             </div>
           ) : (
             <>
@@ -1622,8 +1945,8 @@ function FlightsPage({ notify, user }) {
                 <>
                   {legs.map((l, i) => (
                     <div key={i} className="leg-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr auto", gap: 10, marginBottom: 10, alignItems: "end" }}>
-                      <div><label style={label}>Leg {i + 1} — From</label><input style={input} value={l.from} onChange={(e) => setLeg(i, "from", e.target.value)} placeholder="City (CODE)" /></div>
-                      <div><label style={label}>To</label><input style={input} value={l.to} onChange={(e) => setLeg(i, "to", e.target.value)} placeholder="City (CODE)" /></div>
+                      <div><label style={label}>Leg {i + 1} — From</label><AirportInput value={l.from} onChange={(v) => setLeg(i, "from", v)} placeholder="City or airport…" /></div>
+                      <div><label style={label}>To</label><AirportInput value={l.to} onChange={(v) => setLeg(i, "to", v)} placeholder="City or airport…" /></div>
                       <div><label style={label}>Date</label><input type="date" min={todayStr} style={input} value={l.dep} onChange={(e) => setLeg(i, "dep", e.target.value)} /></div>
                       {legs.length > 2 ? <button onClick={() => setLegs((ls) => ls.filter((_, j) => j !== i))} aria-label="Remove leg" style={{ ...btnCircle, marginBottom: 4 }}><X size={14} /></button> : <span />}
                     </div>
@@ -1633,12 +1956,16 @@ function FlightsPage({ notify, user }) {
                   )}
                 </>
               ) : (
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
-                  <div><label style={label}>From</label><input style={input} value={f.from} onChange={(e) => setF({ ...f, from: e.target.value })} /></div>
-                  <div><label style={label}>To</label><input style={input} placeholder="e.g. Paris (CDG)" value={f.to} onChange={(e) => setF({ ...f, to: e.target.value })} /></div>
-                  <div><label style={label}>Departure</label><input type="date" min={todayStr} style={input} value={f.dep} onChange={(e) => setF({ ...f, dep: e.target.value, ret: f.ret && f.ret < e.target.value ? e.target.value : f.ret })} /></div>
-                  {f.type === "Round trip" && <div><label style={label}>Return</label><input type="date" min={f.dep || todayStr} style={input} value={f.ret} onChange={(e) => setF({ ...f, ret: e.target.value })} /></div>}
-                </div>
+                <>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12 }}>
+                    <div><label style={label}>From</label><AirportInput value={f.from} onChange={(v) => setF({ ...f, from: v })} placeholder="e.g. Dakar (DSS)" /></div>
+                    <div><label style={label}>To</label><AirportInput value={f.to} onChange={(v) => setF({ ...f, to: v })} placeholder="e.g. Paris (CDG)" /></div>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12, marginTop: 12 }}>
+                    <div><label style={label}>Departure</label><input type="date" min={todayStr} style={input} value={f.dep} onChange={(e) => setF({ ...f, dep: e.target.value, ret: f.ret && f.ret < e.target.value ? e.target.value : f.ret })} /></div>
+                    {f.type === "Round trip" && <div><label style={label}>Return</label><input type="date" min={f.dep || todayStr} style={input} value={f.ret} onChange={(e) => setF({ ...f, ret: e.target.value })} /></div>}
+                  </div>
+                </>
               )}
 
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12, marginTop: 12 }}>
@@ -2050,61 +2377,668 @@ function MiceWorkPage({ go }) {
   );
 }
 
-// ---------------- CORPORATE ----------------
-function CorporatePage({ notify }) {
-  const [org, setOrg] = useState("");
+// ---------------- CORPORATE (public B2B recruitment) ----------------
+function CorporatePage({ notify, go, user, role }) {
+  const [f, setF] = useState({ org: "", name: "", email: "", phone: "", travelers: "", message: "" });
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+  useEffect(() => { if (user) setF((x) => ({ ...x, name: x.name || user.name || "", email: x.email || user.email || "" })); }, [user]);
+  const canSend = f.org.trim() && f.name.trim() && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(f.email);
+  const isCorp = role === "corporate" || role === "admin";
+
+  const submit = async () => {
+    if (!canSend) { notify("Please add your organization, name and a valid work email."); return; }
+    setSending(true);
+    try {
+      const res = await fetch("https://api.web3forms.com/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({
+          access_key: WEB3FORMS_KEY,
+          subject: `New corporate account request — ${f.org}`,
+          from_name: "ATS Corporate",
+          name: f.name, email: f.email, phone: f.phone,
+          Organization: f.org, Approx_travelers_per_year: f.travelers || "—",
+          Message: f.message || "—",
+          Account: user ? `Signed in (${user.email})` : "Guest",
+        }),
+      });
+      const data = await res.json();
+      if (data.success) { setSent(true); notify("Request received — our corporate team will get back to you."); }
+      else notify("Could not send the request. Please try again.");
+    } catch { notify("Network error — please try again."); }
+    finally { setSending(false); }
+  };
+
   return (
     <Wrap>
       <Eyebrow>Governments · Embassies · NGOs · Companies</Eyebrow><H2>Corporate travel & logistics</H2>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 24 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 24, alignItems: "start" }}>
         <div style={{ lineHeight: 1.7, fontSize: 15 }}>
-          <p>One account for your organization's travel in Africa:</p>
-          <ul style={{ paddingLeft: 20, lineHeight: 2 }}>
-            <li>Request and approve quotations internally</li>
+          <p style={{ marginTop: 0, color: "#3B4A42" }}>One account for your organization's travel in Africa — with a negotiated preferential rate applied automatically to every booking.</p>
+          <ul style={{ paddingLeft: 20, lineHeight: 2, marginTop: 0 }}>
+            <li>Preferential B2B rate on the full catalogue</li>
             <li>Manage traveler groups and missions</li>
-            <li>Consolidated monthly invoicing</li>
             <li>ATS Logistics: fleet, coaches (22–50 seats), group movement</li>
             <li>Dedicated account manager, EN/FR</li>
           </ul>
+          <div style={{ background: "#f8f8f8", border: "1px solid #ECECEC", borderRadius: 14, padding: "16px 18px", marginTop: 8 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".06em", color: "#8A968E", marginBottom: 10 }}>How it works</div>
+            {[["Request an account", "Send us your organization details below."], ["We set your rate", "ATS reviews and activates your account with your negotiated discount."], ["Book at your rate", "Your preferential rate applies automatically at checkout — no code needed."]].map(([t, d], i) => (
+              <div key={t} style={{ display: "flex", gap: 12, alignItems: "flex-start", padding: "7px 0" }}>
+                <span style={{ flexShrink: 0, width: 24, height: 24, borderRadius: "50%", background: T.green, color: "#fff", fontWeight: 800, fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center" }}>{i + 1}</span>
+                <div><strong style={{ color: "#1A1A1A" }}>{t}</strong><div style={{ fontSize: 13.5, color: "#5A6B61" }}>{d}</div></div>
+              </div>
+            ))}
+          </div>
         </div>
+
         <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 16, padding: 22 }}>
-          <h3 className="disp" style={{ fontWeight: 800, fontSize: 19, marginTop: 0 }}>Open a corporate account</h3>
-          <label style={label}>Organization</label>
-          <input style={input} placeholder="e.g. UNDP Senegal" value={org} onChange={(e) => setOrg(e.target.value)} />
-          <label style={{ ...label, marginTop: 12 }}>Work email</label>
-          <input style={input} placeholder="name@organization.org" />
-          <button style={{ ...btnGold, marginTop: 14, width: "100%" }} onClick={() => notify(`Corporate account request received${org ? " for " + org : ""} — our team will verify and activate your portal.`)}>Request account</button>
+          {isCorp ? (
+            <>
+              <h3 className="disp" style={{ fontWeight: 800, fontSize: 19, marginTop: 0 }}>Your corporate account is active</h3>
+              <p style={{ fontSize: 14.5, lineHeight: 1.6, color: "#3B4A42" }}>Your preferential rate is applied automatically at checkout. Browse the catalogue and book at your negotiated rate.</p>
+              <button style={{ ...btnGold, marginTop: 6, width: "100%" }} onClick={() => go("tours")}>Browse tours →</button>
+            </>
+          ) : sent ? (
+            <div style={{ textAlign: "center", padding: "20px 6px" }}>
+              <div style={{ width: 56, height: 56, borderRadius: "50%", margin: "0 auto 12px", display: "flex", alignItems: "center", justifyContent: "center", background: "#E9F7EE", color: T.green }}><Check size={28} /></div>
+              <h3 className="disp" style={{ fontWeight: 800, fontSize: 18, margin: "0 0 6px" }}>Request received</h3>
+              <p style={{ fontSize: 14, lineHeight: 1.6, color: "#3B4A42" }}>Our corporate team will review it and get back to you at <strong>{f.email}</strong>.</p>
+            </div>
+          ) : (
+            <>
+              <h3 className="disp" style={{ fontWeight: 800, fontSize: 19, marginTop: 0 }}>Open a corporate account</h3>
+              <label style={{ ...label, marginTop: 8 }}>Organization *</label>
+              <input style={input} placeholder="e.g. UNDP Senegal" value={f.org} onChange={(e) => setF({ ...f, org: e.target.value })} />
+              <label style={label}>Contact name *</label>
+              <input style={input} placeholder="Your full name" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
+              <label style={label}>Work email *</label>
+              <input style={input} type="email" placeholder="name@organization.org" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} />
+              <label style={label}>Phone / WhatsApp</label>
+              <input style={input} placeholder="+221 …" value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} />
+              <label style={label}>Approx. travelers / year</label>
+              <input style={input} placeholder="e.g. 50" value={f.travelers} onChange={(e) => setF({ ...f, travelers: e.target.value })} />
+              <label style={label}>Message (optional)</label>
+              <textarea style={{ ...input, minHeight: 80, resize: "vertical" }} placeholder="Tell us about your travel needs…" value={f.message} onChange={(e) => setF({ ...f, message: e.target.value })} />
+              <button disabled={!canSend || sending} style={{ ...btnGold, marginTop: 14, width: "100%", opacity: (canSend && !sending) ? 1 : 0.55, cursor: canSend ? "pointer" : "not-allowed" }} onClick={submit}>{sending ? "Sending…" : "Request account"}</button>
+              <div style={{ fontSize: 12, opacity: 0.6, marginTop: 8, textAlign: "center" }}>Requests are reviewed by ATS. Once approved, we activate your account and rate.</div>
+            </>
+          )}
         </div>
       </div>
     </Wrap>
   );
 }
 
-// ---------------- AGENTS ----------------
-function AgentsPage({ notify }) {
+// ---------------- AGENTS (public recruitment / become an ambassador) ----------------
+function AgentsPage({ notify, go, user, role }) {
+  const [f, setF] = useState({ country: "", name: "", email: "", phone: "", message: "" });
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+  useEffect(() => { if (user) setF((x) => ({ ...x, name: x.name || user.name || "", email: x.email || user.email || "" })); }, [user]);
+  const canSend = f.name.trim() && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(f.email);
+
+  const submit = async () => {
+    if (!canSend) { notify("Please add your name and a valid email."); return; }
+    setSending(true);
+    try {
+      const res = await fetch("https://api.web3forms.com/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({
+          access_key: WEB3FORMS_KEY,
+          subject: `New ambassador application — ${f.name}`,
+          from_name: "ATS Ambassador Program",
+          name: f.name, email: f.email, phone: f.phone,
+          Country: f.country || "—",
+          Message: f.message || "—",
+          Account: user ? `Signed in (${user.email})` : "Guest",
+        }),
+      });
+      const data = await res.json();
+      if (data.success) { setSent(true); notify("Application received — the ATS team will get back to you."); }
+      else notify("Could not send the application. Please try again.");
+    } catch { notify("Network error — please try again."); }
+    finally { setSending(false); }
+  };
+
+  const isAgent = role === "agent" || role === "admin";
+  const HOW = [
+    ["Get your code", "We set up your personal ambassador code and referral link."],
+    ["Share it", "Your clients book with your code — they get a discount, you get tracked."],
+    ["Earn commission", "A commission is recorded on every booking made with your code."],
+    ["Get paid", "Track your earnings and payouts anytime from your agent portal."],
+  ];
+
   return (
     <Wrap>
-      <Eyebrow>Travel agents · Tour operators · Resellers</Eyebrow><H2>Agent & reseller portal</H2>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 24 }}>
+      <Eyebrow>Travel agents · Tour operators · Resellers</Eyebrow><H2>Become an ATS ambassador</H2>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 24, alignItems: "start" }}>
         <div style={{ lineHeight: 1.7, fontSize: 15 }}>
+          <p style={{ marginTop: 0, color: "#3B4A42" }}>Earn a commission on every trip you bring to ATS. Share your code, book for your clients, and follow your earnings in real time.</p>
           <ul style={{ paddingLeft: 20, lineHeight: 2, marginTop: 0 }}>
-            <li>Net rates on the full Senegal catalogue</li>
-            <li>Commission tracking and monthly statements</li>
-            <li>White-label quotations in minutes</li>
-            <li>Manage your customers and bookings in one place</li>
+            <li>Preferential rates on the full Senegal catalogue</li>
+            <li>Commission tracking and statements</li>
+            <li>Personal code + referral link</li>
+            <li>Book for your clients in a few clicks</li>
           </ul>
-          <div style={{ background: T.paperDark, borderRadius: 12, padding: "14px 16px", fontSize: 14 }}>
-            <strong>This month:</strong> 12 bookings · 486,000 XOF earned · next payout 30 Aug.
+          <div style={{ background: "#f8f8f8", border: "1px solid #ECECEC", borderRadius: 14, padding: "16px 18px", marginTop: 8 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".06em", color: "#8A968E", marginBottom: 10 }}>How it works</div>
+            {HOW.map(([t, d], i) => (
+              <div key={t} style={{ display: "flex", gap: 12, alignItems: "flex-start", padding: "7px 0" }}>
+                <span style={{ flexShrink: 0, width: 24, height: 24, borderRadius: "50%", background: T.green, color: "#fff", fontWeight: 800, fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center" }}>{i + 1}</span>
+                <div><strong style={{ color: "#1A1A1A" }}>{t}</strong><div style={{ fontSize: 13.5, color: "#5A6B61" }}>{d}</div></div>
+              </div>
+            ))}
           </div>
         </div>
+
         <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 16, padding: 22 }}>
-          <h3 className="disp" style={{ fontWeight: 800, fontSize: 19, marginTop: 0 }}>Become an ATS partner</h3>
-          <label style={label}>Agency name</label><input style={input} placeholder="Your agency" />
-          <label style={{ ...label, marginTop: 12 }}>Country</label><input style={input} placeholder="e.g. France, USA, Nigeria…" />
-          <label style={{ ...label, marginTop: 12 }}>Email</label><input style={input} placeholder="you@agency.com" />
-          <button style={{ ...btnGold, marginTop: 14, width: "100%" }} onClick={() => notify("Partner application received — our B2B team will send your net-rate agreement.")}>Apply</button>
+          {isAgent ? (
+            <>
+              <h3 className="disp" style={{ fontWeight: 800, fontSize: 19, marginTop: 0 }}>You're an ATS ambassador</h3>
+              <p style={{ fontSize: 14.5, lineHeight: 1.6, color: "#3B4A42" }}>Access your code, referral link, bookings and commissions in your portal.</p>
+              <button style={{ ...btnGold, marginTop: 6, width: "100%" }} onClick={() => go("agent")}>Open agent portal →</button>
+            </>
+          ) : sent ? (
+            <div style={{ textAlign: "center", padding: "20px 6px" }}>
+              <div style={{ width: 56, height: 56, borderRadius: "50%", margin: "0 auto 12px", display: "flex", alignItems: "center", justifyContent: "center", background: "#E9F7EE", color: T.green }}><Check size={28} /></div>
+              <h3 className="disp" style={{ fontWeight: 800, fontSize: 18, margin: "0 0 6px" }}>Application received</h3>
+              <p style={{ fontSize: 14, lineHeight: 1.6, color: "#3B4A42" }}>The ATS team will review your application and get back to you at <strong>{f.email}</strong>.</p>
+            </div>
+          ) : (
+            <>
+              <h3 className="disp" style={{ fontWeight: 800, fontSize: 19, marginTop: 0 }}>Apply to become an ambassador</h3>
+              <label style={{ ...label, marginTop: 8 }}>Full name *</label>
+              <input style={input} placeholder="Your full name" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
+              <label style={label}>Country</label>
+              <input style={input} placeholder="e.g. France, USA, Nigeria…" value={f.country} onChange={(e) => setF({ ...f, country: e.target.value })} />
+              <label style={label}>Email *</label>
+              <input style={input} type="email" placeholder="you@agency.com" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} />
+              <label style={label}>Phone / WhatsApp</label>
+              <input style={input} placeholder="+221 …" value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} />
+              <label style={label}>Message (optional)</label>
+              <textarea style={{ ...input, minHeight: 80, resize: "vertical" }} placeholder="Tell us about you and how you'd promote ATS…" value={f.message} onChange={(e) => setF({ ...f, message: e.target.value })} />
+              <button disabled={!canSend || sending} style={{ ...btnGold, marginTop: 14, width: "100%", opacity: (canSend && !sending) ? 1 : 0.55, cursor: canSend ? "pointer" : "not-allowed" }} onClick={submit}>{sending ? "Sending…" : "Apply"}</button>
+              <div style={{ fontSize: 12, opacity: 0.6, marginTop: 8, textAlign: "center" }}>Applications are reviewed by ATS. Once approved, we set up your code and portal.</div>
+            </>
+          )}
         </div>
       </div>
+    </Wrap>
+  );
+}
+
+// ---------------- AGENT PORTAL (logged-in agents; own data via RLS) ----------------
+function AgentPortal({ user, role, setSignin, notify, go, setBooking }) {
+  const [codes, setCodes] = useState([]);
+  const [comms, setComms] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selTour, setSelTour] = useState("");
+  useEffect(() => {
+    if (!user?.id) return;
+    let alive = true;
+    setLoading(true);
+    Promise.all([
+      supabase.from("promo_codes").select("*").eq("agent_id", user.id),
+      supabase.from("commissions").select("*").eq("agent_id", user.id).order("created_at", { ascending: false }),
+    ]).then(([c1, c2]) => {
+      if (!alive) return;
+      setCodes(c1.data || []);
+      setComms(c2.data || []);
+      setLoading(false);
+    });
+    return () => { alive = false; };
+  }, [user?.id]);
+
+  if (!user) return (
+    <Wrap><H2>Agent portal</H2>
+      <p style={{ opacity: 0.8 }}>Sign in with your ATS agent account to access your dashboard.</p>
+      <button style={btnGold} onClick={() => setSignin(true)}>Sign in</button>
+    </Wrap>
+  );
+  if (role && role !== "agent" && role !== "admin") return (
+    <Wrap><H2>Agent portal</H2>
+      <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 14, padding: 24, lineHeight: 1.6 }}>
+        This area is reserved for ATS ambassadors. Want to become one? <button style={{ background: "none", border: "none", color: T.green, fontWeight: 700, cursor: "pointer", padding: 0, textDecoration: "underline" }} onClick={() => go("agents")}>Apply here</button>.
+      </div>
+    </Wrap>
+  );
+
+  const num = (x) => Number(x || 0);
+  const earned = comms.reduce((s, c) => s + num(c.amount), 0);
+  const pending = comms.filter((c) => c.status === "pending").reduce((s, c) => s + num(c.amount), 0);
+  const paid = comms.filter((c) => c.status === "paid").reduce((s, c) => s + num(c.amount), 0);
+  const copy = (txt) => { try { navigator.clipboard.writeText(txt); notify("Copied to clipboard"); } catch { notify(txt); } };
+  const statusColorMap = { pending: "#B8860B", approved: T.indigo, paid: T.green, cancelled: "#B3261E" };
+  const stat = { background: "#F8F5EF", border: "1px solid #ECE7DD", borderRadius: 14, padding: "16px 18px" };
+  const primaryCode = (codes.find((c) => c.active) || codes[0] || {}).code || "";
+  const bookableTours = TOURS.filter((t) => !t.quote);
+  const bookForClient = () => {
+    const t = TOURS.find((x) => x.id === selTour) || bookableTours[0];
+    if (!t) return;
+    setBooking({ ...t, initialPlan: "full", initialPromo: primaryCode, agentBooking: true });
+  };
+
+  return (
+    <Wrap>
+      <Eyebrow>Ambassador dashboard</Eyebrow>
+      <H2>Welcome, {user.name}</H2>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 14, marginBottom: 22 }}>
+        {[["Total earned", earned], ["Pending", pending], ["Paid out", paid], ["Attributed bookings", comms.length, true]].map(([l, v, count]) => (
+          <div key={l} style={stat}>
+            <div style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: ".06em", color: "#8A968E", fontWeight: 700 }}>{l}</div>
+            <div className="disp" style={{ fontSize: 22, fontWeight: 800, color: "#1A1A1A", marginTop: 4 }}>{count ? v : fmtXOF(v)}</div>
+          </div>
+        ))}
+      </div>
+
+      {primaryCode && (
+        <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 16, padding: 18, marginBottom: 22 }}>
+          <h3 className="disp" style={{ fontWeight: 800, fontSize: 18, margin: "0 0 4px" }}>Book for a client</h3>
+          <div style={{ fontSize: 13, color: "#6B7A72", marginBottom: 12 }}>Pick an experience, then enter your client's details. Your code <strong>{primaryCode}</strong> is applied automatically — the client gets the discount and you earn your commission.</div>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
+            <div style={{ flex: 1, minWidth: 220 }}>
+              <label style={{ ...label, marginTop: 0 }}>Experience</label>
+              <select style={{ ...input, fontWeight: 600 }} value={selTour} onChange={(e) => setSelTour(e.target.value)}>
+                {bookableTours.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+              </select>
+            </div>
+            <button style={{ ...btnGold, fontSize: 14, padding: "12px 20px" }} onClick={bookForClient}>Start booking →</button>
+          </div>
+        </div>
+      )}
+
+      <h3 className="disp" style={{ fontWeight: 800, fontSize: 18, margin: "0 0 12px" }}>Your codes</h3>
+      {loading ? <div style={{ opacity: 0.6 }}>Loading…</div> : codes.length === 0 ? (
+        <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 14, padding: 20 }}>No code assigned yet — your ATS manager will set one up for you.</div>
+      ) : codes.map((c) => {
+        const link = `${window.location.origin}/?ref=${encodeURIComponent(c.code)}`;
+        return (
+          <div key={c.id} style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 16, padding: 18, marginBottom: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+              <span className="disp" style={{ fontSize: 22, fontWeight: 800, letterSpacing: ".04em" }}>{c.code}</span>
+              <span style={{ ...pill(), background: c.active ? "#E9F7EE" : "#F2F2F2", color: c.active ? T.green : "#8A968E", fontSize: 12 }}>{c.active ? "Active" : "Inactive"}</span>
+              <span style={{ fontSize: 13, color: "#5A6B61" }}>−{num(c.discount_percent)}% client · {num(c.commission_percent)}% commission</span>
+              <button style={{ marginLeft: "auto", ...btnGreen, fontSize: 13, padding: "8px 14px", background: "#fff", color: T.green, border: `1.5px solid ${T.green}` }} onClick={() => copy(c.code)}>Copy code</button>
+            </div>
+            <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 12, flexWrap: "wrap" }}>
+              <input readOnly value={link} style={{ ...input, flex: 1, minWidth: 220, background: "#F8F8F8" }} onFocus={(e) => e.target.select()} />
+              <button style={{ ...btnGold, fontSize: 13, padding: "10px 16px" }} onClick={() => copy(link)}>Copy link</button>
+            </div>
+            <div style={{ fontSize: 12.5, color: "#8A968E", marginTop: 8 }}>Used {num(c.uses)} time{num(c.uses) === 1 ? "" : "s"}{c.max_uses ? ` / ${c.max_uses} max` : ""}. Share your link — clients who book with it get the discount and you earn your commission.</div>
+          </div>
+        );
+      })}
+
+      <h3 className="disp" style={{ fontWeight: 800, fontSize: 18, margin: "24px 0 12px" }}>Commissions</h3>
+      {comms.length === 0 ? (
+        <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 14, padding: 20 }}>No commission yet. They appear here once a client pays with your code.</div>
+      ) : (
+        <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 14, overflow: "hidden" }}>
+          {comms.map((c) => (
+            <div key={c.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", borderBottom: `1px solid ${T.line}`, flexWrap: "wrap" }}>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={{ fontWeight: 700, fontSize: 14 }}>{fmtXOF(c.amount)} <span style={{ fontWeight: 500, fontSize: 12.5, opacity: 0.6 }}>on {fmtXOF(c.order_amount)}</span></div>
+                <div style={{ fontSize: 12, opacity: 0.6 }}>Code {c.code} · {num(c.commission_percent)}% · {new Date(c.created_at).toLocaleDateString()}</div>
+              </div>
+              <span style={{ fontSize: 12, fontWeight: 700, color: statusColorMap[c.status] || "#8A968E", textTransform: "capitalize" }}>● {c.status}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </Wrap>
+  );
+}
+
+// ---------------- ADMIN CONSOLE (role: admin; all writes via admin RLS) ----------------
+function AdminConsole({ user, isAdmin, isSuper, setSignin }) {
+  const [tab, setTab] = useState("users");
+  const [profiles, setProfiles] = useState([]);
+  const [orgs, setOrgs] = useState([]);
+  const [codes, setCodes] = useState([]);
+  const [bookings, setBookings] = useState([]);
+  const [comms, setComms] = useState([]);
+  const [activity, setActivity] = useState([]);
+  const [bookingFilter, setBookingFilter] = useState("all");
+  const [loading, setLoading] = useState(true);
+  const [msg, setMsg] = useState("");
+  const [newOrg, setNewOrg] = useState({ name: "", discount: "" });
+  const [newCode, setNewCode] = useState({ code: "", agent_id: "", discount: "10", commission: "5" });
+
+  const reload = async () => {
+    setLoading(true);
+    const [p, o, c, b, cm, ac] = await Promise.all([
+      supabase.from("profiles").select("id,email,first_name,last_name,role,org_id").order("created_at"),
+      supabase.from("organizations").select("*").order("created_at"),
+      supabase.from("promo_codes").select("*").order("created_at"),
+      supabase.from("bookings").select("id,user_id,data,status,created_at").order("created_at", { ascending: false }),
+      supabase.from("commissions").select("*").order("created_at", { ascending: false }),
+      supabase.from("admin_activity").select("*").order("created_at", { ascending: false }).limit(200),
+    ]);
+    setProfiles(p.data || []); setOrgs(o.data || []); setCodes(c.data || []); setBookings(b.data || []); setComms(cm.data || []); setActivity(ac.data || []); setLoading(false);
+  };
+  useEffect(() => { if (isAdmin) reload(); }, [isAdmin]);
+
+  if (!user) return (<Wrap><H2>Admin</H2><p style={{ opacity: 0.8 }}>Sign in with an admin account.</p><button style={btnGold} onClick={() => setSignin(true)}>Sign in</button></Wrap>);
+  if (!isAdmin) return (<Wrap><H2>Admin</H2><div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 14, padding: 24 }}>This area is reserved for ATS administrators.</div></Wrap>);
+
+  const flash = (m) => { setMsg(m); setTimeout(() => setMsg(""), 2500); };
+  const orgName = (id) => (orgs.find((o) => o.id === id) || {}).name || "—";
+  const agents = profiles.filter((p) => p.role === "agent");
+
+  const setRole = async (id, role) => {
+    const patch = { role, updated_at: new Date().toISOString() };
+    if (role !== "corporate") patch.org_id = null;
+    const { error } = await supabase.from("profiles").update(patch).eq("id", id);
+    if (error) return flash("Error: " + error.message);
+    flash("Role updated"); reload();
+  };
+  const assignOrg = async (id, org_id) => {
+    const { error } = await supabase.from("profiles").update({ org_id: org_id || null, updated_at: new Date().toISOString() }).eq("id", id);
+    if (error) return flash("Error: " + error.message);
+    flash("Organization set"); reload();
+  };
+  const createOrg = async () => {
+    if (!newOrg.name.trim()) return flash("Organization name required");
+    const { error } = await supabase.from("organizations").insert({ name: newOrg.name.trim(), discount_percent: Number(newOrg.discount) || 0, active: true });
+    if (error) return flash("Error: " + error.message);
+    setNewOrg({ name: "", discount: "" }); flash("Organization created"); reload();
+  };
+  const setOrgDiscount = async (id, pct) => {
+    const { error } = await supabase.from("organizations").update({ discount_percent: Number(pct) || 0 }).eq("id", id);
+    if (error) return flash("Error: " + error.message);
+    reload();
+  };
+  const toggleOrg = async (id, active) => { await supabase.from("organizations").update({ active }).eq("id", id); reload(); };
+  const createCode = async () => {
+    if (!newCode.code.trim() || !newCode.agent_id) return flash("Code and agent required");
+    const { error } = await supabase.from("promo_codes").insert({
+      code: newCode.code.trim().toUpperCase(), agent_id: newCode.agent_id,
+      discount_percent: Number(newCode.discount) || 0, commission_percent: Number(newCode.commission) || 0, active: true,
+    });
+    if (error) return flash("Error: " + error.message);
+    setNewCode({ code: "", agent_id: "", discount: "10", commission: "5" }); flash("Code created"); reload();
+  };
+  const toggleCode = async (id, active) => { await supabase.from("promo_codes").update({ active }).eq("id", id); reload(); };
+  const updateCode = async (id, patch) => { const { error } = await supabase.from("promo_codes").update(patch).eq("id", id); if (error) return flash("Error: " + error.message); flash("Code updated"); reload(); };
+  const setCommStatus = async (id, status) => { const { error } = await supabase.from("commissions").update({ status }).eq("id", id); if (error) return flash("Error: " + error.message); flash("Commission " + status); reload(); };
+
+  // Booking channel: corporate / agent / direct
+  const channelOf = (d) => (d && d.corp) ? "corporate" : (d && d.promo && d.promo.agentId) ? "agent" : "direct";
+  const custOf = (b) => b.data?.contact?.name || (profiles.find((p) => p.id === b.user_id) || {}).email || "—";
+  const emailOf = (id) => (profiles.find((p) => p.id === id) || {}).email || "—";
+
+  const ROLES = ["client", "agent", "corporate", "admin", "super_admin"];
+  const roleOptions = (current) => isSuper ? ROLES : Array.from(new Set(["client", "agent", "corporate", current]));
+  const th = { textAlign: "left", padding: "8px 10px", fontSize: 11.5, textTransform: "uppercase", letterSpacing: ".05em", color: "#8A968E", borderBottom: `1px solid ${T.line}`, whiteSpace: "nowrap" };
+  const td = { padding: "8px 10px", fontSize: 13.5, borderBottom: `1px solid ${T.line}`, verticalAlign: "middle" };
+  const sel = { ...input, padding: "6px 8px", fontSize: 13, width: "auto" };
+  const tabs = [["users", "Users & roles"], ["orgs", "Corporate"], ["codes", "Promo codes"], ["bookings", "Bookings"], ["commissions", "Commissions"], ["analytics", "Analytics"], ["activity", isSuper ? "Activity (all)" : "Activity"]];
+  const actionLabel = (a) => ({ "promo_code.create": "created code", "promo_code.update": "edited code", "promo_code.activate": "activated code", "promo_code.deactivate": "deactivated code", "organization.create": "created org", "organization.update": "edited org", "organization.activate": "activated org", "organization.deactivate": "deactivated org", "profile.update": "changed user", "commission.approved": "approved commission", "commission.paid": "paid commission", "commission.cancelled": "cancelled commission" }[a] || a);
+  const shownBookings = bookings.filter((b) => bookingFilter === "all" || channelOf(b.data) === bookingFilter);
+  const commStatusColor = { pending: "#B8860B", approved: T.indigo, paid: T.green, cancelled: "#B3261E" };
+
+  return (
+    <Wrap>
+      <Eyebrow>Back office</Eyebrow><H2>Admin console</H2>
+      {msg && <div style={{ background: "#E9F7EE", border: "1px solid #C7E9D3", color: "#1A6B3A", borderRadius: 10, padding: "8px 12px", fontSize: 13, marginBottom: 12 }}>{msg}</div>}
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 18 }}>
+        {tabs.map(([k, l]) => (
+          <button key={k} onClick={() => setTab(k)} style={{ border: "none", cursor: "pointer", background: tab === k ? T.green : "#fff", color: tab === k ? "#fff" : T.ink, borderRadius: 999, padding: "8px 16px", fontWeight: 600, fontSize: 13, boxShadow: `inset 0 0 0 1px ${T.line}` }}>{l}</button>
+        ))}
+      </div>
+
+      {loading ? <div style={{ opacity: 0.6 }}>Loading…</div> : (
+        <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 14, overflowX: "auto" }}>
+          {tab === "users" && (
+            <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 640 }}>
+              <thead><tr><th style={th}>User</th><th style={th}>Role</th><th style={th}>Organization</th></tr></thead>
+              <tbody>
+                {profiles.map((p) => (
+                  <tr key={p.id}>
+                    <td style={td}><div style={{ fontWeight: 600 }}>{[p.first_name, p.last_name].filter(Boolean).join(" ") || "—"}</div><div style={{ fontSize: 12, opacity: 0.6 }}>{p.email}</div></td>
+                    <td style={td}>
+                      {(() => { const locked = !isSuper && (p.role === "admin" || p.role === "super_admin"); return (
+                        <>
+                          <select style={{ ...sel, opacity: locked ? 0.6 : 1 }} disabled={locked} value={p.role} onChange={(e) => setRole(p.id, e.target.value)}>
+                            {roleOptions(p.role).map((r) => <option key={r} value={r}>{r}</option>)}
+                          </select>
+                          {locked && <div style={{ fontSize: 10.5, opacity: 0.5, marginTop: 2 }}>super-admin only</div>}
+                        </>
+                      ); })()}
+                    </td>
+                    <td style={td}>
+                      {p.role === "corporate"
+                        ? <select style={sel} value={p.org_id || ""} onChange={(e) => assignOrg(p.id, e.target.value)}><option value="">— none —</option>{orgs.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}</select>
+                        : <span style={{ opacity: 0.4 }}>—</span>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+
+          {tab === "orgs" && (
+            <div style={{ padding: 16 }}>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end", marginBottom: 16 }}>
+                <div><label style={{ ...label, marginTop: 0 }}>New organization</label><input style={{ ...input, minWidth: 200 }} placeholder="Company name" value={newOrg.name} onChange={(e) => setNewOrg({ ...newOrg, name: e.target.value })} /></div>
+                <div><label style={{ ...label, marginTop: 0 }}>Discount %</label><input style={{ ...input, width: 100 }} type="number" value={newOrg.discount} onChange={(e) => setNewOrg({ ...newOrg, discount: e.target.value })} /></div>
+                <button style={{ ...btnGold, padding: "11px 18px" }} onClick={createOrg}>Add</button>
+              </div>
+              <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 480 }}>
+                <thead><tr><th style={th}>Organization</th><th style={th}>Discount %</th><th style={th}>Status</th></tr></thead>
+                <tbody>
+                  {orgs.map((o) => (
+                    <tr key={o.id}>
+                      <td style={td}>{o.name}</td>
+                      <td style={td}><input style={{ ...sel, width: 80 }} type="number" defaultValue={o.discount_percent} onBlur={(e) => setOrgDiscount(o.id, e.target.value)} /></td>
+                      <td style={td}><button onClick={() => toggleOrg(o.id, !o.active)} style={{ border: "none", cursor: "pointer", borderRadius: 999, padding: "4px 12px", fontSize: 12, fontWeight: 700, background: o.active ? "#E9F7EE" : "#F2F2F2", color: o.active ? T.green : "#8A968E" }}>{o.active ? "Active" : "Inactive"}</button></td>
+                    </tr>
+                  ))}
+                  {orgs.length === 0 && <tr><td style={td} colSpan={3}>No organization yet.</td></tr>}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {tab === "codes" && (
+            <div style={{ padding: 16 }}>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end", marginBottom: 16 }}>
+                <div><label style={{ ...label, marginTop: 0 }}>Code</label><input style={{ ...input, width: 140 }} placeholder="AWA10" value={newCode.code} onChange={(e) => setNewCode({ ...newCode, code: e.target.value.toUpperCase() })} /></div>
+                <div><label style={{ ...label, marginTop: 0 }}>Agent</label><select style={{ ...sel, minWidth: 180 }} value={newCode.agent_id} onChange={(e) => setNewCode({ ...newCode, agent_id: e.target.value })}><option value="">— pick agent —</option>{agents.map((a) => <option key={a.id} value={a.id}>{a.email}</option>)}</select></div>
+                <div><label style={{ ...label, marginTop: 0 }}>Discount %</label><input style={{ ...input, width: 90 }} type="number" value={newCode.discount} onChange={(e) => setNewCode({ ...newCode, discount: e.target.value })} /></div>
+                <div><label style={{ ...label, marginTop: 0 }}>Commission %</label><input style={{ ...input, width: 110 }} type="number" value={newCode.commission} onChange={(e) => setNewCode({ ...newCode, commission: e.target.value })} /></div>
+                <button style={{ ...btnGold, padding: "11px 18px" }} onClick={createCode}>Create</button>
+              </div>
+              {agents.length === 0 && <div style={{ fontSize: 12.5, color: T.laterite, marginBottom: 12 }}>No agent yet — set a user's role to “agent” in the Users tab first.</div>}
+              <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 760 }}>
+                <thead><tr><th style={th}>Code</th><th style={th}>Agent</th><th style={th}>Disc %</th><th style={th}>Comm %</th><th style={th}>Uses / Max</th><th style={th}>Expiry</th><th style={th}>Status</th></tr></thead>
+                <tbody>
+                  {codes.map((c) => {
+                    const ag = profiles.find((p) => p.id === c.agent_id);
+                    return (
+                      <tr key={c.id}>
+                        <td style={{ ...td, fontWeight: 700 }}>{c.code}</td>
+                        <td style={td}>{ag ? ag.email : "—"}</td>
+                        <td style={td}><input style={{ ...sel, width: 70 }} type="number" defaultValue={c.discount_percent} onBlur={(e) => Number(e.target.value) !== Number(c.discount_percent) && updateCode(c.id, { discount_percent: Number(e.target.value) || 0 })} /></td>
+                        <td style={td}><input style={{ ...sel, width: 70 }} type="number" defaultValue={c.commission_percent} onBlur={(e) => Number(e.target.value) !== Number(c.commission_percent) && updateCode(c.id, { commission_percent: Number(e.target.value) || 0 })} /></td>
+                        <td style={td}>{c.uses} / <input style={{ ...sel, width: 64 }} type="number" placeholder="∞" defaultValue={c.max_uses ?? ""} onBlur={(e) => { const v = e.target.value === "" ? null : Number(e.target.value); if (v !== (c.max_uses ?? null)) updateCode(c.id, { max_uses: v }); }} /></td>
+                        <td style={td}><input style={{ ...sel, width: 140 }} type="date" defaultValue={c.expires_at ? c.expires_at.slice(0, 10) : ""} onBlur={(e) => { const v = e.target.value ? new Date(e.target.value + "T23:59:59").toISOString() : null; if ((v ? v.slice(0, 10) : null) !== (c.expires_at ? c.expires_at.slice(0, 10) : null)) updateCode(c.id, { expires_at: v }); }} /></td>
+                        <td style={td}><button onClick={() => toggleCode(c.id, !c.active)} style={{ border: "none", cursor: "pointer", borderRadius: 999, padding: "4px 12px", fontSize: 12, fontWeight: 700, background: c.active ? "#E9F7EE" : "#F2F2F2", color: c.active ? T.green : "#8A968E" }}>{c.active ? "Active" : "Inactive"}</button></td>
+                      </tr>
+                    );
+                  })}
+                  {codes.length === 0 && <tr><td style={td} colSpan={7}>No promo code yet.</td></tr>}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {tab === "bookings" && (
+            <div style={{ padding: 16 }}>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
+                {[["all", "All"], ["direct", "Direct"], ["agent", "Agent"], ["corporate", "Corporate"]].map(([k, l]) => (
+                  <button key={k} onClick={() => setBookingFilter(k)} style={{ border: "none", cursor: "pointer", background: bookingFilter === k ? T.green : "#F7F7F7", color: bookingFilter === k ? "#fff" : "#1A1A1A", borderRadius: 999, padding: "6px 14px", fontWeight: 600, fontSize: 12.5 }}>{l}{k !== "all" ? ` · ${bookings.filter((b) => channelOf(b.data) === k).length}` : ` · ${bookings.length}`}</button>
+                ))}
+              </div>
+              <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 720 }}>
+                <thead><tr><th style={th}>Item</th><th style={th}>Customer</th><th style={th}>Channel</th><th style={th}>Plan</th><th style={th}>Total</th><th style={th}>Status</th><th style={th}>Date</th></tr></thead>
+                <tbody>
+                  {shownBookings.map((b) => {
+                    const d = b.data || {};
+                    const ch = channelOf(d);
+                    return (
+                      <tr key={b.id}>
+                        <td style={td}><div style={{ fontWeight: 600 }}>{d.tour?.name || "—"}</div>{d.promo?.code && <div style={{ fontSize: 11.5, color: T.green }}>code {d.promo.code}</div>}{d.corp?.orgName && <div style={{ fontSize: 11.5, color: T.indigo }}>{d.corp.orgName}</div>}</td>
+                        <td style={td}>{custOf(b)}</td>
+                        <td style={td}><span style={{ fontSize: 11.5, fontWeight: 700, textTransform: "capitalize", color: ch === "agent" ? T.green : ch === "corporate" ? T.indigo : "#8A968E" }}>{ch}</span></td>
+                        <td style={td}>{planLabel(d.plan)}</td>
+                        <td style={td}>{d.plan === "quote" || d.plan === "itinerary" ? "—" : fmtXOF(d.total)}</td>
+                        <td style={td}><span style={{ fontSize: 12, fontWeight: 700, color: statusColor(b.status) }}>● {statusLabel[b.status] || b.status}</span></td>
+                        <td style={td}>{new Date(b.created_at).toLocaleDateString()}</td>
+                      </tr>
+                    );
+                  })}
+                  {shownBookings.length === 0 && <tr><td style={td} colSpan={7}>No booking in this view.</td></tr>}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {tab === "commissions" && (
+            <div style={{ padding: 16 }}>
+              {(() => {
+                const num = (x) => Number(x || 0);
+                const sum = (st) => comms.filter((c) => c.status === st).reduce((s, c) => s + num(c.amount), 0);
+                return (
+                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 14 }}>
+                    {[["Pending", sum("pending")], ["Approved", sum("approved")], ["Paid", sum("paid")]].map(([l, v]) => (
+                      <div key={l} style={{ background: "#F8F5EF", border: "1px solid #ECE7DD", borderRadius: 12, padding: "10px 16px" }}><div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: ".05em", color: "#8A968E", fontWeight: 700 }}>{l}</div><div className="disp" style={{ fontWeight: 800, fontSize: 18 }}>{fmtXOF(v)}</div></div>
+                    ))}
+                  </div>
+                );
+              })()}
+              <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 640 }}>
+                <thead><tr><th style={th}>Agent</th><th style={th}>Code</th><th style={th}>Amount</th><th style={th}>Order</th><th style={th}>Status</th><th style={th}>Actions</th></tr></thead>
+                <tbody>
+                  {comms.map((c) => (
+                    <tr key={c.id}>
+                      <td style={td}>{emailOf(c.agent_id)}</td>
+                      <td style={td}>{c.code || "—"}</td>
+                      <td style={{ ...td, fontWeight: 700 }}>{fmtXOF(c.amount)}</td>
+                      <td style={td}>{fmtXOF(c.order_amount)} · {c.commission_percent}%</td>
+                      <td style={td}><span style={{ fontSize: 12, fontWeight: 700, textTransform: "capitalize", color: commStatusColor[c.status] || "#8A968E" }}>● {c.status}</span></td>
+                      <td style={td}>
+                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                          {c.status === "pending" && <button onClick={() => setCommStatus(c.id, "approved")} style={{ border: `1px solid ${T.indigo}`, background: "#fff", color: T.indigo, borderRadius: 8, padding: "4px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Approve</button>}
+                          {(c.status === "pending" || c.status === "approved") && <button onClick={() => setCommStatus(c.id, "paid")} style={{ border: "none", background: T.green, color: "#fff", borderRadius: 8, padding: "4px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Mark paid</button>}
+                          {c.status !== "paid" && c.status !== "cancelled" && <button onClick={() => setCommStatus(c.id, "cancelled")} style={{ border: "1px solid #B3261E", background: "#fff", color: "#B3261E", borderRadius: 8, padding: "4px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Cancel</button>}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {comms.length === 0 && <tr><td style={td} colSpan={6}>No commission yet.</td></tr>}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {tab === "analytics" && (() => {
+            const num = (x) => Number(x || 0);
+            const isSale = (d) => d && d.plan !== "quote" && d.plan !== "itinerary";
+            const paid = bookings.filter((b) => isSale(b.data) && ["paid", "confirmed", "settled"].includes(b.status));
+            const revenue = paid.reduce((s, b) => s + num(b.data?.total), 0);
+            const channels = ["direct", "agent", "corporate"];
+            const byChannel = channels.map((ch) => {
+              const list = paid.filter((b) => channelOf(b.data) === ch);
+              return { ch, count: list.length, rev: list.reduce((s, b) => s + num(b.data?.total), 0) };
+            });
+            const maxRev = Math.max(1, ...byChannel.map((x) => x.rev));
+            // top agents by commission earned
+            const agg = {};
+            comms.forEach((c) => { agg[c.agent_id] = (agg[c.agent_id] || 0) + num(c.amount); });
+            const topAgents = Object.entries(agg).map(([id, v]) => ({ email: emailOf(id), v })).sort((a, b) => b.v - a.v).slice(0, 5);
+            // last 6 months booking counts
+            const now = new Date();
+            const months = Array.from({ length: 6 }, (_, i) => { const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1); return { key: `${d.getFullYear()}-${d.getMonth()}`, label: d.toLocaleString("en", { month: "short" }), count: 0 }; });
+            bookings.forEach((b) => { const d = new Date(b.created_at); const k = `${d.getFullYear()}-${d.getMonth()}`; const m = months.find((x) => x.key === k); if (m) m.count++; });
+            const maxM = Math.max(1, ...months.map((m) => m.count));
+            const chColor = { direct: "#8A968E", agent: T.green, corporate: T.indigo };
+            const statCard = { background: "#F8F5EF", border: "1px solid #ECE7DD", borderRadius: 14, padding: "16px 18px", flex: 1, minWidth: 150 };
+            return (
+              <div style={{ padding: 16 }}>
+                <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 20 }}>
+                  {[["Confirmed revenue", fmtXOF(revenue)], ["Confirmed bookings", String(paid.length)], ["Total bookings", String(bookings.length)], ["Commissions owed", fmtXOF(comms.filter((c) => c.status !== "paid" && c.status !== "cancelled").reduce((s, c) => s + num(c.amount), 0))]].map(([l, v]) => (
+                    <div key={l} style={statCard}><div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: ".05em", color: "#8A968E", fontWeight: 700 }}>{l}</div><div className="disp" style={{ fontWeight: 800, fontSize: 20, marginTop: 4 }}>{v}</div></div>
+                  ))}
+                </div>
+
+                <h4 style={{ fontSize: 13, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".05em", color: T.green, margin: "0 0 10px" }}>Revenue by channel</h4>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 24 }}>
+                  {byChannel.map((x) => (
+                    <div key={x.ch} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                      <span style={{ width: 84, fontSize: 13, textTransform: "capitalize", color: "#3B4A42" }}>{x.ch}</span>
+                      <div style={{ flex: 1, background: "#F2F2F2", borderRadius: 999, height: 22, overflow: "hidden" }}><div style={{ width: `${Math.round((x.rev / maxRev) * 100)}%`, height: "100%", background: chColor[x.ch], borderRadius: 999, minWidth: x.rev > 0 ? 4 : 0 }} /></div>
+                      <span style={{ width: 120, textAlign: "right", fontSize: 13, fontWeight: 700 }}>{fmtXOF(x.rev)}</span>
+                      <span style={{ width: 60, textAlign: "right", fontSize: 12, opacity: 0.6 }}>{x.count} bkg</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 24 }}>
+                  <div>
+                    <h4 style={{ fontSize: 13, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".05em", color: T.green, margin: "0 0 10px" }}>Top agents (commission)</h4>
+                    {topAgents.length === 0 ? <div style={{ fontSize: 13, opacity: 0.6 }}>No commission yet.</div> : topAgents.map((a, i) => (
+                      <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0", borderBottom: `1px solid ${T.line}` }}>
+                        <span style={{ fontWeight: 800, color: "#8A968E", width: 18 }}>{i + 1}</span>
+                        <span style={{ flex: 1, minWidth: 0, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.email}</span>
+                        <strong style={{ fontSize: 13 }}>{fmtXOF(a.v)}</strong>
+                      </div>
+                    ))}
+                  </div>
+                  <div>
+                    <h4 style={{ fontSize: 13, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".05em", color: T.green, margin: "0 0 10px" }}>Bookings — last 6 months</h4>
+                    <div style={{ display: "flex", alignItems: "flex-end", gap: 8, height: 120 }}>
+                      {months.map((m) => (
+                        <div key={m.key} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                          <div style={{ fontSize: 11, fontWeight: 700 }}>{m.count}</div>
+                          <div style={{ width: "100%", background: T.green, borderRadius: "6px 6px 0 0", height: `${Math.round((m.count / maxM) * 90)}%`, minHeight: m.count > 0 ? 4 : 0 }} />
+                          <div style={{ fontSize: 11, opacity: 0.6 }}>{m.label}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
+          {tab === "activity" && (
+            <div style={{ padding: 16 }}>
+              <div style={{ fontSize: 12.5, color: "#6B7A72", marginBottom: 12 }}>
+                {isSuper ? "Full activity log — every admin action, including super-admin." : "Actions by admins. Super-admin activity is not shown here."}
+              </div>
+              <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 640 }}>
+                <thead><tr><th style={th}>When</th><th style={th}>Admin</th><th style={th}>Action</th><th style={th}>Target</th></tr></thead>
+                <tbody>
+                  {activity.map((a) => (
+                    <tr key={a.id}>
+                      <td style={{ ...td, whiteSpace: "nowrap" }}>{new Date(a.created_at).toLocaleString()}</td>
+                      <td style={td}>{a.actor_email}{a.actor_role === "super_admin" && <span style={{ fontSize: 10.5, color: T.indigo, fontWeight: 700, marginLeft: 5 }}>SUPER</span>}</td>
+                      <td style={td}>{actionLabel(a.action)}</td>
+                      <td style={td}><strong>{a.target_label || "—"}</strong>{a.details && a.action === "profile.update" && a.details.role_from !== a.details.role_to && <span style={{ fontSize: 12, opacity: 0.6 }}> · {a.details.role_from} → {a.details.role_to}</span>}</td>
+                    </tr>
+                  ))}
+                  {activity.length === 0 && <tr><td style={td} colSpan={4}>No activity recorded yet.</td></tr>}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
     </Wrap>
   );
 }
@@ -2225,9 +3159,10 @@ const planColor = (p) => p === "deposit" ? T.laterite : p === "quote" ? T.indigo
 const statusLabel = { pending: "In progress", confirmed: "Confirmed", paid: "Paid", cancelled: "Cancelled", settled: "Fully paid" };
 const statusColor = (s) => s === "cancelled" ? "#B3261E" : s === "settled" || s === "confirmed" || s === "paid" ? T.green : T.laterite;
 
-function AccountPage({ user, bookings, setSignin, notify, signOut, patchBooking, cancelBooking, payInstallment }) {
+function AccountPage({ user, bookings, setSignin, notify, signOut, patchBooking, cancelBooking, payInstallment, role, go }) {
   const [filter, setFilter] = useState("all");
   const [detail, setDetail] = useState(null);
+  const [payTarget, setPayTarget] = useState(null);
   if (!user) return (
     <Wrap>
       <H2>My account</H2>
@@ -2248,6 +3183,15 @@ function AccountPage({ user, bookings, setSignin, notify, signOut, patchBooking,
       </div>
       <div style={{ fontSize: 13.5, opacity: 0.65, marginTop: -6, marginBottom: 16 }}>{user.email}</div>
 
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
+        {role === "agent" && (
+          <button style={{ ...btnGold, fontSize: 14, padding: "10px 18px" }} onClick={() => go("agent")}>Open agent portal →</button>
+        )}
+        {(role === "admin" || role === "super_admin") && (
+          <button style={{ background: "#1A1A1A", color: "#fff", border: "none", borderRadius: 999, fontWeight: 700, fontSize: 14, padding: "10px 18px", cursor: "pointer" }} onClick={() => go("admin")}>Open admin console →</button>
+        )}
+      </div>
+
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 18 }}>
         {tabs.map(([k, l]) => {
           const n = k === "all" ? bookings.length : bookings.filter((b) => bucket(b) === k).length;
@@ -2258,10 +3202,7 @@ function AccountPage({ user, bookings, setSignin, notify, signOut, patchBooking,
       {list.length === 0 ? (
         <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 14, padding: 24 }}>Nothing here yet — book a tour, request a quote or build a trip and it will appear in this space.</div>
       ) : list.map((b, i) => {
-        const paidCount = b.paid || 0; // number of instalments paid (excludes the 20% deposit)
-        const perInst = b.plan === "deposit" ? (b.total - b.deposit) / b.months : 0;
-        const paidAmount = b.plan === "deposit" ? b.deposit + perInst * paidCount : 0;
-        const pct = b.plan === "deposit" && b.total ? Math.round((paidAmount / b.total) * 100) : 0;
+        const ts = b.plan === "deposit" ? tontineState(b) : null;
         return (
         <div key={b._id || i} className="card-hover" style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 16, padding: 20, marginBottom: 14, opacity: b._status === "cancelled" ? 0.6 : 1, display: "flex", flexDirection: "column", gap: 12 }}>
           <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
@@ -2276,40 +3217,87 @@ function AccountPage({ user, bookings, setSignin, notify, signOut, patchBooking,
             <span style={{ fontSize: 11.5, fontWeight: 700, color: statusColor(b._status), alignSelf: "center" }}>● {statusLabel[b._status] || "In progress"}</span>
           </div>
 
-          {b.plan === "deposit" && b._status !== "cancelled" && (
+          {ts && b._status !== "cancelled" && (
             <div style={{ background: T.paperDark, borderRadius: 12, padding: "12px 14px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, fontWeight: 700, marginBottom: 6 }}>
-                <span>{pct >= 100 ? "Fully paid" : `Ma Tontine · deposit + ${paidCount}/${b.months} instalment${b.months > 1 ? "s" : ""} paid`}</span>
-                <span style={{ color: T.green }}>{pct}%</span>
+                <span>{ts.settled ? `Fully paid · ${ts.payCount}/${ts.payCount} payments` : `Ma Tontine · ${ts.payCount}/${ts.plannedTotal} payments (deposit incl.)`}</span>
+                <span style={{ color: T.green }}>{ts.settled ? 100 : ts.pct}%</span>
               </div>
               <div style={{ height: 9, borderRadius: 999, background: "rgba(11,46,27,.12)", overflow: "hidden" }}>
-                <div style={{ height: "100%", width: `${pct}%`, background: `linear-gradient(90deg, ${T.green}, ${T.gold})`, borderRadius: 999, transition: "width .4s ease" }} />
+                <div style={{ height: "100%", width: `${ts.settled ? 100 : ts.pct}%`, background: `linear-gradient(90deg, ${T.green}, ${T.gold})`, borderRadius: 999, transition: "width .4s ease" }} />
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, opacity: 0.7, marginTop: 6 }}>
-                <span>Paid: {fmtXOF(paidAmount)}</span>
-                <span>Remaining: {fmtXOF(b.total - paidAmount)}</span>
+                <span>Paid: {fmtXOF(ts.paidAmount)}</span>
+                <span>Remaining: {fmtXOF(ts.remaining)}</span>
               </div>
             </div>
           )}
 
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
             <button style={{ ...btnGreen, fontSize: 13, padding: "8px 16px" }} onClick={() => setDetail(b)}>View details</button>
-            {b.plan === "deposit" && b._status !== "cancelled" && paidCount < b.months && (
+            {ts && b._status !== "cancelled" && !ts.settled && (
               <button style={{ background: "none", border: `1.5px solid ${T.line}`, borderRadius: 10, cursor: "pointer", fontWeight: 700, color: T.ink, padding: "8px 16px", fontSize: 13 }}
-                onClick={() => payInstallment(b)}>Pay next instalment</button>
+                onClick={() => setPayTarget(b)}>Pay towards balance</button>
             )}
           </div>
         </div>
         );
       })}
 
-      {detail && <BookingDetail rec={detail} onClose={() => setDetail(null)} notify={notify} patchBooking={patchBooking} cancelBooking={cancelBooking} user={user} payInstallment={payInstallment} />}
+      {detail && <BookingDetail rec={detail} onClose={() => setDetail(null)} notify={notify} patchBooking={patchBooking} cancelBooking={cancelBooking} user={user} onPay={(r) => setPayTarget(r)} />}
+      {payTarget && <InstallmentModal rec={payTarget} onClose={() => setPayTarget(null)} onConfirm={(amt) => { const r = payTarget; setPayTarget(null); payInstallment(r, amt); }} />}
     </Wrap>
   );
 }
 
+// ---- Ma Tontine Voyage : client chooses how much to pay towards the balance ----
+function InstallmentModal({ rec, onClose, onConfirm }) {
+  const ts = tontineState(rec);
+  const [amount, setAmount] = useState(String(ts.minNext));
+  const val = Math.round(Number(amount) || 0);
+  const valid = val >= ts.minNext && val <= ts.remaining;
+  const paysOff = val >= ts.remaining - 1;
+  const box = { background: "#F8F5EF", border: "1px solid #ECE7DD", borderRadius: 12, padding: "12px 14px" };
+  return (
+    <Overlay onClose={onClose}>
+      <h3 className="disp" style={{ fontWeight: 800, fontSize: 20, margin: "0 0 4px" }}>Pay towards your balance</h3>
+      <div style={{ fontSize: 13.5, opacity: 0.7, marginBottom: 14 }}>{rec.tour?.name}</div>
+
+      <div style={{ ...box, marginBottom: 14 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13.5, padding: "3px 0" }}>
+          <span style={{ opacity: 0.7 }}>Remaining balance</span><span style={{ fontWeight: 700 }}>{fmtXOF(ts.remaining)}</span>
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13.5, padding: "3px 0" }}>
+          <span style={{ opacity: 0.7 }}>Payments so far</span><span style={{ fontWeight: 700 }}>{ts.payCount}/{ts.plannedTotal}</span>
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13.5, padding: "3px 0" }}>
+          <span style={{ opacity: 0.7 }}>Minimum this time</span><span style={{ fontWeight: 700 }}>{fmtXOF(ts.minNext)}</span>
+        </div>
+      </div>
+
+      <label style={{ ...label, display: "block" }}>Amount to pay now (XOF)</label>
+      <input type="number" value={amount} min={ts.minNext} max={ts.remaining} step="1000"
+        onChange={(e) => setAmount(e.target.value)} style={{ ...input, marginBottom: 8 }} />
+      <div style={{ fontSize: 12.5, opacity: 0.7, marginBottom: 4 }}>
+        Between {fmtXOF(ts.minNext)} and {fmtXOF(ts.remaining)}. Pay more to clear your trip faster{paysOff && valid ? " — this payment settles the booking in full." : "."}
+      </div>
+      {!valid && (
+        <div style={{ fontSize: 12.5, color: "#B3261E", marginBottom: 6 }}>
+          Enter an amount from {fmtXOF(ts.minNext)} to {fmtXOF(ts.remaining)}.
+        </div>
+      )}
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 14 }}>
+        <button style={{ ...btnGold, fontSize: 13.5, padding: "10px 18px", opacity: valid ? 1 : 0.5, cursor: valid ? "pointer" : "not-allowed" }}
+          disabled={!valid} onClick={() => onConfirm(val)}>Pay {valid ? fmtXOF(val) : ""}</button>
+        <button style={{ background: "none", border: `1.5px solid ${T.line}`, borderRadius: 10, cursor: "pointer", fontWeight: 700, color: T.ink, padding: "10px 18px", fontSize: 13.5 }}
+          onClick={onClose}>Cancel</button>
+      </div>
+    </Overlay>
+  );
+}
+
 function downloadInvoice(rec, user) {
-  const remaining = rec.plan === "deposit" ? rec.total - rec.deposit : 0;
+  const ts = rec.plan === "deposit" ? tontineState(rec) : null;
   const rows = [
     ["Reference", (rec._id || "PENDING").toString().slice(0, 8).toUpperCase()],
     ["Customer", user?.name || rec.contact?.name || "—"],
@@ -2320,9 +3308,10 @@ function downloadInvoice(rec, user) {
     ...(rec.addons && rec.addons.length ? rec.addons.map((a) => [`Add-on: ${a.name}${a.per === "person" ? " (per person)" : ""}`, a.amount != null ? fmtXOF(a.amount) : "on request"]) : []),
     ["Payment plan", planLabel(rec.plan)],
     rec.plan !== "quote" && rec.plan !== "itinerary" ? ["Total", fmtXOF(rec.total)] : null,
-    rec.plan === "deposit" ? ["Deposit paid", fmtXOF(rec.deposit)] : null,
-    rec.plan === "deposit" ? ["Remaining", `${fmtXOF(remaining)} in ${rec.months} instalments`] : null,
-    rec.plan === "deposit" ? ["Instalments paid", `${rec.paid || 0} / ${rec.months}`] : null,
+    ts ? ["Deposit paid", fmtXOF(rec.deposit)] : null,
+    ts ? ["Paid to date", fmtXOF(ts.paidAmount)] : null,
+    ts ? ["Remaining", ts.settled ? "Fully paid" : fmtXOF(ts.remaining)] : null,
+    ts ? ["Payments made", ts.settled ? `${ts.payCount} / ${ts.payCount}` : `${ts.payCount} / ${ts.plannedTotal}`] : null,
   ].filter(Boolean);
   const html = `<!doctype html><html><head><meta charset="utf-8"><title>ATS invoice</title>
     <style>body{font-family:Arial,sans-serif;color:#0B2E1B;max-width:640px;margin:40px auto;padding:0 20px}
@@ -2338,9 +3327,9 @@ function downloadInvoice(rec, user) {
   if (w) { w.document.write(html); w.document.close(); }
 }
 
-function BookingDetail({ rec, onClose, notify, patchBooking, cancelBooking, user, payInstallment }) {
+function BookingDetail({ rec, onClose, notify, patchBooking, cancelBooking, user, onPay }) {
   const it = rec.itinerary;
-  const remaining = rec.plan === "deposit" ? rec.total - rec.deposit : 0;
+  const ts = rec.plan === "deposit" ? tontineState(rec) : null;
   const canCancel = rec._status !== "cancelled" && rec._status !== "settled";
   return (
     <Overlay onClose={onClose}>
@@ -2377,10 +3366,11 @@ function BookingDetail({ rec, onClose, notify, patchBooking, cancelBooking, user
           </div>
         )}
         {rec.plan !== "quote" && rec.plan !== "itinerary" && <Row l="Total" v={fmtXOF(rec.total)} />}
-        {rec.plan === "deposit" && <>
+        {ts && <>
           <Row l="Deposit paid" v={fmtXOF(rec.deposit)} />
-          <Row l="Balance" v={`${fmtXOF(remaining)} · ${rec.months} × ${fmtXOF(remaining / rec.months)}${rec.schedule ? ` over ${rec.schedule}` : ""}`} />
-          <Row l="Instalments paid" v={`${rec.paid || 0} / ${rec.months}`} />
+          <Row l="Paid to date" v={fmtXOF(ts.paidAmount)} />
+          <Row l="Balance" v={ts.settled ? "Fully paid" : fmtXOF(ts.remaining)} />
+          <Row l="Payments made" v={ts.settled ? `${ts.payCount} / ${ts.payCount} · 100%` : `${ts.payCount} / ${ts.plannedTotal}`} />
         </>}
       </div>
 
@@ -2389,9 +3379,9 @@ function BookingDetail({ rec, onClose, notify, patchBooking, cancelBooking, user
       )}
 
       <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 16 }}>
-        {rec.plan === "deposit" && rec._status !== "cancelled" && (rec.paid || 0) < rec.months && (
+        {ts && rec._status !== "cancelled" && !ts.settled && (
           <button style={{ ...btnGold, fontSize: 13.5, padding: "9px 16px" }}
-            onClick={() => { onClose(); payInstallment(rec); }}>Pay next instalment</button>
+            onClick={() => { onClose(); onPay(rec); }}>Pay towards balance</button>
         )}
         {rec.plan !== "quote" && rec.plan !== "itinerary" && (
           <button style={{ ...btnGreen, fontSize: 13.5, padding: "9px 16px" }} onClick={() => downloadInvoice(rec, user)}>Download invoice</button>
@@ -2551,8 +3541,10 @@ const TONTINE_OPTIONS = [
 
 function BookingModal({ tour, user, onClose, onConfirm }) {
   const todayStr = new Date().toISOString().slice(0, 10);
+  const minDate = new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10); // earliest = day after tomorrow
   const [dateFrom, setDateFrom] = useState(tour.initialDateFrom || tour.initialDate || "");
-  const [dateTo, setDateTo] = useState(tour.initialDateTo || "");
+  const [dateTo, setDateTo] = useState(tour.initialDateTo || tour.initialDateFrom || tour.initialDate || "");
+  const setTripDate = (v) => { setDateFrom(v); setDateTo(v); }; // single date for trips
   const date = dateFrom; // start date drives availability / scheduling
   const [adults, setAdults] = useState(tour.initialPax || 2);
   const [children, setChildren] = useState(0); // 3–12
@@ -2561,8 +3553,17 @@ function BookingModal({ tour, user, onClose, onConfirm }) {
   const [vehicle, setVehicle] = useState(tour.initialVehicle ?? -1); // -1 = no transport
   const [plan, setPlan] = useState(tour.initialPlan === "deposit" ? "deposit" : "full");
   const [sched, setSched] = useState("3m");
+  const [tranches, setTranches] = useState(3); // client-chosen number of instalments for the 80% balance
+  const [accepted, setAccepted] = useState(false); // mandatory T&C acceptance for paid bookings
+  const [promoCode, setPromoCode] = useState(() => { try { return (tour.initialPromo || localStorage.getItem("ats_ref") || "").toUpperCase(); } catch { return (tour.initialPromo || "").toUpperCase(); } });
+  const [promo, setPromo] = useState(null); // validate-promo result
+  const [promoChecking, setPromoChecking] = useState(false);
   const [msg, setMsg] = useState("");
-  const [bill, setBill] = useState(() => { const [fn, ...rn] = (user?.name || "").split(" "); return { firstName: fn || "", lastName: rn.join(" ") || "", email: user?.email || "", phone: "", address: "", city: "", country: "" }; });
+  const [bill, setBill] = useState(() => {
+    if (tour.agentBooking) return { firstName: "", lastName: "", email: "", phone: "", address: "", city: "", country: "" };
+    const [fn, ...rn] = (user?.name || "").split(" ");
+    return { firstName: fn || "", lastName: rn.join(" ") || "", email: user?.email || "", phone: "", address: "", city: "", country: "" };
+  });
   const toggle = (n) => setAddons((a) => (a.includes(n) ? a.filter((x) => x !== n) : [...a, n]));
 
   // ---- Ma Tontine availability vs chosen travel date ----
@@ -2570,7 +3571,9 @@ function BookingModal({ tour, user, onClose, onConfirm }) {
   const optAvailable = (o) => daysUntil != null && daysUntil >= o.days;
   const tontineAvailable = TONTINE_OPTIONS.some(optAvailable);
   const selectedOpt = TONTINE_OPTIONS.find((o) => o.key === sched) || TONTINE_OPTIONS[3];
-  const months = selectedOpt.n;
+  const baseN = selectedOpt.n;                 // instalments implied by the chosen period
+  const maxTr = baseN + 2;                      // client may go up to +2 instalments
+  const months = Math.min(Math.max(1, tranches), maxTr); // effective number of instalments
 
   // keep schedule + plan valid when the date changes
   useEffect(() => {
@@ -2580,6 +3583,12 @@ function BookingModal({ tour, user, onClose, onConfirm }) {
       if (firstOk) setSched(firstOk.key);
     }
   }, [date]);
+
+  // when the period changes, reset the instalment count to that period's default
+  useEffect(() => { setTranches(selectedOpt.n); }, [sched]);
+
+  // full page: start at the top
+  useEffect(() => { window.scrollTo({ top: 0 }); }, []);
 
   const pax = adults + children;
   const seats = pax + infants;
@@ -2601,6 +3610,29 @@ function BookingModal({ tour, user, onClose, onConfirm }) {
   const onRequestAddons = tour.addons.filter((x) => addons.includes(x.name) && !x.price);
   const chosenAddons = tour.addons.filter((x) => addons.includes(x.name)).map((a) => ({ name: a.name, per: a.per, price: a.price, amount: a.price ? (a.per === "person" ? a.price * pax : a.price) : null }));
 
+  // ---- Promo / ambassador code (full payment only) ----
+  const total0 = calc ? calc.total : 0;
+  useEffect(() => {
+    const c = promoCode.trim();
+    if (!c || plan !== "full" || !total0) { setPromo(null); setPromoChecking(false); return; }
+    setPromoChecking(true);
+    const id = setTimeout(async () => {
+      try {
+        const { data } = await supabase.functions.invoke("validate-promo", { body: { code: c, amount: total0 } });
+        setPromo(data && data.valid ? data : { valid: false });
+      } catch { setPromo({ valid: false }); }
+      finally { setPromoChecking(false); }
+    }, 400);
+    return () => clearTimeout(id);
+  }, [promoCode, plan, total0]);
+  const corporate = plan === "full" && CORP_DISCOUNT > 0;         // corporate rate takes priority
+  const promoValid = plan === "full" && !corporate && promo && promo.valid;
+  const promoPct = promoValid ? Number(promo.discount_percent) || 0 : 0;
+  const discPct = corporate ? CORP_DISCOUNT : promoPct;
+  const discActive = corporate || promoValid;
+  const discLabel = corporate ? "Corporate rate" : (promoValid ? `Promo ${promo.code}` : "");
+  const payTotal = calc ? Math.round(calc.total * (1 - discPct / 100)) : 0;
+
   const Counter = ({ label: l, sub, value, set, min = 0 }) => (
     <div style={{ display: "flex", alignItems: "center", padding: "10px 0", borderBottom: `1px solid ${T.line}` }}>
       <div><div style={{ fontWeight: 600, fontSize: 14.5 }}>{l}</div><div style={{ fontSize: 12, opacity: 0.6 }}>{sub}</div></div>
@@ -2613,26 +3645,32 @@ function BookingModal({ tour, user, onClose, onConfirm }) {
   );
 
   return (
-    <div role="dialog" aria-modal="true" className="bk-overlay" style={{ position: "fixed", inset: 0, zIndex: 60, background: "rgba(17,24,20,.5)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={onClose}>
-      <style>{`@media(max-width:640px){.bk-overlay{align-items:flex-end !important;padding:0 !important}.bk-modal{max-width:none !important;border-radius:20px 20px 0 0 !important;max-height:94vh !important;padding:20px 18px !important}}`}</style>
-      <div className="bk-modal" onClick={(e) => e.stopPropagation()} style={{ background: "#fff", borderRadius: 20, width: "100%", maxWidth: 680, maxHeight: "90vh", overflowY: "auto", padding: "28px 32px", color: T.ink }}>
-        <div style={{ display: "flex", alignItems: "start", gap: 12, marginBottom: 6 }}>
-          <div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "#8A968E", textTransform: "uppercase", letterSpacing: ".1em" }}>{tour.pole} · {tour.dur}</div>
-            <h3 className="disp" style={{ fontSize: 22, fontWeight: 800, lineHeight: 1.2, margin: "6px 0 0", color: "#1A1A1A" }}>{tour.name}</h3>
-          </div>
-          <button onClick={onClose} aria-label="Close" style={{ ...btnCircle, marginLeft: "auto" }}><X size={16} /></button>
+    <Wrap>
+      <button onClick={onClose} style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "none", border: "none", cursor: "pointer", color: T.ink, fontWeight: 700, fontSize: 14, padding: 0, marginBottom: 14 }}>
+        <ChevronLeft size={18} /> Back
+      </button>
+      <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 20, width: "100%", maxWidth: 720, margin: "0 auto", padding: "26px 30px", color: T.ink }}>
+        <div style={{ marginBottom: 6 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "#8A968E", textTransform: "uppercase", letterSpacing: ".1em" }}>{tour.pole} · {tour.dur}</div>
+          <h3 className="disp" style={{ fontSize: 24, fontWeight: 800, lineHeight: 1.2, margin: "6px 0 0", color: "#1A1A1A" }}>{tour.name}</h3>
         </div>
 
-        <div style={sect}>Travel dates</div>
-        <RangeDate from={dateFrom} to={dateTo} onChange={(f, tt) => { setDateFrom(f); setDateTo(tt); }} triggerStyle={input} />
+        {tour.agentBooking && (
+          <div style={{ marginTop: 12, background: "#F8F5EF", border: "1px solid #ECE7DD", borderRadius: 10, padding: "10px 13px", fontSize: 13, lineHeight: 1.5, color: "#3B4A42", display: "flex", gap: 8, alignItems: "flex-start" }}>
+            <UserRound size={16} color={T.green} style={{ flexShrink: 0, marginTop: 1 }} />
+            <span>You're booking on behalf of a client{tour.initialPromo ? <> — your code <strong>{tour.initialPromo}</strong> is applied</> : ""}. Enter the client's billing details below.</span>
+          </div>
+        )}
+
+        <div style={sect}>Travel date</div>
+        <input type="date" min={minDate} value={dateFrom} onChange={(e) => setTripDate(e.target.value)} style={input} />
 
         <div style={sect}>Travelers</div>
         <Counter label="Adults" sub={tour.quote ? "" : `${fmtXOF(tg.a)} each at current basis`} value={adults} set={setAdults} min={1} />
         <Counter label="Children (3–12)" sub={tour.quote ? "" : tg.c ? `${fmtXOF(tg.c)} each` : "child rate confirmed at booking"} value={children} set={setChildren} />
         <Counter label="Infants (under 3)" sub="Free" value={infants} set={setInfants} />
         {!tour.quote && (
-          <div style={{ marginTop: 10, background: "#F8F5EF", border: "1px solid #ECE7DD", borderRadius: 10, padding: "10px 13px", fontSize: 13.5, color: "#3B4A42" }}>
+          <div style={{ marginTop: 10, background: "#f8f8f8", border: "1px solid #ECECEC", borderRadius: 10, padding: "10px 13px", fontSize: 13.5, color: "#3B4A42" }}>
             Basis applied: <strong style={{ color: "#1A1A1A" }}>{tierLabel[tier]}</strong> — {tier !== "grp" ? "add travelers to unlock lower per-person rates." : "best per-person rate unlocked."}
           </div>
         )}
@@ -2679,14 +3717,15 @@ function BookingModal({ tour, user, onClose, onConfirm }) {
 
             <div style={sect}>Payment</div>
             <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={() => setPlan("full")} style={{ flex: 1, border: `1.5px solid ${plan === "full" ? T.green : T.line}`, background: plan === "full" ? "#fff" : "transparent", borderRadius: 12, padding: "10px 8px", fontWeight: 600, fontSize: 13, cursor: "pointer", color: T.ink }}>Pay in full</button>
+              <button onClick={() => setPlan("full")} style={{ flex: 1, border: `1.5px solid ${plan === "full" ? T.green : T.line}`, background: plan === "full" ? T.green : "#fff", borderRadius: 12, padding: "10px 8px", fontWeight: 600, fontSize: 13, cursor: "pointer", color: plan === "full" ? "#fff" : T.ink }}>Pay in full</button>
               <button onClick={() => tontineAvailable && setPlan("deposit")} disabled={!tontineAvailable} title={!tontineAvailable ? "Choose a travel date further away to pay in instalments" : ""}
-                style={{ flex: 1, border: `1.5px solid ${plan === "deposit" ? T.green : T.line}`, background: plan === "deposit" ? "#fff" : "transparent", borderRadius: 12, padding: "10px 8px", fontWeight: 600, fontSize: 13, cursor: tontineAvailable ? "pointer" : "not-allowed", color: T.ink, opacity: tontineAvailable ? 1 : 0.45 }}>
+                style={{ flex: 1, border: `1.5px solid ${plan === "deposit" ? T.green : T.line}`, background: plan === "deposit" ? T.green : "#fff", borderRadius: 12, padding: "10px 8px", fontWeight: 600, fontSize: 13, cursor: tontineAvailable ? "pointer" : "not-allowed", color: plan === "deposit" ? "#fff" : T.ink, opacity: tontineAvailable ? 1 : 0.45 }}>
                 Ma Tontine Voyage · 20% deposit
               </button>
             </div>
+
             {!tontineAvailable && (
-              <div style={{ marginTop: 10, background: "#F8F5EF", border: "1px solid #ECE7DD", borderRadius: 10, padding: "10px 12px", fontSize: 13, lineHeight: 1.5, color: "#5A6B61" }}>
+              <div style={{ marginTop: 10, background: "#f8f8f8", border: "1px solid #ECECEC", borderRadius: 10, padding: "10px 12px", fontSize: 13, lineHeight: 1.5, color: "#5A6B61" }}>
                 {!date
                   ? "Select a travel date above to unlock Ma Tontine Voyage instalment plans."
                   : `⏳ Your travel date is in ${daysUntil} day${daysUntil > 1 ? "s" : ""} — too soon for instalments (minimum 15 days). Please pay in full, or pick a later date.`}
@@ -2708,16 +3747,54 @@ function BookingModal({ tour, user, onClose, onConfirm }) {
                   })}
                 </div>
                 <div style={{ fontSize: 12, opacity: 0.6, marginTop: 6 }}>Greyed periods require a travel date further in the future than the period itself.</div>
+
+                <div style={{ fontSize: 12.5, opacity: 0.7, margin: "14px 0 6px" }}>Split the balance into instalments (you choose the exact amount each time):</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {Array.from({ length: maxTr }, (_, i) => i + 1).map((n) => (
+                    <button key={n} onClick={() => setTranches(n)}
+                      style={{ border: `1.5px solid ${months === n ? T.green : T.line}`, borderRadius: 999, padding: "5px 13px", fontWeight: 600, fontSize: 12.5, cursor: "pointer", background: months === n ? T.green : "#fff", color: months === n ? "#fff" : T.ink }}>
+                      {n}×
+                    </button>
+                  ))}
+                </div>
+                <div style={{ fontSize: 12, opacity: 0.6, marginTop: 6 }}>From 1 instalment (pay the balance at once) up to {maxTr}× for this period. You can always pay more than the minimum, or clear the balance early.</div>
               </div>
             )}
 
-            <div style={{ marginTop: 18, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 14, padding: 16, fontSize: 14.5 }}>
+            <div style={sect}>Reservation & billing details</div>
+            <BillingFields bill={bill} setBill={setBill} />
+            {!dateFrom && <div style={{ fontSize: 12.5, color: T.laterite, marginTop: 8 }}>Please choose your travel date above to book.</div>}
+
+            {plan === "full" && corporate && (
+              <div style={{ marginTop: 14, background: "#f8f8f8", border: "1px solid #ECECEC", borderRadius: 10, padding: "10px 13px", fontSize: 13, color: "#3B4A42", display: "flex", gap: 8, alignItems: "center" }}>
+                <Building2 size={16} color={T.green} style={{ flexShrink: 0 }} /> Your corporate rate (−{CORP_DISCOUNT}%) is applied automatically.
+              </div>
+            )}
+            {plan === "full" && !corporate && (
+              <div style={{ marginTop: 14 }}>
+                <label style={{ ...label, marginTop: 0 }}>Promo / ambassador code (optional)</label>
+                <input style={input} value={promoCode} onChange={(e) => setPromoCode(e.target.value.toUpperCase())} placeholder="e.g. AWA10" autoComplete="off" />
+                {promoCode.trim() && (
+                  promoChecking
+                    ? <div style={{ fontSize: 12.5, opacity: 0.6, marginTop: 6 }}>Checking…</div>
+                    : promoValid
+                      ? <div style={{ fontSize: 12.5, color: T.green, fontWeight: 700, marginTop: 6, display: "flex", alignItems: "center", gap: 5 }}><Check size={14} /> Code applied — {promoPct}% off</div>
+                      : <div style={{ fontSize: 12.5, color: "#B3261E", marginTop: 6 }}>Invalid or expired code.</div>
+                )}
+              </div>
+            )}
+
+            <div style={{ marginTop: 16, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 14, padding: 16, fontSize: 14.5 }}>
               <Row l={`Tour · ${tierLabel[tier]} · ${adults} ad${children ? ` + ${children} ch` : ""}`} v={fmtXOF(calc.base)} />
               {calc.transport > 0 && <Row l={`Transport · ${VEHICLES[vehicle].name}`} v={fmtXOF(calc.transport)} />}
               {chosenAddons.map((a) => <Row key={a.name} l={`+ ${a.name}${a.per === "person" ? ` (×${pax})` : ""}`} v={a.amount != null ? fmtXOF(a.amount) : "on request"} />)}
+              {discActive && <div style={{ display: "flex", padding: "4px 0", color: T.green, fontWeight: 600 }}><span>{discLabel} · −{discPct}%</span><span style={{ marginLeft: "auto" }}>−{fmtXOF(calc.total - payTotal)}</span></div>}
               <div style={{ borderTop: `1px solid ${T.line}`, marginTop: 8, paddingTop: 10, display: "flex", fontSize: 17 }}>
                 <strong>Total</strong>
-                <strong style={{ marginLeft: "auto" }}>{fmtXOF(calc.total)} <span style={{ fontWeight: 500, fontSize: 13, opacity: 0.6 }}>{fmtUSD(calc.total)}</span></strong>
+                <strong style={{ marginLeft: "auto" }}>
+                  {discActive && <span style={{ fontWeight: 500, fontSize: 13, opacity: 0.5, textDecoration: "line-through", marginRight: 6 }}>{fmtXOF(calc.total)}</span>}
+                  {fmtXOF(payTotal)} <span style={{ fontWeight: 500, fontSize: 13, opacity: 0.6 }}>{fmtUSD(payTotal)}</span>
+                </strong>
               </div>
               {(childAsAdult || onRequestAddons.length > 0) && (
                 <div style={{ marginTop: 8, fontSize: 12.5, color: T.laterite, lineHeight: 1.5 }}>
@@ -2726,27 +3803,25 @@ function BookingModal({ tour, user, onClose, onConfirm }) {
                 </div>
               )}
               {plan === "deposit" && tontineAvailable && (
-                <div style={{ marginTop: 10, background: "#F7F7F7", border: "1px solid #EEE", borderRadius: 10, padding: "10px 12px", fontSize: 13.5, lineHeight: 1.6, color: "#3B4A42" }}>
+                <div style={{ marginTop: 10, background: "#f8f8f8", border: "1px solid #ECECEC", borderRadius: 10, padding: "10px 12px", fontSize: 13.5, lineHeight: 1.6, color: "#3B4A42" }}>
                   <strong style={{ color: "#1A1A1A" }}>Due today: {fmtXOF(calc.deposit)}</strong> (20% deposit)<br />
-                  Then <strong>{months} × {fmtXOF(calc.installment)}</strong> over {selectedOpt.label} (balance {fmtXOF(calc.total - calc.deposit)}).<br />
-                  Fully settled before your travel date{date ? ` (${date})` : ""}. Reminders by email, SMS and WhatsApp.
+                  Then the balance of {fmtXOF(calc.total - calc.deposit)} split into <strong>{months} instalment{months > 1 ? "s" : ""}</strong>, so a minimum of <strong>{fmtXOF(calc.installment)}</strong> per payment.<br />
+                  <span style={{ display: "flex", gap: 7, marginTop: 6, alignItems: "flex-start" }}><Info size={15} color={T.green} style={{ flexShrink: 0, marginTop: 2 }} /><span>That amount is only a <strong>minimum</strong>: at each payment you're free to pay <strong>more</strong> — even the whole remaining balance at once — to finish sooner. You never pay less than the minimum.</span></span>
+                  <span style={{ display: "block", marginTop: 6 }}>Fully settled before your travel date{date ? ` (${date})` : ""}. Reminders by email, SMS and WhatsApp.</span>
                 </div>
               )}
             </div>
 
-            <div style={sect}>Reservation & billing details</div>
-            <BillingFields bill={bill} setBill={setBill} />
-            {(!dateFrom || !dateTo) && <div style={{ fontSize: 12.5, color: T.laterite, marginTop: 8 }}>Please choose your travel dates (start and end) above to book.</div>}
-
-            <button style={{ width: "100%", marginTop: 14, background: T.gold, color: T.ink, border: "none", borderRadius: 12, padding: 14, fontWeight: 800, fontSize: 16, cursor: "pointer", opacity: (billValid(bill) && dateFrom && dateTo) ? 1 : 0.55 }}
-              disabled={!billValid(bill) || !dateFrom || !dateTo}
-              onClick={() => onConfirm({ tour, date: `${dateFrom} → ${dateTo}`, dateFrom, dateTo, adults, children, infants, plan, months, schedule: plan === "deposit" ? selectedOpt.label : "", total: calc.total, deposit: calc.deposit, contact: { ...bill, name: `${bill.firstName} ${bill.lastName}`.trim() }, addons: chosenAddons })}>
-              {plan === "deposit" ? `Reserve with ${fmtXOF(calc.deposit)} deposit` : `Pay in full — ${fmtXOF(calc.total)}`}
+            <TermsCheck checked={accepted} onChange={setAccepted} />
+            <button style={{ width: "100%", marginTop: 12, background: T.gold, color: T.ink, border: "none", borderRadius: 12, padding: 14, fontWeight: 800, fontSize: 16, cursor: (billValid(bill) && dateFrom && accepted) ? "pointer" : "not-allowed", opacity: (billValid(bill) && dateFrom && accepted) ? 1 : 0.55 }}
+              disabled={!billValid(bill) || !dateFrom || !accepted}
+              onClick={() => onConfirm({ tour, date: dateFrom, dateFrom, dateTo: dateFrom, adults, children, infants, plan, months, schedule: plan === "deposit" ? selectedOpt.label : "", total: calc.total, deposit: calc.deposit, contact: { ...bill, name: `${bill.firstName} ${bill.lastName}`.trim() }, addons: chosenAddons, promoCode: promoValid ? promo.code : "" })}>
+              {plan === "deposit" ? `Reserve with ${fmtXOF(calc.deposit)} deposit` : `Pay in full — ${fmtXOF(payTotal)}`}
             </button>
           </>
         )}
       </div>
-    </div>
+    </Wrap>
   );
 }
 const sect = { margin: "22px 0 9px", fontWeight: 700, fontSize: 12.5, textTransform: "uppercase", letterSpacing: ".08em", color: T.green };
@@ -2849,34 +3924,125 @@ function VehiclePhoto({ url, name, height }) {
 
 function TransferCheckout({ detail, user, onClose, onConfirm }) {
   const [bill, setBill] = useState(() => { const [fn, ...rn] = (user?.name || "").split(" "); return { firstName: fn || "", lastName: rn.join(" ") || "", email: user?.email || "", phone: "", address: "", city: "", country: "" }; });
+  const [accepted, setAccepted] = useState(false);
   const total = detail.total;
+  const promo = usePromo(total);
 
   const rows = detail.rows || [["Service", detail.route], ["Vehicle", detail.vehicle], ["Date", detail.date || "—"], ["Pick-up", detail.time], ["Passengers", detail.pax]];
 
   const confirm = () => {
-    if (!billValid(bill)) return;
+    if (!billValid(bill) || !accepted) return;
     const base = detail.record || { tour: detail.tour, date: detail.date, adults: detail.pax, children: 0, infants: 0, transfer: { time: detail.time, unit: detail.unit } };
-    onConfirm({ ...base, plan: "full", months: 0, schedule: "", total, deposit: 0, contact: { ...bill, name: `${bill.firstName} ${bill.lastName}`.trim() } });
+    const name = `${bill.firstName} ${bill.lastName}`.trim();
+    sendAgencyEmail({
+      access_key: WEB3FORMS_KEY_LOGISTICS,
+      subject: `Transfer request — ${detail.route || detail.title || "transport"}`,
+      from_name: "ATS Transfers",
+      name, email: bill.email, phone: bill.phone,
+      Billing_address: [bill.address, bill.city, bill.country].filter(Boolean).join(", "),
+      ...rowsToFields(rows),
+      Total_XOF: total,
+    });
+    onConfirm({ ...base, plan: "full", months: 0, schedule: "", total, deposit: 0, contact: { ...bill, name }, promoCode: promo.valid ? promo.promo.code : "" });
   };
 
   return (
     <Overlay onClose={onClose}>
       <h3 className="disp" style={{ fontWeight: 800, fontSize: 20, marginTop: 0 }}>{detail.title || "Confirm your transfer"}</h3>
-      <div style={{ background: T.paperDark, borderRadius: 12, padding: "12px 14px", fontSize: 14, lineHeight: 1.7 }}>
+      <div style={{ background: "#f8f8f8", border: "1px solid #ECECEC", borderRadius: 12, padding: "12px 14px", fontSize: 14, lineHeight: 1.7 }}>
         {rows.map(([l, v]) => <Row key={l} l={l} v={v} />)}
+        {promo.active && <div style={{ display: "flex", padding: "4px 0", color: T.green, fontWeight: 600 }}><span>{promo.label} · −{promo.pct}%</span><span style={{ marginLeft: "auto" }}>−{fmtXOF(total - promo.payTotal)}</span></div>}
         <div style={{ borderTop: `1px solid ${T.line}`, marginTop: 8, paddingTop: 8, display: "flex", fontSize: 16 }}>
-          <strong>Total</strong><strong style={{ marginLeft: "auto" }}>{fmtXOF(total)} <span style={{ fontWeight: 500, fontSize: 12, opacity: 0.6 }}>{fmtUSD(total)}</span></strong>
+          <strong>Total</strong><strong style={{ marginLeft: "auto" }}>
+            {promo.active && <span style={{ fontWeight: 500, fontSize: 12, opacity: 0.5, textDecoration: "line-through", marginRight: 6 }}>{fmtXOF(total)}</span>}
+            {fmtXOF(promo.payTotal)} <span style={{ fontWeight: 500, fontSize: 12, opacity: 0.6 }}>{fmtUSD(promo.payTotal)}</span>
+          </strong>
         </div>
       </div>
       <div style={{ fontSize: 12.5, color: "#6B7A72", marginTop: 8 }}>Confirmed with full payment — no instalment plan.</div>
 
       <div style={sect}>Reservation & billing details</div>
       <BillingFields bill={bill} setBill={setBill} />
+      {!promo.corporate && <PromoField p={promo} />}
 
-      <button disabled={!billValid(bill)} style={{ ...btnGold, width: "100%", marginTop: 14, opacity: billValid(bill) ? 1 : 0.55 }} onClick={confirm}>
-        Pay in full — {fmtXOF(total)}
+      <TermsCheck checked={accepted} onChange={setAccepted} />
+      <button disabled={!billValid(bill) || !accepted} style={{ ...btnGold, width: "100%", marginTop: 12, opacity: (billValid(bill) && accepted) ? 1 : 0.55, cursor: (billValid(bill) && accepted) ? "pointer" : "not-allowed" }} onClick={confirm}>
+        Pay in full — {fmtXOF(promo.payTotal)}
       </button>
     </Overlay>
+  );
+}
+
+// Full-page car-rental checkout (replaces the old modal). Neutral #F8F8F8 panels, car photo.
+function RentalCheckoutPage({ detail, user, onBack, onConfirm }) {
+  const [bill, setBill] = useState(() => { const [fn, ...rn] = (user?.name || "").split(" "); return { firstName: fn || "", lastName: rn.join(" ") || "", email: user?.email || "", phone: "", address: "", city: "", country: "" }; });
+  const [accepted, setAccepted] = useState(false);
+  const total = detail.total;
+  const promo = usePromo(total);
+  const rows = detail.rows || [];
+  useEffect(() => { window.scrollTo({ top: 0 }); }, []);
+
+  const confirm = () => {
+    if (!billValid(bill) || !accepted) return;
+    const base = detail.record || {};
+    const name = `${bill.firstName} ${bill.lastName}`.trim();
+    sendAgencyEmail({
+      access_key: WEB3FORMS_KEY_LOGISTICS,
+      subject: `Car rental — ${detail.carName || "vehicle"}`,
+      from_name: "ATS Car Rental",
+      name, email: bill.email, phone: bill.phone,
+      Billing_address: [bill.address, bill.city, bill.country].filter(Boolean).join(", "),
+      ...rowsToFields(rows),
+      Total_XOF: total,
+    });
+    onConfirm({ ...base, plan: "full", months: 0, schedule: "", total, deposit: 0, contact: { ...bill, name }, promoCode: promo.valid ? promo.promo.code : "" });
+  };
+
+  return (
+    <div>
+      <button onClick={onBack} style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "none", border: "none", cursor: "pointer", color: T.ink, fontWeight: 700, fontSize: 14, padding: 0, marginBottom: 14 }}>
+        <ChevronLeft size={18} /> Back to cars
+      </button>
+      <h2 className="disp" style={{ fontWeight: 800, fontSize: 24, margin: "0 0 18px" }}>{detail.title || "Confirm your car rental"}</h2>
+
+      <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(280px, 380px)", gap: 24, alignItems: "start" }} className="rental-cols">
+        {/* Summary — photo (left) + vehicle info (right) */}
+        <div style={{ background: "#F8F8F8", border: "1px solid #ECECEC", borderRadius: 16, overflow: "hidden", display: "flex", flexWrap: "wrap" }} className="rental-summary">
+          <div style={{ flex: "1 1 240px", minWidth: 220, background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", borderRight: "1px solid #ECECEC", padding: 12, minHeight: 220 }}>
+            {detail.image
+              ? <img src={detail.image} alt={detail.carName || "Car"} style={{ width: "100%", height: "100%", maxHeight: 240, objectFit: "contain" }} />
+              : <Car size={64} color={T.green} strokeWidth={1.3} />}
+          </div>
+          <div style={{ flex: "1 1 300px", minWidth: 260, padding: "18px 20px" }}>
+            {detail.carName && <div className="disp" style={{ fontWeight: 800, fontSize: 18 }}>{detail.carName}</div>}
+            {detail.carType && <div style={{ fontSize: 12.5, opacity: 0.6, marginBottom: 10 }}>{detail.carType}</div>}
+            <div style={{ fontSize: 14, lineHeight: 1.7 }}>
+              {rows.map(([l, v]) => <Row key={l} l={l} v={v} />)}
+              {promo.active && <div style={{ display: "flex", padding: "4px 0", color: T.green, fontWeight: 600 }}><span>{promo.label} · −{promo.pct}%</span><span style={{ marginLeft: "auto" }}>−{fmtXOF(total - promo.payTotal)}</span></div>}
+              <div style={{ borderTop: "1px solid #E4E4E4", marginTop: 8, paddingTop: 10, display: "flex", fontSize: 17 }}>
+                <strong>Total</strong><strong style={{ marginLeft: "auto" }}>
+                  {promo.active && <span style={{ fontWeight: 500, fontSize: 12.5, opacity: 0.5, textDecoration: "line-through", marginRight: 6 }}>{fmtXOF(total)}</span>}
+                  {fmtXOF(promo.payTotal)} <span style={{ fontWeight: 500, fontSize: 12.5, opacity: 0.55 }}>{fmtUSD(promo.payTotal)}</span>
+                </strong>
+              </div>
+            </div>
+            <div style={{ fontSize: 12.5, color: "#6B7A72", marginTop: 10 }}>Confirmed with full payment — no instalment plan.</div>
+          </div>
+        </div>
+
+        {/* Billing */}
+        <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 16, padding: 20 }}>
+          <div style={{ ...sect, marginTop: 0 }}>Reservation & billing details</div>
+          <BillingFields bill={bill} setBill={setBill} />
+          {!promo.corporate && <PromoField p={promo} />}
+          <TermsCheck checked={accepted} onChange={setAccepted} />
+          <button disabled={!billValid(bill) || !accepted} style={{ ...btnGold, width: "100%", marginTop: 12, opacity: (billValid(bill) && accepted) ? 1 : 0.55, cursor: (billValid(bill) && accepted) ? "pointer" : "not-allowed" }} onClick={confirm}>
+            Pay in full — {fmtXOF(promo.payTotal)}
+          </button>
+        </div>
+      </div>
+      <style>{`@media (max-width: 820px){ .rental-cols{ grid-template-columns: 1fr !important; } }`}</style>
+    </div>
   );
 }
 
@@ -2976,43 +4142,58 @@ function TransferWidget({ addBooking, compact, user }) {
 }
 
 // ---------------- CAR RENTAL ----------------
+// Fuel is included in the daily rate below. "Without fuel" deducts this per-day
+// placeholder estimate (to be replaced with the transport team's real prices).
+const FUEL_PER_DAY = 15000;
+
 function CarRentalWidget({ addBooking, user }) {
-  const todayStr = new Date().toISOString().slice(0, 10);
+  const minDate = new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10); // earliest = day after tomorrow (J+2)
   const [pickup, setPickup] = useState("");
-  const [sameReturn, setSameReturn] = useState(true);
-  const [dropoff, setDropoff] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [puTime, setPuTime] = useState("10:00");
   const [doTime, setDoTime] = useState("10:00");
   const [searched, setSearched] = useState(false);
   const [checkout, setCheckout] = useState(null);
+  const [fuelById, setFuelById] = useState({}); // car.id -> "with" | "without"
   const cmap = usePhotoMap("rentals");
 
-  const days = dateFrom && dateTo ? Math.max(1, Math.round((new Date(dateTo + "T00:00:00") - new Date(dateFrom + "T00:00:00")) / 86400000)) : 0;
-  const canSearch = pickup.trim() && dateFrom && dateTo && (sameReturn || dropoff.trim());
-  const returnLoc = sameReturn ? pickup : dropoff;
+  const effTo = dateTo || dateFrom; // empty "to" = single-day rental
+  const days = dateFrom ? Math.max(1, Math.round((new Date(effTo + "T00:00:00") - new Date(dateFrom + "T00:00:00")) / 86400000)) : 0;
+  const canSearch = pickup.trim() && dateFrom;
+  const getFuel = (id) => fuelById[id] ?? "with";
+  const dailyFor = (car, fuel) => fuel === "without" ? Math.max(0, car.daily - FUEL_PER_DAY) : car.daily;
 
   const openCheckout = (car) => {
-    const total = car.daily * days;
+    const fuel = getFuel(car.id);
+    const daily = dailyFor(car, fuel);
+    const total = daily * days;
+    const single = effTo === dateFrom;
+    const period = single ? dateFrom : `${dateFrom} → ${effTo}`;
     setCheckout({
       title: "Confirm your car rental",
       total,
+      image: cmap[car.slug] || null,
+      carName: car.name,
+      carType: `${car.type} · ${car.year}`,
       rows: [
         ["Car", car.name],
         ["Pick-up", `${pickup} · ${dateFrom} ${puTime}`],
-        ["Return", `${returnLoc} · ${dateTo} ${doTime}`],
+        ["Return", `${dateFrom !== effTo ? effTo : dateFrom} ${doTime}`],
         ["Duration", `${days} day${days > 1 ? "s" : ""}`],
-        ["Daily rate", fmtXOF(car.daily)],
+        ["Fuel", fuel === "with" ? "Included" : "Not included"],
+        ["Daily rate", fmtXOF(daily)],
       ],
       record: {
-        tour: { emoji: "🚗", name: `${car.name} — ${days}-day rental`, pole: "Car rental", dur: `${dateFrom} → ${dateTo}`, thumb: cmap[car.slug] || null },
-        date: `${dateFrom} → ${dateTo}`,
+        tour: { emoji: "🚗", name: `${car.name} — ${days}-day rental`, pole: "Car rental", dur: period, thumb: cmap[car.slug] || null },
+        date: period,
         adults: car.seats, children: 0, infants: 0,
-        rental: { car: car.name, pickup, returnLoc, dateFrom, dateTo, puTime, doTime, days, daily: car.daily },
+        rental: { car: car.name, pickup, dateFrom, dateTo: effTo, puTime, doTime, days, daily, fuel: fuel === "with" ? "Included" : "Not included" },
       },
     });
   };
+
+  if (checkout) return <RentalCheckoutPage detail={checkout} user={user} onBack={() => setCheckout(null)} onConfirm={(rec) => { setCheckout(null); addBooking(rec); }} />;
 
   return (
     <div>
@@ -3024,19 +4205,9 @@ function CarRentalWidget({ addBooking, user }) {
             <AddressInput value={pickup} onChange={setPickup} placeholder="Type an address in Senegal…" />
           </div>
           <div>
-            <label style={label}>Return location</label>
-            {sameReturn ? (
-              <div style={{ ...input, background: T.paperDark, color: "#6B7A72", display: "flex", alignItems: "center" }}>{pickup || "Same as pick-up"}</div>
-            ) : (
-              <AddressInput value={dropoff} onChange={setDropoff} placeholder="Return address in Senegal…" />
-            )}
-            <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, marginTop: 6, cursor: "pointer" }}>
-              <input type="checkbox" checked={sameReturn} onChange={(e) => setSameReturn(e.target.checked)} style={{ accentColor: T.green }} /> Same as pick-up
-            </label>
-          </div>
-          <div>
             <label style={label}>Rental dates</label>
-            <RangeDate from={dateFrom} to={dateTo} onChange={(f, tt) => { setDateFrom(f); setDateTo(tt); }} triggerStyle={input} />
+            <RangeDate from={dateFrom} to={dateTo} minDate={minDate} onChange={(f, tt) => { setDateFrom(f); setDateTo(tt); }} triggerStyle={input} />
+            <div style={{ fontSize: 12, opacity: 0.6, marginTop: 6 }}>Pick a single day, or a start and end date for a longer hire.</div>
           </div>
           <div style={{ display: "flex", gap: 10 }}>
             <div style={{ flex: 1 }}><label style={label}>Pick-up time</label><input type="time" style={input} value={puTime} onChange={(e) => setPuTime(e.target.value)} /></div>
@@ -3069,23 +4240,37 @@ function CarRentalWidget({ addBooking, user }) {
                     <span style={{ ...pill(T.green), display: "inline-flex", alignItems: "center", gap: 4 }}><Fuel size={12} /> {car.fuel}</span>
                     <span style={{ ...pill(T.indigo), display: "inline-flex", alignItems: "center", gap: 4 }}><MapPin size={12} /> {car.location}</span>
                   </div>
-                  <div style={{ marginTop: "auto", display: "flex", alignItems: "flex-end", gap: 10 }}>
-                    <div>
-                      <div style={{ fontWeight: 800, fontSize: 18, color: T.green }} className="disp">{fmtXOF(car.daily)}<span style={{ fontSize: 12, fontWeight: 500, opacity: 0.6 }}> /day</span></div>
-                      <div style={{ fontSize: 12.5, opacity: 0.7 }}>Total {days}d: <strong>{fmtXOF(car.daily * days)}</strong></div>
-                    </div>
-                    {car.available
-                      ? <button style={{ ...btnGold, marginLeft: "auto", fontSize: 14, padding: "9px 16px" }} onClick={() => openCheckout(car)}>Book</button>
-                      : <span style={{ marginLeft: "auto", fontSize: 12.5, color: "#B3261E", fontWeight: 700 }}>Unavailable</span>}
-                  </div>
+                  {(() => {
+                    const fuel = getFuel(car.id);
+                    const daily = dailyFor(car, fuel);
+                    return (
+                      <>
+                        <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
+                          {[["with", "With fuel"], ["without", "Without fuel"]].map(([k, l]) => (
+                            <button key={k} onClick={() => setFuelById((m) => ({ ...m, [car.id]: k }))}
+                              style={{ flex: 1, border: `1.5px solid ${fuel === k ? T.green : T.line}`, background: fuel === k ? T.green : "#fff", color: fuel === k ? "#fff" : T.ink, borderRadius: 10, padding: "6px 8px", fontWeight: 600, fontSize: 12, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
+                              <Fuel size={13} /> {l}
+                            </button>
+                          ))}
+                        </div>
+                        <div style={{ marginTop: "auto", display: "flex", alignItems: "flex-end", gap: 10 }}>
+                          <div>
+                            <div style={{ fontWeight: 800, fontSize: 18, color: T.green }} className="disp">{fmtXOF(daily)}<span style={{ fontSize: 12, fontWeight: 500, opacity: 0.6 }}> /day</span></div>
+                            <div style={{ fontSize: 12.5, opacity: 0.7 }}>Total {days}d: <strong>{fmtXOF(daily * days)}</strong></div>
+                          </div>
+                          {car.available
+                            ? <button style={{ ...btnGold, marginLeft: "auto", fontSize: 14, padding: "9px 16px" }} onClick={() => openCheckout(car)}>Book</button>
+                            : <span style={{ marginLeft: "auto", fontSize: 12.5, color: "#B3261E", fontWeight: 700 }}>Unavailable</span>}
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
             ))}
           </div>
         </>
       )}
-
-      {checkout && <TransferCheckout detail={checkout} user={user} onClose={() => setCheckout(null)} onConfirm={(rec) => { setCheckout(null); addBooking(rec); }} />}
     </div>
   );
 }
@@ -3128,7 +4313,7 @@ function TransportPage({ addBooking, notify, user }) {
 function Footer({ go, notify }) {
   const [email, setEmail] = useState("");
   return (
-    <footer style={{ background: "#F8F5EF", color: "#1A1A1A", borderTop: "1px solid #ECE7DD", padding: "44px 20px", marginTop: 20 }}>
+    <footer style={{ background: "#ffffff", color: "#1A1A1A", borderTop: "1px solid #ECECEC", padding: "44px 20px", marginTop: 20 }}>
       <div style={{ maxWidth: 1200, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px,1fr))", gap: 24, fontSize: 14 }}>
         <div>
           <div className="disp" style={{ fontWeight: 800, fontSize: 18, marginBottom: 8, color: "#1A1A1A" }}>Africa Tourism Solutions</div>
@@ -3141,7 +4326,7 @@ function Footer({ go, notify }) {
         </div>
         <div>
           <div style={{ fontWeight: 700, marginBottom: 8, color: "#1A1A1A" }}>Explore</div>
-          {[["tours", "Tours & experiences"], ["builder", "Trip Builder"], ["transport", "Transfers & car hire"], ["flights", "Flights"], ["events", "Events & MICE"], ["about", "About Us"]].map(([k, l]) => (
+          {[["tours", "Tours & experiences"], ["builder", "Trip Builder"], ["transport", "Transfers & car hire"], ["flights", "Flights"], ["events", "Events & MICE"], ["about", "About Us"], ["terms", "Terms & cancellation policy"]].map(([k, l]) => (
             <button key={k} onClick={() => go(k)} style={{ display: "block", background: "none", border: "none", color: "#5A6B61", cursor: "pointer", padding: "4px 0", fontSize: 14, fontFamily: "inherit" }}>{l}</button>
           ))}
         </div>
