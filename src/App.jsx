@@ -845,7 +845,7 @@ function Nav({ go, page, user, setSignin, bookings, currency, setCurrency }) {
       {open && (
         <>
           <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 39 }} />
-          <div style={{ ...GLASS, position: "absolute", top: "calc(100% - 2px)", right: 16, zIndex: 41, width: "min(300px, calc(100vw - 32px))", borderRadius: 18, padding: "10px 12px 14px" }}>
+          <div style={{ position: "absolute", top: "calc(100% - 2px)", right: 16, zIndex: 41, width: "min(300px, calc(100vw - 32px))", borderRadius: 18, padding: "10px 12px 14px", background: "#fff", border: `1px solid ${T.line}`, boxShadow: "0 16px 40px rgba(11,46,27,.16)" }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
               {links.map(([k, l]) => (
                 <button key={k} onClick={() => nav(k)} className={page.name === k ? "" : "nav-menu-link"} style={{ background: page.name === k ? T.green : "transparent", border: "none", cursor: "pointer", color: page.name === k ? "#fff" : T.ink, padding: "11px 12px", borderRadius: 10, fontWeight: page.name === k ? 700 : 600, fontSize: 15, textAlign: "left" }}>{l}</button>
