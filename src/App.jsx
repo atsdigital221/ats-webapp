@@ -7,7 +7,7 @@ import {
   Calendar, Check, X, Star, MessageCircle, Bot, ChevronLeft, ChevronRight, ChevronDown, Heart,
   Menu, Search, Shield, ArrowRight, Package, Globe, Sparkles, Hotel, UserRound, Gift, Trophy,
   Mic, Dumbbell, Languages, CircleCheck, Building2, Ship, Waves,
-  CalendarCheck, Newspaper, Video, ConciergeBell, PenTool, Info,
+  CalendarCheck, Newspaper, Video, ConciergeBell, PenTool, Info, Play,
 } from "lucide-react";
 
 // Category icon for a tour / booking record (replaces per-item emojis)
@@ -120,6 +120,8 @@ const TEAM = [
   ["Fatou Kane Wathie", "Sales & Marketing Assistant", "fatou-kane-wathie"],
   ["Abdou Karim Dieng", "Parking & Fleet Manager", "abdou-karim-dieng"],
   ["Seydou Traoré", "Graphic Designer", "seydou-traore"],
+  ["Cheikh Faye", "Client Relations Officer", "cheikh-faye"],
+  ["Yaram Kane", "Administrative & Logistics Assistant", "yaram-kane"],
   ["Abdou Diouf", "Web Developer", "abdou-diouf"],
 ];
 // Team member photo (bucket site/team/<slug>.webp) with initials fallback.
@@ -709,7 +711,8 @@ export default function ATSPlatformPreview() {
         button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid ${T.gold};outline-offset:2px}
       `}</style>
 
-      <Nav {...ctx} page={page} />
+      <Nav {...ctx} page={page} overHero={false} />
+      <div style={{ height: 64 }} />
       {booking ? (
         <BookingModal tour={booking} user={user} onClose={() => setBooking(null)} onConfirm={confirmBooking} />
       ) : (
@@ -726,6 +729,8 @@ export default function ATSPlatformPreview() {
           {page.name === "agents" && <AgentsPage {...ctx} />}
           {page.name === "agent" && <AgentPortal {...ctx} />}
           {page.name === "admin" && <AdminConsole {...ctx} />}
+          {page.name === "blog" && <BlogPage go={go} />}
+          {page.name === "article" && <ArticlePage slug={page.slug} go={go} />}
           {page.name === "about" && <AboutPage {...ctx} />}
           {page.name === "account" && <AccountPage {...ctx} />}
           {page.name === "payment" && <PaymentResult status={page.status} {...ctx} />}
@@ -738,10 +743,10 @@ export default function ATSPlatformPreview() {
 
       {/* Floating WhatsApp + AI */}
       <div style={{ position: "fixed", right: 16, bottom: 16, display: "flex", flexDirection: "column", gap: 10, zIndex: 50 }}>
-        <a href="https://wa.me/221774807878?text=Bonjour%20ATS%2C%20j'aimerais%20plus%20d'informations." target="_blank" rel="noopener noreferrer" aria-label="Chat on WhatsApp" style={{ width: 52, height: 52, borderRadius: "50%", border: "none", background: "#25D366", color: "#fff", cursor: "pointer", boxShadow: "0 8px 20px rgba(0,0,0,.25)", display: "flex", alignItems: "center", justifyContent: "center", textDecoration: "none" }}>
-          <svg viewBox="0 0 24 24" width="27" height="27" fill="currentColor" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        <a href="https://wa.me/221774807878?text=Bonjour%20ATS%2C%20j'aimerais%20plus%20d'informations." target="_blank" rel="noopener noreferrer" aria-label="Chat on WhatsApp" style={{ width: 42, height: 42, borderRadius: "50%", border: "none", background: "#25D366", color: "#fff", cursor: "pointer", boxShadow: "0 8px 20px rgba(0,0,0,.25)", display: "flex", alignItems: "center", justifyContent: "center", textDecoration: "none" }}>
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
         </a>
-        <button onClick={() => setChat(true)} aria-label="AI assistant" style={{ width: 52, height: 52, borderRadius: "50%", border: "none", background: T.indigo, color: "#fff", cursor: "pointer", boxShadow: "0 8px 20px rgba(0,0,0,.25)", display: "flex", alignItems: "center", justifyContent: "center" }}><Bot size={24} /></button>
+        <button onClick={() => setChat(true)} aria-label="AI assistant" style={{ width: 42, height: 42, borderRadius: "50%", border: "none", background: T.indigo, color: "#fff", cursor: "pointer", boxShadow: "0 8px 20px rgba(0,0,0,.25)", display: "flex", alignItems: "center", justifyContent: "center" }}><Bot size={20} /></button>
       </div>
 
       {toast && (
@@ -757,15 +762,16 @@ export default function ATSPlatformPreview() {
 const GLASS = { background: "rgba(255,255,255,.45)", backdropFilter: "blur(14px)", WebkitBackdropFilter: "blur(14px)", border: "1px solid rgba(255,255,255,.55)", boxShadow: "0 6px 22px rgba(11,46,27,.12)" };
 
 // Compact custom dropdown for the nav (language / currency)
-function NavSelect({ value, options, onChange, trigger, full }) {
+function NavSelect({ value, options, onChange, trigger, full, ghost, ink }) {
   const [open, setOpen] = useState(false);
+  const c = ghost ? (ink || "#fff") : T.ink;
   return (
     <div style={{ position: "relative", width: full ? "100%" : "auto" }}>
       {open && <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 41 }} />}
       <button onClick={() => setOpen((o) => !o)} aria-haspopup="listbox" aria-expanded={open}
-        style={{ display: "inline-flex", alignItems: "center", justifyContent: full ? "space-between" : "center", gap: 8, width: full ? "100%" : "auto", background: "#fff", border: `1px solid ${T.line}`, borderRadius: 999, padding: "7px 12px 7px 14px", cursor: "pointer", color: T.ink, fontFamily: "inherit" }}>
+        style={{ display: "inline-flex", alignItems: "center", justifyContent: full ? "space-between" : "center", gap: 6, width: full ? "100%" : "auto", background: ghost ? "transparent" : "#fff", border: `1px solid ${ghost ? "rgba(255,255,255,.45)" : T.line}`, borderRadius: 999, padding: "7px 10px 7px 12px", cursor: "pointer", color: c, fontFamily: "inherit" }}>
         {trigger}
-        <ChevronDown size={15} color={T.ink} style={{ marginLeft: 4, flexShrink: 0 }} />
+        <ChevronDown size={15} color={c} style={{ marginLeft: 2, flexShrink: 0 }} />
       </button>
       {open && (
         <div role="listbox" style={{ position: "absolute", top: "calc(100% + 6px)", right: 0, left: full ? 0 : "auto", zIndex: 42, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 12, boxShadow: "0 14px 34px rgba(0,0,0,.16)", overflow: "hidden", minWidth: 130 }}>
@@ -778,16 +784,34 @@ function NavSelect({ value, options, onChange, trigger, full }) {
   );
 }
 
-function Nav({ go, page, user, setSignin, bookings, currency, setCurrency }) {
+// 3×3 dots menu icon (Tourm style)
+const NineDots = ({ color = "#111", size = 22 }) => (
+  <svg width={size} height={size} viewBox="0 0 22 22" fill={color} aria-hidden="true">
+    {[3, 11, 19].map((y) => [3, 11, 19].map((x) => <circle key={`${x}-${y}`} cx={x} cy={y} r="2" />))}
+  </svg>
+);
+
+function Nav({ go, page, user, setSignin, bookings, currency, setCurrency, overHero }) {
   const [open, setOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const [logoOk, setLogoOk] = useState(true);
-  const logoUrl = supabase.storage.from(PHOTO_BUCKET).getPublicUrl("site/logo.png").data.publicUrl;
+  const logoDark = supabase.storage.from(PHOTO_BUCKET).getPublicUrl("site/logo.png").data.publicUrl;
+  const logoWhite = supabase.storage.from(PHOTO_BUCKET).getPublicUrl("site/logo-white.png").data.publicUrl;
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 24);
+    onScroll(); window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+  const transparent = overHero && !scrolled && !open;
+  const ink = transparent ? "#fff" : T.ink;
+
   const links = [
     ["home", "Home"], ["tours", "Tours"], ["builder", "Trip Builder"], ["transport", "Transports"], ["flights", "Flights"],
-    ["events", "MICE"], ["corporate", "Corporate"], ["agents", "Agents"], ["about", "About Us"],
+    ["events", "MICE"], ["corporate", "Corporate"], ["agents", "Agents"], ["blog", "Blog"], ["about", "About Us"],
   ];
+  const leftLinks = [["tours", "Tours"], ["transport", "Transports"]];
+  const rightLinks = [["builder", "Trip Builder"], ["events", "MICE"]];
   const nav = (k) => { go(k); setOpen(false); };
-  // Language UI state (translation wired separately). Currency comes from the app (drives all prices).
   const [lang, setLang] = useState(() => { try { return localStorage.getItem("ats_lang") || "EN"; } catch { return "EN"; } });
   useEffect(() => { try { localStorage.setItem("ats_lang", lang); } catch { /* */ } }, [lang]);
   const cur = currency || "XOF";
@@ -798,67 +822,208 @@ function Nav({ go, page, user, setSignin, bookings, currency, setCurrency }) {
     </div>
   );
   const accountBtn = (full) => user ? (
-    <button onClick={() => nav("account")} style={{ display: "inline-flex", alignItems: "center", gap: 7, justifyContent: full ? "flex-start" : "center", color: "#fff", background: T.green, padding: full ? "11px 16px" : "8px 16px", borderRadius: full ? 12 : 999, border: "none", cursor: "pointer", fontWeight: 700, width: full ? "100%" : "auto", boxShadow: full ? "none" : "0 4px 14px rgba(0,146,69,.35)" }}>
+    <button onClick={() => nav("account")} style={{ display: "inline-flex", alignItems: "center", gap: 7, justifyContent: "center", color: "#fff", background: T.green, padding: "11px 16px", borderRadius: 12, border: "none", cursor: "pointer", fontWeight: 700, width: full ? "100%" : "auto" }}>
       <UserRound size={17} strokeWidth={2.2} /> {user.name.split(" ")[0]} {bookings.length > 0 && `· ${bookings.length}`}
     </button>
   ) : (
-    <button onClick={() => { setSignin(true); setOpen(false); }} style={{ display: "inline-flex", alignItems: "center", gap: 7, justifyContent: full ? "flex-start" : "center", color: "#fff", background: T.green, padding: full ? "11px 16px" : "8px 18px", borderRadius: full ? 12 : 999, border: "none", cursor: "pointer", fontWeight: 700, width: full ? "100%" : "auto", boxShadow: full ? "none" : "0 4px 14px rgba(0,146,69,.35)" }}><UserRound size={17} strokeWidth={2.2} /> Sign in</button>
+    <button onClick={() => { setSignin(true); setOpen(false); }} style={{ display: "inline-flex", alignItems: "center", gap: 7, justifyContent: "center", color: "#fff", background: T.green, padding: "11px 16px", borderRadius: 12, border: "none", cursor: "pointer", fontWeight: 700, width: full ? "100%" : "auto" }}><UserRound size={17} strokeWidth={2.2} /> Sign in</button>
+  );
+  const TopLink = ({ k, l }) => (
+    <button onClick={() => nav(k)} className="nav-top-link" style={{ background: "none", border: "none", cursor: "pointer", color: page.name === k ? T.gold : ink, fontWeight: page.name === k ? 600 : 500, fontSize: 14.5, padding: "6px 4px", whiteSpace: "nowrap", fontFamily: "inherit" }}>{l}</button>
   );
 
   return (
-    <nav style={{ position: "sticky", top: 0, zIndex: 40, background: "transparent" }}>
+    <nav style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 50, background: transparent ? "linear-gradient(to bottom, rgba(0,0,0,.55) 0%, rgba(0,0,0,.10) 70%, rgba(0,0,0,0) 100%)" : "#fff", borderBottom: `1px solid ${transparent ? "transparent" : "#ECECEC"}`, transition: "background .25s ease, border-color .25s ease" }}>
       <style>{`
         .nav-desktop{display:flex}
-        .nav-mobileonly{display:none}
-        @media(max-width:980px){
-          .nav-desktop{display:none !important}
-          .nav-mobileonly{display:block}
-        }
-        .nav-menu-link{position:relative;transition:background .18s ease,color .18s ease,transform .18s ease}
+        .nav-top-link{transition:opacity .15s ease}
+        .nav-top-link:hover{opacity:.65}
+        @media(max-width:980px){ .nav-desktop{display:none !important} }
+        .nav-menu-link{position:relative;transition:background .18s ease,transform .18s ease}
         .nav-menu-link:hover{background:rgba(0,146,69,.10) !important;transform:translateX(4px)}
         .nav-menu-link::before{content:"";position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:0;background:${T.green};border-radius:3px;transition:height .2s ease}
         .nav-menu-link:hover::before{height:60%}
-        @media(prefers-reduced-motion:reduce){.nav-menu-link,.nav-menu-link::before{transition:none}.nav-menu-link:hover{transform:none}}
+        @media(prefers-reduced-motion:reduce){.nav-menu-link,.nav-menu-link::before,.nav-top-link{transition:none}.nav-menu-link:hover{transform:none}}
+        .ats-drawer{animation:ats-slidein .3s cubic-bezier(.22,.8,.3,1)}
+        @keyframes ats-slidein{from{transform:translateX(100%)}to{transform:translateX(0)}}
+        .ats-overlay{animation:ats-fadein .28s ease}
+        @keyframes ats-fadein{from{opacity:0}to{opacity:1}}
+        .ats-row{transition:background .16s ease}
+        .ats-row:hover{background:#F4F6F5}
+        .ats-row:hover .ats-ico{background:${T.green};color:#fff}
+        @media(prefers-reduced-motion:reduce){.ats-drawer,.ats-overlay{animation:none}}
       `}</style>
-      <div style={{ maxWidth: 1240, margin: "0 auto", padding: "12px 16px", display: "flex", alignItems: "center", gap: 12 }}>
-        {/* Logo pill — solid white rounded */}
-        <button onClick={() => nav("home")} aria-label="Africa Tourism Solutions — home" className="disp" style={{ background: "#fff", border: "1px solid rgba(11,46,27,.06)", boxShadow: "0 6px 22px rgba(11,46,27,.12)", display: "flex", alignItems: "center", fontWeight: 800, fontSize: 18, letterSpacing: "-0.02em", cursor: "pointer", padding: logoOk ? "7px 18px" : "10px 18px", borderRadius: 999, color: T.ink }}>
+      <div style={{ padding: "12px 16px" }}>
+      <div style={{ maxWidth: 1320, margin: "0 auto", display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center", gap: 12 }}>
+        {/* Left: logo */}
+        <button onClick={() => nav("home")} aria-label="Africa Tourism Solutions — home" style={{ justifySelf: "start", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", padding: 0 }}>
           {logoOk
-            ? <img src={logoUrl} alt="Africa Tourism Solutions" onError={() => setLogoOk(false)} style={{ height: 34, display: "block" }} />
-            : <><span style={{ color: T.green }}>Africa</span>&nbsp;Tourism&nbsp;<span style={{ color: "#C9A902" }}>Solutions</span></>}
+            ? <img src={transparent ? logoWhite : logoDark} alt="Africa Tourism Solutions" onError={() => setLogoOk(false)} style={{ height: 40, display: "block" }} />
+            : <span className="disp" style={{ fontWeight: 800, fontSize: 18, color: ink }}>ATS</span>}
         </button>
 
-        {/* Right cluster: language + currency + account (desktop) then hamburger (all sizes, far right) */}
-        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 }}>
-          <div className="nav-desktop" style={{ alignItems: "center", gap: 12 }}>
-            {prefs(false)}
-            {accountBtn(false)}
+        {/* Centered nav titles */}
+        <div className="nav-desktop" style={{ justifySelf: "center", alignItems: "center", gap: 26 }}>
+          {[...leftLinks, ...rightLinks].map(([k, l]) => <TopLink key={k} k={k} l={l} />)}
+        </div>
+
+        {/* Right: language/currency + 9-dots menu */}
+        <div style={{ justifySelf: "end", display: "flex", alignItems: "center", gap: 14 }}>
+          <div className="nav-desktop" style={{ alignItems: "center", gap: 8 }}>
+            <NavSelect ghost={transparent} ink={ink} value={lang} options={["EN", "FR"]} onChange={setLang} trigger={<Globe size={16} color={ink} strokeWidth={2} />} />
+            <NavSelect ghost={transparent} ink={ink} value={cur} options={["XOF", "USD", "EUR"]} onChange={setCurrency} trigger={<span style={{ fontWeight: 600, fontSize: 12.5 }}>{cur}</span>} />
           </div>
           <button aria-label={open ? "Close menu" : "Open menu"} aria-expanded={open} onClick={() => setOpen((o) => !o)}
-            style={{ ...GLASS, display: "flex", alignItems: "center", justifyContent: "center", width: 46, height: 46, borderRadius: 14, cursor: "pointer", color: T.ink }}>
-            {open ? <X size={22} /> : <Menu size={22} />}
+            style={{ background: "none", border: "none", cursor: "pointer", color: ink, display: "flex", alignItems: "center", justifyContent: "center", padding: 6 }}>
+            {open ? <X size={24} /> : <NineDots color={ink} size={22} />}
           </button>
         </div>
       </div>
+      </div>
 
-      {/* Menu drawer (all sizes). Links always; prefs + account only on mobile (desktop keeps them in the bar). */}
-      {open && (
-        <>
-          <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 39 }} />
-          <div style={{ position: "absolute", top: "calc(100% - 2px)", right: 16, zIndex: 41, width: "min(300px, calc(100vw - 32px))", borderRadius: 18, padding: "10px 12px 14px", background: "#fff", border: `1px solid ${T.line}`, boxShadow: "0 16px 40px rgba(11,46,27,.16)" }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-              {links.map(([k, l]) => (
-                <button key={k} onClick={() => nav(k)} className={page.name === k ? "" : "nav-menu-link"} style={{ background: page.name === k ? T.green : "transparent", border: "none", cursor: "pointer", color: page.name === k ? "#fff" : T.ink, padding: "11px 12px", borderRadius: 10, fontWeight: page.name === k ? 700 : 600, fontSize: 15, textAlign: "left" }}>{l}</button>
-              ))}
+      {/* Full-height slide-in drawer */}
+      {open && createPortal((() => {
+        const mainMenu = [
+          ["home", "Home", Compass], ["tours", "Tours", MapIcon], ["builder", "Trip Builder", Sparkles],
+          ["transport", "Transports", Car], ["flights", "Flights", Plane], ["events", "MICE", Mic],
+          ["corporate", "Corporate", Building2], ["agents", "Agents", Users],
+        ];
+        const resources = [
+          ["about", "About Us", Info], ["blog", "Blog", Newspaper], ["terms", "Terms & Cancellation", Shield],
+        ];
+        const secLabel = { fontSize: 10.5, fontWeight: 700, letterSpacing: ".14em", textTransform: "uppercase", color: "#93A29A", margin: "0 4px 8px" };
+        const Row = ({ k, l, Ico, active, badge, onClick, chevron = true }) => (
+          <button onClick={onClick} className="ats-row" style={{ display: "flex", alignItems: "center", gap: 14, width: "100%", background: active ? "rgba(0,146,69,.09)" : "transparent", border: active ? "1px solid rgba(0,146,69,.25)" : "1px solid transparent", cursor: "pointer", padding: "9px 10px", borderRadius: 14, textAlign: "left", fontFamily: "inherit" }}>
+            <span className="ats-ico" style={{ width: 36, height: 36, flexShrink: 0, borderRadius: 11, display: "flex", alignItems: "center", justifyContent: "center", background: active ? T.green : "#F1F3F2", color: active ? "#fff" : T.ink, transition: "background .16s ease, color .16s ease" }}><Ico size={17} strokeWidth={2} /></span>
+            <span style={{ flex: 1, fontSize: 14, fontWeight: active ? 700 : 500, color: active ? T.green : T.ink }}>{l}</span>
+            {badge && <span style={{ fontSize: 12, fontWeight: 700, color: T.green, background: "rgba(0,146,69,.12)", borderRadius: 999, padding: "3px 9px" }}>{badge}</span>}
+            {chevron && <ChevronRight size={18} color="#B7C1BB" />}
+          </button>
+        );
+        return (
+        <div style={{ position: "fixed", inset: 0, zIndex: 100 }}>
+          <div className="ats-overlay" onClick={() => setOpen(false)} style={{ position: "absolute", inset: 0, background: "rgba(9,20,15,.45)", backdropFilter: "blur(2px)", WebkitBackdropFilter: "blur(2px)" }} />
+          <aside className="ats-drawer" style={{ position: "absolute", top: 0, right: 0, bottom: 0, width: "min(384px, 90vw)", background: "#fff", boxShadow: "-18px 0 50px rgba(9,20,15,.22)", display: "flex", flexDirection: "column" }}>
+            {/* Header */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 18px", borderBottom: `1px solid ${T.line}`, flexShrink: 0 }}>
+              <button onClick={() => nav("home")} aria-label="ATS — home" style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", alignItems: "center" }}>
+                {logoOk ? <img src={logoDark} alt="Africa Tourism Solutions" onError={() => setLogoOk(false)} style={{ height: 34, display: "block" }} /> : <span className="disp" style={{ fontWeight: 800, fontSize: 20 }}>ATS</span>}
+              </button>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <NavSelect value={lang} options={["EN", "FR"]} onChange={setLang} trigger={<Globe size={18} color="#111" strokeWidth={2} />} />
+                <button aria-label="Close menu" onClick={() => setOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", color: T.ink, display: "flex", padding: 6 }}><X size={24} /></button>
+              </div>
             </div>
-            <div className="nav-mobileonly">
-              <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${T.line}` }}>{prefs(true)}</div>
-              <div style={{ marginTop: 12 }}>{accountBtn(true)}</div>
+            {/* Scroll body */}
+            <div style={{ flex: 1, overflowY: "auto", padding: "18px 14px 28px" }}>
+              <div style={secLabel}>Main menu</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                {mainMenu.map(([k, l, Ico]) => <Row key={k} k={k} l={l} Ico={Ico} active={page.name === k} onClick={() => nav(k)} />)}
+              </div>
+
+              <div style={{ height: 1, background: T.line, margin: "18px 6px" }} />
+              <div style={secLabel}>Display currency</div>
+              <NavSelect full value={cur} options={["XOF", "USD", "EUR"]} onChange={setCurrency} trigger={<span style={{ fontWeight: 700, fontSize: 13 }}>{cur}</span>} />
+
+              <div style={{ height: 1, background: T.line, margin: "18px 6px" }} />
+              <div style={secLabel}>Your account</div>
+              {user ? (
+                <button onClick={() => nav("account")} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", color: "#fff", background: T.green, padding: "13px 16px", borderRadius: 12, border: "none", cursor: "pointer", fontWeight: 700, fontSize: 15 }}>
+                  <UserRound size={18} strokeWidth={2.2} /> {user.name.split(" ")[0]}{bookings.length > 0 ? ` · ${bookings.length}` : ""}
+                </button>
+              ) : (
+                <div style={{ display: "flex", gap: 10 }}>
+                  <button onClick={() => { setSignin(true); setOpen(false); }} style={{ flex: 1, color: "#fff", background: T.green, padding: "13px 12px", borderRadius: 12, border: "none", cursor: "pointer", fontWeight: 700, fontSize: 15 }}>Sign in</button>
+                  <button onClick={() => { setSignin(true); setOpen(false); }} style={{ flex: 1, color: T.ink, background: "#F1F3F2", padding: "13px 12px", borderRadius: 12, border: "none", cursor: "pointer", fontWeight: 700, fontSize: 15 }}>Register</button>
+                </div>
+              )}
+
+              <div style={{ height: 1, background: T.line, margin: "18px 6px" }} />
+              <div style={secLabel}>Resources</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                {resources.map(([k, l, Ico]) => <Row key={k} k={k} l={l} Ico={Ico} active={page.name === k} onClick={() => nav(k)} />)}
+                <a href="https://wa.me/221774807878?text=Bonjour%20ATS%2C%20je%20souhaite%20une%20consultation." target="_blank" rel="noopener noreferrer" onClick={() => setOpen(false)} className="ats-row" style={{ display: "flex", alignItems: "center", gap: 14, width: "100%", background: "transparent", border: "1px solid transparent", cursor: "pointer", padding: "9px 10px", borderRadius: 14, textDecoration: "none" }}>
+                  <span className="ats-ico" style={{ width: 36, height: 36, flexShrink: 0, borderRadius: 11, display: "flex", alignItems: "center", justifyContent: "center", background: "#F1F3F2", color: T.ink, transition: "background .16s ease, color .16s ease" }}><CalendarCheck size={17} strokeWidth={2} /></span>
+                  <span style={{ flex: 1, fontSize: 14, fontWeight: 500, color: T.ink }}>Book a consultation</span>
+                  <ChevronRight size={18} color="#B7C1BB" />
+                </a>
+              </div>
+
+              <div style={{ height: 1, background: T.line, margin: "18px 6px" }} />
+              <div style={secLabel}>Follow us</div>
+              <div style={{ display: "flex", gap: 10 }}>
+                {ATS_SOCIALS.map(([s, url]) => (
+                  <a key={s} href={url} target="_blank" rel="noopener noreferrer" style={{ flex: 1, textAlign: "center", background: "#F1F3F2", color: T.ink, borderRadius: 12, padding: "11px 6px", fontSize: 11.5, fontWeight: 700, textDecoration: "none" }}>{s}</a>
+                ))}
+              </div>
+
+              <div style={{ marginTop: 20, textAlign: "center", fontSize: 12, color: "#93A29A" }}>Africa Tourism Solutions · Dakar, Senegal</div>
             </div>
-          </div>
-        </>
-      )}
+          </aside>
+        </div>
+        );
+      })(), document.body)}
     </nav>
+  );
+}
+
+// Official ATS social media links (used in nav drawer + footer).
+const ATS_SOCIALS = [
+  ["Facebook", "https://www.facebook.com/africatourismsolutions"],
+  ["Instagram", "https://www.instagram.com/africatourismsolutions/?hl=en"],
+  ["LinkedIn", "https://sn.linkedin.com/company/africa-tourism-solutions"],
+  ["TikTok", "https://www.tiktok.com/@africatourismsolutions1"],
+];
+
+// Featured trips shown in the hero slider (edit this list to change which trips appear).
+const HOME_POPULAR = ["goree", "bandia", "lompoul", "toubacouta", "stlouis", "food"];
+
+function HeroCard({ t, go, setBooking }) {
+  const img = useCoverUrl(t.id);
+  return (
+    <div style={{ width: 300, flexShrink: 0, background: "rgba(255,255,255,.14)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,.22)", borderRadius: 16, padding: 12, display: "flex", gap: 12, color: "#fff" }}>
+      <button onClick={() => go("tour", { id: t.id })} aria-label={t.name} style={{ width: 96, height: 100, borderRadius: 12, overflow: "hidden", border: "none", padding: 0, cursor: "pointer", flexShrink: 0, background: `linear-gradient(140deg, ${T.green}, ${T.indigo})` }}>
+        {img && <img src={img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />}
+      </button>
+      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
+        <div className="disp" style={{ fontWeight: 700, fontSize: 15.5, lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.name.split(" — ")[0]}</div>
+        <div style={{ fontWeight: 700, fontSize: 13.5, marginTop: 3 }}>{fmtXOF(fromPrice(t))} <span style={{ fontWeight: 500, opacity: .8, fontSize: 11.5 }}>/ person</span></div>
+        <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, opacity: .85, marginTop: 5 }}><Clock size={13} /> {t.dur}</div>
+        <button onClick={() => setBooking(t)} style={{ marginTop: "auto", alignSelf: "flex-start", background: "transparent", border: "1px solid rgba(255,255,255,.65)", color: "#fff", borderRadius: 999, padding: "6px 16px", fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}>Book Now</button>
+      </div>
+    </div>
+  );
+}
+
+function HeroSlider({ go, setBooking }) {
+  const tours = HOME_POPULAR.map((id) => TOURS.find((t) => t.id === id)).filter(Boolean);
+  const [i, setI] = useState(0);
+  const max = Math.max(0, tours.length - 1);
+  const prev = () => setI((x) => Math.max(0, x - 1));
+  const next = () => setI((x) => Math.min(max, x + 1));
+  useEffect(() => {
+    if (max === 0) return;
+    const id = setTimeout(() => setI((x) => (x >= max ? 0 : x + 1)), 4000);
+    return () => clearTimeout(id);
+  }, [i, max]);
+  const arrow = (solid) => ({ width: 40, height: 40, borderRadius: "50%", border: `1.5px solid ${solid ? "#fff" : "rgba(255,255,255,.7)"}`, background: solid ? "#fff" : "transparent", color: solid ? T.ink : "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 });
+  const CARD = 300, GAP = 16;
+  return (
+    <div className="hero-slider" style={{ width: "min(680px, 78vw)" }}>
+      <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: ".16em", textTransform: "uppercase", marginBottom: 12, opacity: 0.9 }}>Popular Tours</div>
+      <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 16, paddingRight: 4 }}>
+        <div style={{ flex: 1, height: 2, background: "rgba(255,255,255,.35)", borderRadius: 2, position: "relative" }}>
+          <div style={{ position: "absolute", left: 0, top: 0, height: "100%", width: `${((i + 1) / tours.length) * 100}%`, background: "#fff", borderRadius: 2, transition: "width .3s ease" }} />
+        </div>
+        <button onClick={prev} style={arrow(false)} aria-label="Previous"><ChevronLeft size={18} /></button>
+        <button onClick={next} style={arrow(true)} aria-label="Next"><ChevronRight size={18} /></button>
+      </div>
+      <div style={{ overflow: "hidden" }}>
+        <div style={{ display: "flex", gap: GAP, transform: `translateX(-${i * (CARD + GAP)}px)`, transition: "transform .35s ease" }}>
+          {tours.map((t) => <HeroCard key={t.id} t={t} go={go} setBooking={setBooking} />)}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -872,40 +1037,40 @@ function Home({ go, notify, setBooking, filters, setFilters, setChat, addBooking
 
   return (
     <>
-      <header style={{
-        background: `linear-gradient(160deg, rgba(0,0,0,.58) 0%, rgba(0,0,0,.42) 100%), url("${heroUrl}") center/cover no-repeat, linear-gradient(160deg, #006B33 0%, ${T.green} 65%, #00A84F 100%)`,
-        color: T.paper, position: "relative",
-      }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "40px 20px", position: "relative", minHeight: "90vh", display: "flex", flexDirection: "column", justifyContent: "center" }}>
-          <Eyebrow><span style={{ color: T.gold }}>Stop wondering, start discovering</span></Eyebrow>
-          <h1 className="disp" style={{ fontSize: "clamp(30px,5vw,50px)", lineHeight: 1.05, fontWeight: 700, margin: "14px 0 16px", maxWidth: 780, letterSpacing: "-0.02em" }}>
-            Africa, organised by the people who live it.
-          </h1>
-          <p style={{ maxWidth: 560, fontSize: 17, opacity: 0.9, lineHeight: 1.55 }}>
-            Tours, flights, hotels, transport, events and full destination management — starting in Senegal, expanding across the continent.
-          </p>
-          <div style={{ marginTop: 30, background: T.paper, borderRadius: 16, padding: 10, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 8, boxShadow: "0 18px 40px rgba(0,60,30,.30)" }}>
-            <SearchField label="Destination">
-              <select style={selStyle} value={search.dest} onChange={(e) => setSearch({ ...search, dest: e.target.value })}>
-                {["Senegal", "Rwanda", "More coming soon…"].map((d) => <option key={d}>{d}</option>)}
-              </select>
-            </SearchField>
-            <SearchField label="Experience">
-              <select style={selStyle} value={search.exp} onChange={(e) => setSearch({ ...search, exp: e.target.value })}>
-                {["All", "Heritage", "Safari", "Nature", "Beach", "Adventure", "Gastronomy", "Culture", "Circuit"].map((d) => <option key={d}>{d}</option>)}
-              </select>
-            </SearchField>
-            <SearchField label="Dates">
-              <RangeDate from={search.dateFrom} to={search.dateTo} onChange={(f, tt) => setSearch({ ...search, dateFrom: f, dateTo: tt })} triggerStyle={selStyle} />
-            </SearchField>
-            <SearchField label="Travelers">
-              <select style={selStyle} value={search.pax} onChange={(e) => setSearch({ ...search, pax: e.target.value })}>
-                {[1, 2, 3, 4, 5, 6, 8, 10].map((n) => <option key={n} value={n}>{n} traveler{n > 1 ? "s" : ""}</option>)}
-              </select>
-            </SearchField>
-            <button style={{ ...btnGold, borderRadius: 10 }} onClick={() => { setFilters({ ...filters, tag: search.exp }); go("tours"); }}>Search</button>
+      <header style={{ background: T.paper, padding: "8px 16px 24px" }}>
+        <style>{`
+          @media(max-width:900px){
+            .hero-scroll{display:none !important}
+            .hero-card{min-height:auto !important;padding:36px 20px 26px !important;display:flex !important;flex-direction:column !important}
+            .hero-copy{max-width:100% !important}
+            .hero-copy .hero-btn{width:100% !important;justify-content:center !important}
+            .hero-pop{position:static !important;right:auto !important;bottom:auto !important;margin-top:30px !important;width:100% !important}
+            .hero-slider{width:100% !important}
+          }
+          @media(max-width:520px){
+            .hero-card{padding:30px 16px 22px !important}
+          }
+        `}</style>
+        <div className="hero-card" style={{
+          maxWidth: 1320, margin: "0 auto", position: "relative", borderRadius: 26, overflow: "hidden", minHeight: "60vh", color: "#fff",
+          padding: "clamp(48px,7vw,86px) clamp(28px,5vw,68px)",
+          background: `linear-gradient(90deg, rgba(6,20,15,.68) 0%, rgba(6,20,15,.34) 42%, rgba(6,20,15,.06) 72%), url("${heroUrl}") center/cover no-repeat, linear-gradient(160deg, #006B33 0%, ${T.green} 65%, #00A84F 100%)`,
+        }}>
+          <div className="hero-copy" style={{ maxWidth: 620 }}>
+            <h1 className="disp" style={{ fontSize: "clamp(42px,7vw,86px)", lineHeight: 0.98, fontWeight: 800, margin: 0, letterSpacing: "-0.02em" }}>Discover</h1>
+            <div className="disp" style={{ fontSize: "clamp(19px,3vw,30px)", fontWeight: 600, marginTop: 8 }}>the beauty of Senegal</div>
+            <p style={{ maxWidth: 460, fontSize: "clamp(14.5px,2.6vw,16.5px)", lineHeight: 1.6, opacity: 0.9, marginTop: 20 }}>
+              Tours, flights, transport, events and full destination management — crafted on the ground by ATS, your local partner in Senegal.
+            </p>
+            <button className="hero-btn" onClick={() => go("tours")} style={{ marginTop: 26, display: "inline-flex", alignItems: "center", gap: 12, background: "#fff", color: T.ink, border: "none", borderRadius: 999, padding: "14px 30px", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
+              Explore Tours <ArrowRight size={18} />
+            </button>
           </div>
-          <div style={{ marginTop: 12, fontSize: 13, opacity: 0.75 }}>Popular: Gorée Island · Bandia Safari · Lac Rose · Toubacouta · Saint-Louis · Lompoul</div>
+
+          {/* Popular trips slider (bottom-right on desktop, stacked on mobile) */}
+          <div className="hero-pop" style={{ position: "absolute", right: "clamp(20px,4vw,44px)", bottom: 30 }}>
+            <HeroSlider go={go} setBooking={setBooking} />
+          </div>
         </div>
       </header>
 
@@ -3053,80 +3218,373 @@ function AdminConsole({ user, isAdmin, isSuper, setSignin }) {
 }
 
 // ---------------- ABOUT ----------------
+function AboutDeco({ k, style }) {
+  // k is a base name without extension (e.g. "deco-passport"); tries common formats.
+  const EXTS = ["svg", "png", "jpg", "jpeg", "webp"];
+  const [idx, setIdx] = useState(0);
+  if (idx >= EXTS.length) return null;
+  const url = supabase.storage.from(PHOTO_BUCKET).getPublicUrl(`site/${k}.${EXTS[idx]}`).data.publicUrl;
+  return <img src={url} onError={() => setIdx((i) => i + 1)} alt="" aria-hidden="true" className="about-deco" style={{ position: "absolute", pointerEvents: "none", zIndex: 2, ...style }} />;
+}
+
+function AboutIntro() {
+  const img1 = useCoverUrl("city");
+  const img2 = useCoverUrl("goree");
+  const img3 = useCoverUrl("boat");
+  const features = [
+    [Compass, "Local Ground Expertise", "A Senegalese-owned DMC with teams on the ground across the country."],
+    [Shield, "Safety First Always", "Vetted guides, reliable transport and support throughout your trip."],
+    [Users, "Professional Guides", "Passionate, multilingual guides who reveal the real, majestic Senegal."],
+  ];
+  const box = (url, cls) => (
+    <div className={cls} style={{ borderRadius: 18, overflow: "hidden", boxShadow: "0 20px 46px rgba(11,46,27,.15)", background: url ? `url("${url}") center/cover no-repeat` : `linear-gradient(150deg, ${T.green}, ${T.indigo})` }} />
+  );
+  return (
+    <div style={{ background: "#fff" }}>
+      <style>{`
+        .about-wrap{position:relative;max-width:1060px;margin:0 auto}
+        .about-grid{display:grid;grid-template-columns:0.92fr 1fr;gap:44px;align-items:center}
+        .about-collage{position:relative;height:480px}
+        .about-collage .c1{position:absolute;top:0;left:0;width:52%;height:64%;z-index:1}
+        .about-collage .c2{position:absolute;top:19%;right:0;width:54%;height:62%;border:6px solid #fff;z-index:3}
+        .about-collage .c3{position:absolute;bottom:0;left:2%;width:50%;height:32%;border:6px solid #fff;z-index:2}
+        .about-script{font-family:'Caveat',cursive}
+        @media(max-width:960px){
+          .about-grid{grid-template-columns:1fr;gap:30px}
+          .about-collage{height:auto;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+          .about-collage .c1,.about-collage .c2,.about-collage .c3{position:static;width:auto;height:180px;border:none}
+          .about-collage .c1{grid-column:1 / 2}
+          .about-collage .c2{grid-column:2 / 3}
+          .about-collage .c3{grid-column:1 / 3;height:160px}
+          .about-deco{display:none !important}
+        }
+      `}</style>
+      <Wrap style={{ padding: "64px 20px" }}>
+        <div className="about-wrap">
+          {/* Decorative icons around the block (upload to site/… to enable) */}
+          <AboutDeco k="deco-passport" style={{ top: -22, left: -48, width: 72, transform: "rotate(-8deg)" }} />
+          <AboutDeco k="deco-buoy" style={{ left: -70, top: "64%", width: 58 }} />
+          <AboutDeco k="deco-hat" style={{ right: -66, top: 120, width: 64 }} />
+          <AboutDeco k="deco-compass" style={{ right: -82, top: "58%", width: 66 }} />
+          <AboutDeco k="deco-bus" style={{ right: -60, bottom: -22, width: 132 }} />
+          <div className="about-grid">
+            <div className="about-collage">
+              {box(img1, "c1")}
+              {box(img2, "c2")}
+              {box(img3, "c3")}
+            </div>
+            <div>
+              <div className="about-script" style={{ fontSize: 32, fontWeight: 600, color: T.green, marginBottom: 2, lineHeight: 1 }}>Welcome to ATS</div>
+              <h1 className="disp" style={{ fontSize: "clamp(28px,4vw,42px)", fontWeight: 800, lineHeight: 1.1, letterSpacing: "-0.02em", color: T.ink, margin: "0 0 20px" }}>About Africa Tourism Solutions</h1>
+              <p style={{ fontSize: 16, lineHeight: 1.7, color: "#3B4A42", margin: "0 0 30px" }}>
+                Founded by two young Senegalese entrepreneurs, ATS is the expression of an Africa revalued — historically, touristically and culturally. We exist to break the stereotype of a continent defined by poverty and danger, with a rich, authentic offer that shows its true, majestic beauty.
+              </p>
+              <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+                {features.map(([Ico, title, desc]) => (
+                  <div key={title} style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
+                    <span style={{ width: 50, height: 50, flexShrink: 0, borderRadius: "50%", background: "rgba(0,146,69,.10)", color: T.green, display: "flex", alignItems: "center", justifyContent: "center" }}><Ico size={21} strokeWidth={2} /></span>
+                    <div>
+                      <div className="disp" style={{ fontWeight: 700, fontSize: 17, color: T.ink }}>{title}</div>
+                      <div style={{ fontSize: 14, lineHeight: 1.55, color: "#7A867E", marginTop: 3 }}>{desc}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <a href="https://wa.me/221774807878?text=Bonjour%20ATS%2C%20j'aimerais%20plus%20d'informations." target="_blank" rel="noopener noreferrer" style={{ marginTop: 30, display: "inline-flex", alignItems: "center", gap: 12, background: T.ink, color: "#fff", borderRadius: 999, padding: "15px 32px", fontWeight: 700, fontSize: 15, textDecoration: "none" }}>
+                Contact With Us <ArrowRight size={18} />
+              </a>
+            </div>
+          </div>
+        </div>
+      </Wrap>
+    </div>
+  );
+}
+
+function CeoWord() {
+  const [ok, setOk] = useState(true);
+  const ceoUrl = supabase.storage.from(PHOTO_BUCKET).getPublicUrl("site/team/alioune-mboup.webp").data.publicUrl;
+  const paras = [
+    "Africa Tourism Solutions is a tourism and events agency. Through inclusive, innovative solutions, we set out to give both locals and visitors a truly unique experience on African soil.",
+    "Founded by two young Senegalese entrepreneurs, ATS is the expression of an Africa revalued — historically, touristically and culturally. At the heart of our team are young professionals passionate about the development of Africa.",
+    "To overcome the perception of a continent defined by poverty and danger, we are committed to breaking that stereotype with a rich, authentic offer of services.",
+    "Through our work, we hope to inspire African youth to discover the grand, majestic beauty of the continent — because educating this generation is essential to preserving our culture and heritage.",
+  ];
+  return (
+    <div style={{ background: "#fff" }}>
+      <style>{`
+        .ceo-grid{display:grid;grid-template-columns:0.82fr 1fr;gap:44px;align-items:stretch;max-width:1060px;margin:0 auto}
+        .ceo-photo{position:relative;border-radius:22px;overflow:hidden;min-height:520px;background:linear-gradient(140deg,#0B2E1B,#123A26);box-shadow:0 26px 60px rgba(11,46,27,.20)}
+        @media(max-width:860px){
+          .ceo-grid{grid-template-columns:1fr;gap:26px}
+          .ceo-photo{min-height:420px}
+        }
+      `}</style>
+      <Wrap style={{ padding: "8px 20px 56px" }}>
+        <div className="ceo-grid">
+          <div className="ceo-photo">
+            {ok && <img src={ceoUrl} alt="Alioune Mboup — CEO & Co-founder" onError={() => setOk(false)} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "top center" }} />}
+            <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(6,20,13,.82) 0%, rgba(6,20,13,.20) 42%, rgba(6,20,13,0) 66%)" }} />
+            <div style={{ position: "absolute", left: 26, right: 26, bottom: 24 }}>
+              <div className="disp" style={{ color: "#fff", fontWeight: 800, fontSize: 26, letterSpacing: "-0.01em" }}>Alioune Mboup</div>
+              <div style={{ color: T.gold, fontWeight: 700, fontSize: 12.5, letterSpacing: ".14em", textTransform: "uppercase", marginTop: 4 }}>CEO &amp; Co-founder</div>
+            </div>
+          </div>
+          <div>
+            <div className="about-script" style={{ fontSize: 30, fontWeight: 600, color: T.green, lineHeight: 1 }}>A word from</div>
+            <h2 className="disp" style={{ fontSize: "clamp(26px,3.4vw,38px)", fontWeight: 800, letterSpacing: "-0.02em", color: T.ink, margin: "2px 0 14px" }}>Our Director</h2>
+            <div style={{ width: 54, height: 4, borderRadius: 4, background: T.gold, marginBottom: 22 }} />
+            <div style={{ position: "relative" }}>
+              <span className="disp" aria-hidden="true" style={{ position: "absolute", top: -26, left: -8, fontSize: 88, lineHeight: 1, color: "rgba(0,146,69,.12)", fontWeight: 800 }}>&ldquo;</span>
+              {paras.map((p, idx) => (
+                <p key={idx} style={{ fontSize: 15.5, lineHeight: 1.75, color: "#3B4A42", margin: idx === 0 ? "0 0 14px" : "0 0 14px" }}>{p}</p>
+              ))}
+            </div>
+          </div>
+        </div>
+      </Wrap>
+    </div>
+  );
+}
+
+function TeamStrip() {
+  const N = TEAM.length;
+  const COPIES = 5;
+  const LIST = [].concat(...Array.from({ length: COPIES }, () => TEAM));
+  const CARD = 210;
+  const [idx, setIdx] = useState(2 * N); // start on the middle copy (Aminata)
+  const [paused, setPaused] = useState(false);
+  const wrapRef = useRef(null);
+  const cardRefs = useRef([]);
+  const instantRef = useRef(true);
+  const normTimer = useRef(null);
+  const reduce = typeof window !== "undefined" && window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const center = (i, smooth) => {
+    const c = wrapRef.current, card = cardRefs.current[i];
+    if (!c || !card) return;
+    c.scrollTo({ left: card.offsetLeft - (c.clientWidth - CARD) / 2, behavior: smooth ? "smooth" : "auto" });
+  };
+  useEffect(() => {
+    if (paused || reduce) return;
+    const id = setInterval(() => setIdx((v) => v + 1), 2600);
+    return () => clearInterval(id);
+  }, [paused, reduce]);
+  useEffect(() => {
+    const smooth = !instantRef.current;
+    instantRef.current = false;
+    center(idx, smooth);
+    if (normTimer.current) clearTimeout(normTimer.current);
+    if (idx < 2 * N || idx >= 3 * N) {
+      normTimer.current = setTimeout(() => {
+        instantRef.current = true;
+        setIdx((v) => { let w = v; while (w < 2 * N) w += N; while (w >= 3 * N) w -= N; return w; });
+      }, smooth ? 540 : 0);
+    }
+    return () => {};
+  }, [idx, N]);
+  const go = (dir) => setIdx((v) => v + dir);
+  const arrow = (side) => ({ position: "absolute", top: "50%", [side]: 6, transform: "translateY(-50%)", zIndex: 5, width: 42, height: 42, borderRadius: "50%", border: "1px solid rgba(11,46,27,.10)", background: "rgba(255,255,255,.82)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", color: T.ink, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 6px 18px rgba(11,46,27,.16)", transition: "background .2s ease, transform .2s ease" });
+  return (
+    <div style={{ position: "relative" }} onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
+      <style>{`.team-strip::-webkit-scrollbar{display:none}.team-arrow:hover{background:#fff !important}`}</style>
+      <button aria-label="Previous" className="team-arrow" onClick={() => go(-1)} style={arrow("left")}><ChevronLeft size={20} /></button>
+      <button aria-label="Next" className="team-arrow" onClick={() => go(1)} style={arrow("right")}><ChevronRight size={20} /></button>
+      <div ref={wrapRef} className="team-strip"
+        style={{ display: "flex", alignItems: "center", gap: 22, overflowX: "auto", padding: "48px 0 64px", scrollbarWidth: "none", msOverflowStyle: "none" }}>
+        {LIST.map(([n, r, slug], i) => {
+          const on = i === idx;
+          return (
+            <button key={i} ref={(el) => (cardRefs.current[i] = el)} onClick={() => setIdx(i)} aria-label={`${n} — ${r}`}
+              style={{ position: "relative", flex: "0 0 auto", width: CARD, borderRadius: 18, overflow: "hidden", padding: 0, border: "none", cursor: "pointer", background: "#EFF3EF",
+                opacity: on ? 1 : 0.9, transform: on ? "scale(1.14)" : "scale(1)", transformOrigin: "center center", zIndex: on ? 2 : 1,
+                boxShadow: on ? "0 14px 34px rgba(11,46,27,.20)" : "0 6px 16px rgba(0,0,0,.08)", transition: "transform .5s ease, opacity .5s ease, box-shadow .5s ease" }}>
+              <TeamPhoto slug={slug} name={n} ratio="4 / 5" />
+              <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(6,20,13,.86) 0%, rgba(6,20,13,.28) 34%, rgba(6,20,13,0) 55%)", pointerEvents: "none" }} />
+              <div style={{ position: "absolute", left: 14, right: 14, bottom: 14, textAlign: "left", pointerEvents: "none" }}>
+                <div className="disp" style={{ color: "#fff", fontWeight: 800, fontSize: 15.5, lineHeight: 1.15 }}>{n}</div>
+                <div style={{ color: on ? T.gold : "rgba(255,255,255,.85)", fontWeight: 600, fontSize: 11.5, letterSpacing: ".06em", marginTop: 3, transition: "color .4s ease" }}>{r}</div>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+const REVIEW_FALLBACK = [
+  { author: "Pauline Edima-Tenwo", role: "DG de Global Business Group", rating: 5, text: "Personnellement, j'ai été très satisfaite par les prestations d'ATS que j'utilisais pour la première fois (disponibilités, excellent rapport qualité prix, ponctualité, flexibilité) : je recommande sans hésiter." },
+  { author: "Mme Dia", role: "Cliente", rating: 5, text: "J'ai eu la chance de vivre une excursion magique dans le désert de Lompoul avec l'équipe ATS, et c'était tout simplement exceptionnel ! La ponctualité, la logistique fluide et l'excellent rapport qualité-prix méritent d'être salués." },
+  { author: "Maureen Rosita", role: "Cliente", rating: 5, text: "Depuis que je suis arrivée au Sénégal, je rêvais de découvrir l'intérieur du pays. ATS m'a donné cette opportunité, et surtout à des tarifs vraiment abordables." },
+];
+
+function GMark({ size = 16 }) {
+  return <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden="true"><path fill="#4285F4" d="M45.1 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h11.8c-.5 2.7-2 5-4.4 6.6v5.5h7.1c4.1-3.8 6.6-9.4 6.6-16.1z"/><path fill="#34A853" d="M24 46c5.9 0 10.9-2 14.5-5.3l-7.1-5.5c-2 1.3-4.5 2.1-7.4 2.1-5.7 0-10.5-3.8-12.2-9h-7.3v5.7C10.7 41.1 16.9 46 24 46z"/><path fill="#FBBC05" d="M11.8 28.3c-.4-1.3-.7-2.7-.7-4.3s.3-3 .7-4.3v-5.7H4.5C3 17.1 2.1 20.4 2.1 24s.9 6.9 2.4 10l7.3-5.7z"/><path fill="#EA4335" d="M24 10.7c3.2 0 6.1 1.1 8.4 3.3l6.3-6.3C34.9 4.1 29.9 2 24 2 16.9 2 10.7 6.9 7.9 14l7.3 5.7c1.7-5.2 6.5-9 12.8-9z"/></svg>;
+}
+
+function ReviewsSlider({ reviews, usingGoogle }) {
+  const N = reviews.length;
+  const COPIES = 5;
+  const LIST = [].concat(...Array.from({ length: COPIES }, () => reviews));
+  const [idx, setIdx] = useState(2 * N);
+  const [paused, setPaused] = useState(false);
+  const wrapRef = useRef(null);
+  const cardRefs = useRef([]);
+  const instantRef = useRef(true);
+  const normTimer = useRef(null);
+  const reduce = typeof window !== "undefined" && window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const center = (i, smooth) => {
+    const c = wrapRef.current, card = cardRefs.current[i];
+    if (!c || !card) return;
+    c.scrollTo({ left: card.offsetLeft - (c.clientWidth - card.clientWidth) / 2, behavior: smooth ? "smooth" : "auto" });
+  };
+  useEffect(() => {
+    if (paused || reduce || N < 2) return;
+    const id = setInterval(() => setIdx((v) => v + 1), 5000);
+    return () => clearInterval(id);
+  }, [paused, reduce, N]);
+  useEffect(() => {
+    const smooth = !instantRef.current; instantRef.current = false;
+    center(idx, smooth);
+    if (normTimer.current) clearTimeout(normTimer.current);
+    if (idx < 2 * N || idx >= 3 * N) {
+      normTimer.current = setTimeout(() => {
+        instantRef.current = true;
+        setIdx((v) => { let w = v; while (w < 2 * N) w += N; while (w >= 3 * N) w -= N; return w; });
+      }, smooth ? 560 : 0);
+    }
+  }, [idx, N]);
+  const activeDot = ((idx % N) + N) % N;
+  const toDot = (d) => setIdx((v) => v + (d - (((v % N) + N) % N)));
+  return (
+    <div style={{ position: "relative" }} onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
+      <style>{`.rev-strip::-webkit-scrollbar{display:none}.rev-text{display:-webkit-box;-webkit-line-clamp:6;-webkit-box-orient:vertical;overflow:hidden}`}</style>
+      <div ref={wrapRef} className="rev-strip" style={{ display: "flex", alignItems: "center", gap: 26, overflowX: "auto", padding: "26px 0 40px", scrollbarWidth: "none", msOverflowStyle: "none" }}>
+        {LIST.map((r, i) => {
+          const on = i === idx;
+          return (
+            <article key={i} ref={(el) => (cardRefs.current[i] = el)} onClick={() => !on && setIdx(i)}
+              style={{ position: "relative", flex: "0 0 auto", width: "min(600px, 86vw)", background: on ? "#fff" : "#F1F6F3", borderRadius: 20, padding: "26px 28px 30px",
+                boxShadow: on ? "0 26px 60px rgba(11,46,27,.16)" : "none", opacity: on ? 1 : 0.55, transform: on ? "scale(1)" : "scale(.9)", transformOrigin: "center center",
+                transition: "opacity .5s ease, transform .5s ease, box-shadow .5s ease", cursor: on ? "default" : "pointer" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                {r.photo
+                  ? <img src={r.photo} alt="" referrerPolicy="no-referrer" style={{ width: 52, height: 52, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
+                  : <div style={{ width: 52, height: 52, borderRadius: "50%", flexShrink: 0, background: T.paperDark, color: T.green, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 19 }}>{(r.author || "?").trim().charAt(0).toUpperCase()}</div>}
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div className="disp" style={{ fontWeight: 800, fontSize: 18, color: T.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.author}</div>
+                  <div style={{ fontSize: 13, color: "#7A867E" }}>{r.when || r.role || "Voyageur"}</div>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                  <Stars size={16} n={Math.round(r.rating || 5)} />
+                  {usingGoogle && <GMark size={16} />}
+                </div>
+              </div>
+              <p className="rev-text" style={{ margin: "16px 0 0", fontSize: 15.5, lineHeight: 1.7, color: "#3B4A42" }}>&ldquo;{r.text}&rdquo;</p>
+              {on && (
+                <div aria-hidden="true" style={{ position: "absolute", left: "50%", bottom: -22, transform: "translateX(-50%)", width: 46, height: 46, borderRadius: "50%", background: T.green, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 8px 20px rgba(0,146,69,.4)" }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M9.5 5C6.5 5 4 7.5 4 10.5V19h7v-8H7.2c0-1.8 1-3 2.3-3V5zm9 0c-3 0-5.5 2.5-5.5 5.5V19h7v-8h-3.8c0-1.8 1-3 2.3-3V5z"/></svg>
+                </div>
+              )}
+            </article>
+          );
+        })}
+      </div>
+      {N > 1 && (
+        <div style={{ display: "flex", justifyContent: "center", gap: 9, marginTop: 6 }}>
+          {reviews.map((_, d) => (
+            <button key={d} aria-label={`Avis ${d + 1}`} onClick={() => toDot(d)}
+              style={{ width: d === activeDot ? 22 : 9, height: 9, borderRadius: 999, border: "none", cursor: "pointer", padding: 0, background: d === activeDot ? T.green : "rgba(11,46,27,.18)", transition: "width .3s ease, background .3s ease" }} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PartnerLogo({ k, onState }) {
+  const EXTS = ["svg", "png", "jpg", "jpeg", "webp"];
+  const [i, setI] = useState(0);
+  if (i >= EXTS.length) return null;
+  const url = supabase.storage.from(PHOTO_BUCKET).getPublicUrl(`site/partners/${k}.${EXTS[i]}`).data.publicUrl;
+  return <img src={url} alt="Partenaire ATS" onLoad={() => onState(k, true)} onError={() => { if (i + 1 >= EXTS.length) onState(k, false); setI((x) => x + 1); }}
+    style={{ height: 42, width: "auto", maxWidth: 150, objectFit: "contain", filter: "grayscale(1)", opacity: 0.65, transition: "opacity .2s, filter .2s" }}
+    onMouseEnter={(e) => { e.currentTarget.style.filter = "none"; e.currentTarget.style.opacity = "1"; }}
+    onMouseLeave={(e) => { e.currentTarget.style.filter = "grayscale(1)"; e.currentTarget.style.opacity = "0.65"; }} />;
+}
+
+function Partners() {
+  const KEYS = Array.from({ length: 10 }, (_, i) => `partner-${i + 1}`);
+  const [oks, setOks] = useState({});
+  const onState = (k, v) => setOks((o) => (o[k] === v ? o : { ...o, [k]: v }));
+  const any = Object.values(oks).some(Boolean);
+  return (
+    <div style={{ marginTop: 46, display: any ? "block" : "none" }}>
+      <div style={{ textAlign: "center", fontSize: 11.5, fontWeight: 700, letterSpacing: ".16em", textTransform: "uppercase", color: "#93A29A", marginBottom: 18 }}>Ils nous font confiance</div>
+      <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", alignItems: "center", gap: "24px 40px" }}>
+        {KEYS.map((k) => <PartnerLogo key={k} k={k} onState={onState} />)}
+      </div>
+    </div>
+  );
+}
+
+function GoogleReviews() {
+  const [data, setData] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    supabase.functions.invoke("google-reviews").then(({ data, error }) => {
+      if (!alive || error || !data || !data.reviews || !data.reviews.length) return;
+      setData(data);
+    }).catch(() => {});
+    return () => { alive = false; };
+  }, []);
+  const usingGoogle = !!(data && data.reviews && data.reviews.length);
+  const reviews = usingGoogle ? data.reviews : REVIEW_FALLBACK;
+  const writeUrl = data?.writeReviewUrl || "https://search.google.com/local/writereview?placeid=ChIJXwRg7DBzwQ4Rn9doWBHa8sc";
+  const mapsUrl = data?.mapsUri || "https://maps.google.com/?cid=14407817925944203167";
+  return (
+    <div style={{ marginTop: 48 }}>
+      <div className="about-script" style={{ textAlign: "center", fontSize: 30, fontWeight: 600, color: T.green, lineHeight: 1 }}>Testimonial</div>
+      <h2 className="disp" style={{ textAlign: "center", fontWeight: 800, fontSize: "clamp(26px,3.6vw,38px)", letterSpacing: "-0.02em", color: T.ink, margin: "2px 0 6px" }}>What Clients Say About Us</h2>
+      {usingGoogle && (
+        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 8, fontSize: 14, color: "#3B4A42" }}>
+          <GMark size={16} /><span style={{ fontWeight: 800, color: T.ink }}>{data.rating}</span>
+          <Stars size={15} n={Math.round(data.rating)} /><span style={{ opacity: 0.7 }}>· {data.count} avis Google</span>
+        </div>
+      )}
+      <ReviewsSlider key={reviews.length + (usingGoogle ? "g" : "f")} reviews={reviews} usingGoogle={usingGoogle} />
+      <div style={{ display: "flex", justifyContent: "center", gap: 12, flexWrap: "wrap", marginTop: 10 }}>
+        <a href={mapsUrl} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "#fff", color: T.ink, border: `1.5px solid ${T.line}`, borderRadius: 999, padding: "10px 18px", fontWeight: 700, fontSize: 14, textDecoration: "none" }}><GMark size={16} /> Voir sur Google</a>
+        <a href={writeUrl} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 8, background: T.green, color: "#fff", border: "none", borderRadius: 999, padding: "11px 20px", fontWeight: 700, fontSize: 14, textDecoration: "none" }}>Laisser un avis <ArrowRight size={17} /></a>
+      </div>
+      <Partners />
+    </div>
+  );
+}
+
 function AboutPage({ notify }) {
   return (
     <>
-      <div style={{ background: "linear-gradient(180deg, #FFFFFF 0%, #F8F5EF 100%)", color: T.ink, borderBottom: "1px solid #ECE7DD" }}>
-        <Wrap style={{ padding: "64px 20px", textAlign: "center" }}>
-          <p style={{ color: T.green, fontWeight: 600, letterSpacing: ".14em", fontSize: 12, textTransform: "uppercase", margin: 0 }}>Qui sommes-nous</p>
-          <h1 className="disp" style={{ fontSize: "clamp(26px,4vw,40px)", fontWeight: 700, margin: "10px 0 14px", letterSpacing: "-0.02em", color: "#1A1A1A" }}>About Africa Tourism Solutions</h1>
-          <p style={{ maxWidth: 680, margin: "0 auto", fontSize: 17, lineHeight: 1.6, color: "#3B4A42" }}>
-            Founded by two young Senegalese entrepreneurs, ATS is the expression of an Africa revalued — historically, touristically and culturally. We exist to break the stereotype of a continent defined by poverty and danger, with a rich, authentic offer that shows its true, majestic beauty.
-          </p>
-        </Wrap>
-      </div>
+      <AboutIntro />
+      <CeoWord />
       <Wrap>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(290px, 1fr))", gap: 28 }}>
-          <div style={{ background: "#fff", border: "1px solid #EEE", borderRadius: 16, padding: 24 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-              <div style={{ width: 76, height: 76, borderRadius: "50%", overflow: "hidden", flexShrink: 0, border: "1px solid #EEE" }}>
-                <TeamPhoto slug="alioune-mboup" name="Alioune Mboup" ratio="1 / 1" />
-              </div>
-              <div>
-                <div className="disp" style={{ fontWeight: 800, fontSize: 19, color: "#1A1A1A" }}>Alioune Mboup</div>
-                <div style={{ fontSize: 13, color: "#6B7A72", fontWeight: 700 }}>CEO &amp; Co-founder</div>
-              </div>
-            </div>
-            <p style={{ lineHeight: 1.65, fontSize: 15, marginTop: 16, marginBottom: 0, color: "#3B4A42" }}>
-              "Through inclusive and innovative solutions, we want to offer locals and visitors a unique experience on African soil. We hope to inspire African youth to discover the grand, majestic beauty of the continent — because educating this generation is essential to preserving our culture and heritage."
-            </p>
-          </div>
-          <div>
-            <h3 className="disp" style={{ fontWeight: 800, fontSize: 21, marginTop: 0, color: "#1A1A1A" }}>The ATS Group</h3>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: 12 }}>
-              {[["ATS Travel", "Flights & ticketing"], ["ATS Events", "MICE & celebrations"], ["ATS Business", "Corporate & team building"], ["ATS Logistics", "Fleet & group movement"], ["ATS Evasion", "Leisure escapes"], ["ATS School", "Educational travel"]].map(([n, d]) => (
-                <div key={n} style={{ background: "#fff", border: "1px solid #EEE", borderRadius: 14, padding: "14px 16px" }}>
-                  <div style={{ fontWeight: 700, fontSize: 14, color: "#1A1A1A" }}>{n}</div>
-                  <div style={{ fontSize: 12, color: "#7A867E", marginTop: 2 }}>{d}</div>
-                </div>
-              ))}
-            </div>
-            <div style={{ marginTop: 16, background: "#FAFAFA", border: "1px solid #EEE", borderRadius: 14, padding: "16px 18px", fontSize: 14, lineHeight: 1.7, color: "#3B4A42" }}>
-              <strong style={{ color: "#1A1A1A" }}>Contact:</strong>{" "}
-              <a href="tel:+221774807878" style={{ color: T.green, fontWeight: 600, textDecoration: "none" }}>+221 77 480 78 78</a> ·{" "}
-              <a href="tel:+221338251279" style={{ color: T.green, fontWeight: 600, textDecoration: "none" }}>+221 33 825 12 79</a> ·{" "}
-              <a href="mailto:infos@africatourismsolutions.com" style={{ color: T.green, fontWeight: 600, textDecoration: "none", wordBreak: "break-all" }}>infos@africatourismsolutions.com</a><br />
-              Immeuble SICAP, Point E, Lot 8, apt A · Hann Maristes 2, Dakar
-            </div>
-          </div>
-        </div>
-
-        <h3 className="disp" style={{ fontWeight: 800, fontSize: 22, margin: "36px 0 14px" }}>Our team</h3>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))", gap: 16 }}>
-          {TEAM.map(([n, r, slug]) => (
-            <div key={n} className="card-hover" style={{ background: "#fff", border: "1px solid #EEE", borderRadius: 16, overflow: "hidden" }}>
-              <TeamPhoto slug={slug} name={n} ratio="4 / 5" />
-              <div style={{ padding: "12px 14px", textAlign: "center" }}>
+        <div style={{ maxWidth: 1060, margin: "0 auto" }}>
+          <h3 className="disp" style={{ fontWeight: 800, fontSize: 22, marginTop: 0, color: "#1A1A1A" }}>The ATS Group</h3>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 12 }}>
+            {[["ATS Travel", "Flights & ticketing"], ["ATS Events", "MICE & celebrations"], ["ATS Business", "Corporate & team building"], ["ATS Logistics", "Fleet & group movement"], ["ATS Evasion", "Leisure escapes"], ["ATS School", "Educational travel"]].map(([n, d]) => (
+              <div key={n} style={{ background: "#fff", border: "1px solid #EEE", borderRadius: 14, padding: "14px 16px" }}>
                 <div style={{ fontWeight: 700, fontSize: 14, color: "#1A1A1A" }}>{n}</div>
-                <div style={{ fontSize: 12, color: "#7A867E", marginTop: 2 }}>{r}</div>
+                <div style={{ fontSize: 12, color: "#7A867E", marginTop: 2 }}>{d}</div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
 
-        <h3 className="disp" style={{ fontWeight: 800, fontSize: 22, margin: "36px 0 14px" }}>What clients say</h3>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 14 }}>
-          {[["Pauline Edima-Tenwo", "DG, Global Business Group", "Very satisfied for a first experience: availability, excellent value, punctuality, flexibility. I recommend without hesitation."],
-            ["Mme Dia", "Client", "A magical Lompoul desert excursion — so rich and well-paced it felt like two full days. Punctuality and smooth logistics deserve praise."],
-            ["Caroline", "Family trip", "A huge thank you for organising this memorable trip — we absolutely loved it and hope to return to your magnificent country."]].map(([n, r, q]) => (
-            <div key={n} style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 14, padding: 18, fontSize: 14, lineHeight: 1.6 }}>
-              <div style={{ marginBottom: 4 }}><Stars size={15} /></div>
-              <p style={{ margin: "8px 0" }}>{q}</p>
-              <strong>{n}</strong> <span style={{ opacity: 0.65 }}>· {r}</span>
-            </div>
-          ))}
-        </div>
-        <button style={{ ...btnGreen, marginTop: 20 }} onClick={() => notify("Opening Google Reviews for Africa Tourism Solutions.")}>Leave a review</button>
+        <h3 className="disp" style={{ fontWeight: 800, fontSize: 22, margin: "40px 0 6px", textAlign: "center" }}>Our team</h3>
+        <p style={{ textAlign: "center", color: "#7A867E", fontSize: 14, margin: "0 0 4px" }}>The people who craft your journey on the ground.</p>
+        <TeamStrip />
+
+        <GoogleReviews />
       </Wrap>
     </>
   );
@@ -4318,38 +4776,302 @@ function TransportPage({ addBooking, notify, user }) {
   );
 }
 
+// ---------------- BLOG ----------------
+const W = "https://africatourismsolutions.com/wp-content/uploads";
+const BLOG = [
+  {
+    slug: "thiebou-dieune", title: "Thiébou Dieune", date: "2025-05-26", tag: "Gastronomie",
+    hero: `${W}/2025/04/thieb-djen-senegalaise-01.webp`, images: [],
+    excerpt: "Élément incontournable de la gastronomie sénégalaise, le thiébou dieune fait la réputation de toute une nation et s'est exporté à travers le monde.",
+    body: [
+      "Vous avez dit thiébou dieune ??",
+      "Élément incontournable de la gastronomie sénégalaise, le thiébou dieune fait la réputation de toute une nation établie en Afrique de l'Ouest et a fini par s'exporter à travers le monde.",
+      "Qu'est-ce donc ce fameux plat qui dès les 12 coups de midi passés décore et embaume l'espace des maisonnées sénégalaises ?",
+      "Traduit du wolof au français par « Riz au Poisson », le thiébou dieune est le plat privilégié à l'heure du déjeuner. Il est fait à base de riz, et agrémenté de légumes comme la carotte, le chou, le manioc, l'aubergine…",
+      "Comptez à peu près 2 heures de cuisson. Selon les condiments utilisés, il peut être blanc lorsqu'il est cuisiné avec de la tomate farcie — on parlera alors de « thiébou dieune bu wekh » — ou à base de tomate concentrée et de couleur orangée, il s'agit alors du « thiébou dieune bou khonk ».",
+      "D'ailleurs, on retrouve également le thiébou dieune chez nos voisins ghanéens et nigériens qui parlent de Jollof rice. Dans ce cas, on peut même retrouver de la salade et du concombre pour accompagner le plat.",
+      "Une raison de plus qui nous pousse à poser la question : qui est le vrai auteur de ce plat ?",
+    ],
+  },
+  {
+    slug: "tour-de-dakar-en-car-rapide", title: "Tour de Dakar en car rapide", date: "2025-05-21", tag: "Excursion",
+    hero: `${W}/2020/11/tour-de-dakar-car-rapide.jpg`, images: [],
+    excerpt: "Le car rapide est l'un des moyens de transport les plus populaires au Sénégal. Le tour de Dakar à son bord est une activité à faire entre amis ou en famille.",
+    body: [
+      "Le car rapide est l'un des moyens de transport les plus populaires au Sénégal. Les Dakarois reconnaissent la valeur de ce petit car aux couleurs jaunes et bleues avec ses fresques florales, et l'apprenti, toujours agile à l'arrière de l'automobile.",
+      "Au cours d'une journée ensoleillée, le tour de Dakar est une activité à faire entre amis, collègues ou en famille !",
+      "Nous démarrons avec la visite du Monument de la Renaissance africaine, haut de 52 mètres, qui donne une vue splendide sur Dakar. Nous faisons ensuite une escale à la mosquée de la Divinité également située à Ouakam, une belle réalisation architecturale nichée à quelques mètres de l'océan Atlantique.",
+      "Pendant notre excursion, nous marquons un arrêt à la Place du Souvenir africain où nous découvrons de grands espaces d'exposition et la carte de l'Afrique. C'est un lieu de retrouvailles et d'expression artistique accolé au centre commercial Sea Plaza.",
+      "Nous apercevons même des pêcheurs au loin et décidons de prendre des photos avant de nous diriger vers le Tacos de Lyon pour déjeuner !",
+      "Notre tour en car rapide prit fin au village artisanal de Soumbédioune, un site traditionnel où l'on retrouve d'une part des pêcheurs, et de l'autre des artisans. L'originalité de leur travail nous a d'ailleurs poussés à acheter un éventail à base de wax.",
+      "Visiter tous ces endroits en une seule journée fut une expérience sympathique à bord de ce symbole du transport urbain dakarois ! Nous vous recommandons vivement ce circuit entre amis ou en famille.",
+    ],
+  },
+  {
+    slug: "dakar-capitale-de-lart", title: "Dakar, capitale de l'art !", date: "2024-11-15", tag: "Culture",
+    hero: null, images: [],
+    excerpt: "Du 7 novembre au 7 décembre 2024, Dakar renoue avec l'art à l'occasion de la Biennale de l'art africain contemporain.",
+    body: [
+      "Du 7 novembre au 7 décembre 2024, Dakar renoue avec l'art.",
+      "Un rendez-vous passionnant attendu par les amateurs d'art, les artistes, les collectionneurs, le grand public…",
+      "Tout y passe : peinture, sculpture, arts sonores, arts numériques, photographie… Que vous participiez au IN ou aux Off, découvrez les expositions dans les lieux définis ou dans des endroits insoupçonnés où le maître mot reste l'art.",
+      "La Biennale de l'art africain contemporain est l'une des plus grandes rencontres de l'art sur le continent ; cette 15ᵉ édition renforce et ravive le rôle de l'art dans l'émancipation des nations.",
+      "Pour l'occasion, un programme riche et diversifié est organisé. Participez aux vernissages, visitez les expositions et assistez aux conférences, tables rondes…",
+    ],
+  },
+  {
+    slug: "team-building", title: "Team Building", date: "2024-10-08", tag: "MICE",
+    hero: null, images: [],
+    excerpt: "Développer ses équipes grâce au team building : détente, renforcement de l'esprit d'équipe et amélioration des valeurs communes.",
+    body: [
+      "Développer ses équipes grâce au team building.",
+      "Le team building se présente comme l'une des activités les plus favorables à la détente, au renforcement de l'esprit d'équipe et à l'amélioration des valeurs communes chez les travailleurs d'une organisation. Pour les petites équipes ou de plus grandes organisations, il est toujours intéressant pour la direction de définir le besoin en team building et d'organiser ce moment spécial de manière annuelle.",
+      "Le team building peut avoir plusieurs objectifs : resserrer les liens d'une équipe ou en créer de nouveaux, faciliter l'intégration de nouveaux collaborateurs, acquérir de nouvelles compétences…",
+      "En fonction des objectifs fixés, les choix d'activités se présentent ainsi : team building récréatif (activités de groupe physiques et divertissantes), team building tactique (formation du personnel à la gestion des challenges), team building événementiel (événements marquants : anniversaire de la société, pot de départ…).",
+      "Chaque activité répond à une thématique élaborée par nos encadreurs et coachs certifiés qui s'assurent du bon déroulement de l'activité. Loin d'être une activité à but uniquement ludique et onéreux, le team building est un signal de l'intérêt de l'entreprise pour ses employés et de sa volonté à construire une équipe soudée, dynamique et productive.",
+      "Vous souhaitez organiser un team building ? Écrivez-nous à infos@africatourismsolutions.com",
+    ],
+  },
+  {
+    slug: "caravane-2024", title: "Caravane 2024", date: "2024-08-26", tag: "Événement",
+    hero: `${W}/2024/08/IMG_9859-copie-768x768.jpeg`,
+    images: [`${W}/2024/08/IMG_0212-copie-768x768.jpeg`, `${W}/2024/08/IMG_9903-copie-768x768.jpeg`, `${W}/2024/08/IMG_0059-copie-768x768.jpeg`, `${W}/2024/08/IMG_0114-copie-768x768.jpeg`, `${W}/2024/08/IMG_9831-copie-768x768.jpeg`, `${W}/2024/08/IMG_0250-copie-768x768.jpeg`, `${W}/2024/08/IMG_0087-copie-768x768.jpeg`, `${W}/2024/08/IMG_0323-copie-768x768.jpeg`, `${W}/2024/08/IMG_0318-copie-768x768.jpeg`, `${W}/2024/08/IMG_0302-copie-768x768.jpeg`],
+    excerpt: "Des vacances utiles et ludiques avec la Caravane pour les Enfants : clap de fin de la 3ᵉ édition de la caravane touristique.",
+    body: [
+      "Des vacances utiles et ludiques avec la Caravane pour les Enfants.",
+      "Clap de fin de la 3ᵉ édition de la Caravane touristique pour les enfants ! Un moment unique au cours duquel nous amenons les enfants à la découverte des plus belles destinations touristiques du Sénégal.",
+      "Cette année, trois destinations ont été à l'honneur : Dakar, Saly et Toubab Dialaw. Nous avons choisi comme base la petite côte pour nos jeunes aventuriers, avec des excursions à Gorée, Saly, Bandia ou encore Toubab Dialaw.",
+      "L'un des moments les plus idylliques fut lors de notre visite à Gorée où Colonel, l'un des guides que nous apprécions le plus et le doyen des guides de l'île, a entraîné les enfants pour une visite taillée sur mesure pour leur âge et adaptée à leur sensibilité. Nous en étions ravis !",
+      "De retour à Dakar, nous nous sommes rendus à Keur Mbaye Fall pour apporter notre contribution à l'association Les Petites Gouttes qui organisait elle aussi un patronage pour les enfants talibés, albinos et vivant dans les quartiers environnants.",
+      "Après cette belle journée, nous avons repris la route, direction la petite côte, plus précisément Saly ! Entre les activités à Accrobaobab, le déjeuner à Bandia, ou encore la journée passée à Ndayane à l'hôtel Pierre de Lisse, il n'y avait pas de place pour l'ennui.",
+      "À cela se sont ajoutées les activités de natation, techniques et manuelles animées par nos brillants moniteurs : les enfants ont appris à confectionner des sacs à moquette, des tableaux de décoration, des pots de fleurs et même des activités culinaires sous l'œil avisé de nos encadreurs.",
+      "Pour clôturer la caravane, moniteurs et enfants ont échangé sur la thématique « L'impact des réseaux sociaux sur les enfants », l'occasion de rappeler les bases d'un usage d'internet plus sécurisé. Au cours de cette soirée éducative et culturelle, nos aventuriers ont arboré leurs plus belles tenues traditionnelles — un moment de joie que nous chérissons encore, les enfants dansant au rythme des tam-tams, heureux et reconnaissants.",
+    ],
+  },
+  {
+    slug: "cap-skirring-la-perle-du-sud", title: "Cap Skirring, la perle du Sud", date: "2023-10-24", tag: "Destination",
+    hero: `${W}/2023/10/ats-cap-skirring.jpg`,
+    images: [`${W}/2023/10/ats-cap-skirring-escalades-768x768.jpg`, `${W}/2023/10/belle-plage-cap-skirring-768x768.jpg`, `${W}/2023/10/roi-de-oussout-cap-skirring-768x768.jpg`, `${W}/2023/10/jeu-de-loisir-ats-cap-skirring-768x768.jpg`, `${W}/2023/10/champs-cap-skirring-ats-768x768.jpg`, `${W}/2023/10/Cap-skirring-ats-decouvrir-768x768.jpg`],
+    excerpt: "Située à Ziguinchor, Cap Skirring est la station balnéaire la plus prisée après la petite côte — la promesse d'un dépaysement total.",
+    body: [
+      "Les villes au Sud ont le charme d'être des destinations conviviales ! Cap Skirring n'y fait pas exception.",
+      "Située dans la région de Ziguinchor, elle est la station balnéaire la plus prisée après la petite côte. Abritant une chaîne d'hôtels variés, des Airbnb atypiques, et riche de sa culture locale et du savoir-faire de ses habitants dans les domaines artistiques ou agricoles, Cap Skirring demeure une ville charmante au potentiel touristique fort ! C'est la promesse d'un dépaysement total.",
+      "À partir de Dakar, comptez 1 heure en avion avec les compagnies locales. Un trajet en route est aussi possible et dure une journée — vous pourrez d'ailleurs profiter du paysage. À bord du bateau Aline Sitoé Diatta, vous aurez droit à une vue imprenable sur l'océan Atlantique et les dauphins seront même de sortie de temps à autre !",
+      "Pourquoi visiter Cap Skirring ?",
+      "🏖️ Paysage — L'environnement naturel est encore préservé. Vous pouvez trouver des pépites comme le village de Kabrousse ou l'hôtel Hibiscus, là où le chant des oiseaux et la vue de l'océan Atlantique sauront vous charmer.",
+      "🍽️ Gastronomie — Les fruits, crustacés et gourmandises locales ne manquent pas. Fans de fruits de la passion et de fruits de mer ? Vous serez servis. Vous retrouverez dans les maisons familiales de grandes cours et des arbres fruitiers à foison !",
+      "😌 Cyclotourisme — Malgré son statut de ville touristique, le Cap est aussi apprécié pour son calme. Vous pourrez profiter d'une balade à vélo ou escalader 25 mètres de hauteur à la pointe Saint-Georges.",
+      "Alors, êtes-vous prêts à découvrir Cap Skirring ? Nous serons là pour vous aider dans l'organisation de votre voyage ! Écrivez-nous à infos@africatourismsolutions.com. À très vite !",
+    ],
+  },
+  {
+    slug: "ile-de-goree", title: "Île de Gorée", date: "2023-07-20", tag: "Destination",
+    hero: `${W}/2023/03/ile-de-goree-ats-5-scaled.jpg`, images: [],
+    excerpt: "Patrimoine mondial de l'UNESCO, l'île de Gorée est le premier site touristique du Sénégal, à 30 minutes de chaloupe de Dakar.",
+    body: [
+      "Patrimoine mondial classé à l'UNESCO, l'île de Gorée est le premier site touristique du Sénégal. Pour la rejoindre à partir de Dakar, il suffit d'emprunter la chaloupe pour un trajet de 30 minutes.",
+      "Découvrez l'histoire et l'architecture de cette île témoin de la traite négrière entre amis, et profitez de la plage en fin de journée.",
+    ],
+  },
+  {
+    slug: "le-desert-de-lompoul", title: "Le désert de Lompoul", date: "2023-07-20", tag: "Destination", author: "Abdou Diouf",
+    hero: `${W}/2023/02/desert-de-lompoul-ats-0-1.jpg`, images: [],
+    excerpt: "Le Sahara en miniature au Sénégal : le désert de Lompoul, un site atypique de dunes ocres entre Dakar et Saint-Louis.",
+    body: [
+      "Le Sahara en miniature au Sénégal : voici le désert de Lompoul, un site atypique qui vaut le détour. Lompoul est le seul désert du Sénégal et l'un des endroits incontournables à visiter.",
+      "Il offre aux visiteurs des paysages sensationnels et un mélange de cultures sénégalo-mauritanien. Le désert de Lompoul est situé entre Dakar et Saint-Louis, sur la frontière atlantique au nord-ouest du Sénégal. Aux alentours se trouvent le village de Lompoul et la ville de Kébémer, mais aussi la mer. Il s'étend sur seulement 18 kilomètres carrés mais paraît très vaste à l'œil nu, formé de dunes de sable ocre pouvant aller jusqu'à 50 mètres de hauteur.",
+      "Le désert de Lompoul peut se parcourir à pied pour les adeptes de la randonnée et, pour ceux à la recherche de sensations fortes, s'aventurer dans les dunes à bord d'un 4×4. Pour une découverte plus originale, montez à dos de chameau pour voir ce désert en hauteur. Quel que soit le mode de transport, de magnifiques panoramas attendent ceux qui s'aventurent au sommet des dunes.",
+      "Pour ceux qui le souhaitent, vous pourrez passer la nuit dans les camps et lodges destinés à vous faire profiter de la magie d'une nuit étoilée dans les dunes, et vivre le désert comme un nomade. Après une journée d'exploration, les voyageurs se retrouvent au fond des dunes, entourés de plats traditionnels, dans une ambiance chaleureuse au son des tambours.",
+      "Alors n'attendez plus, venez vous évader dans le désert de Lompoul avec ATS.",
+    ],
+  },
+  {
+    slug: "des-moments-inoubliables", title: "Des moments inoubliables", date: "2023-04-03", tag: "Inspiration",
+    hero: `${W}/2023/03/reserve-de-fathala-ats-4-scaled.jpg`, images: [],
+    excerpt: "Entre amis, en famille ou en couple, explorez le Sénégal — ses rues colorées, sa culture riche et ses journées ensoleillées.",
+    body: [
+      "Entre amis, en famille ou en couple, explorez le Sénégal !",
+      "Nous vous invitons à une découverte du pays de la Teranga, de ses rues colorées, de sa culture riche, de journées ensoleillées et pleines de rythme.",
+      "Plongez dans la région sud, où se mêlent nature et chaleur humaine : une aventure unique. En verte Casamance on découvre des mets savoureux de la terre à l'assiette, dans un cadre chaleureux propice à la détente.",
+      "Le long de la côte dakaroise, au bord de l'océan Atlantique, nous saurons dénicher les plus beaux spots pour vous. À 5 heures de Dakar, une petite marche avec les lions et nous foulerons avec enthousiasme la terre du Saloum qui abrite une des plus belles mangroves du pays. Nous irons ensemble au cœur des villes sénégalaises : Kédougou, Lompoul, la petite côte…",
+      "Une visite du Sénégal ne pourrait être complète sans un pèlerinage à Saint-Louis autour d'un bon thiébou dieune Penda Mbaye, le plat national sénégalais désormais inscrit au patrimoine mondial de l'UNESCO.",
+    ],
+  },
+  {
+    slug: "les-iles-du-saloum", title: "Les îles du Saloum", date: "2023-03-31", tag: "Destination",
+    hero: `${W}/2023/03/iles-du-saloum-ats-sine-saloum-6-scaled.jpg`, images: [],
+    excerpt: "Une envie de vous éloigner des grandes villes ? Découvrez le Sine Saloum, une région classée à l'UNESCO, riche en biodiversité.",
+    body: [
+      "Une envie de vous éloigner des grandes villes du Sénégal ? Venez découvrir le Sine Saloum, une région riche en biodiversité.",
+      "Classé au patrimoine de l'UNESCO, le delta des deux fleuves — le Sine et le Saloum — a donné naissance à une région de faune et de flore exceptionnelle, avec des paysages de mangroves, d'îlots, de plages et de forêts à couper le souffle.",
+      "Le Sine Saloum vous permettra d'être pleinement en contact avec cette nature luxuriante, d'observer les oiseaux et de profiter d'une ambiance chaleureuse et calme. Cette destination vous procurera sérénité et bien-être grâce à ce magnifique paysage verdoyant.",
+      "N'hésitez plus et venez explorer le Sine Saloum avec ATS, cet endroit préservé du Sénégal.",
+    ],
+  },
+  {
+    slug: "la-lutte-senegalaise", title: "La lutte sénégalaise, un sport passionnant !", date: "2023-03-31", tag: "Culture", author: "Abdou Diouf",
+    hero: `${W}/2023/03/273017071_478732156962715_5276060254870059247_n.jpg`, images: [],
+    excerpt: "La lutte sénégalaise « bëre », à la fois mystique et divertissante, est un sport national profondément ancré dans la culture du pays.",
+    body: [
+      "19h ! Du haut des gradins, le public retient son souffle. Des prières muettes sont adressées aux dieux de l'arène, portées par les chants traditionnels des cantatrices sérères. La pression est à son comble et au cœur de l'arène, deux mastodontes couverts de gris-gris se jaugent en attendant le coup de sifflet de l'arbitre. On est dimanche, jour de combat de lutte sénégalaise.",
+      "La lutte sénégalaise « bëre » est un élément important dans certains groupes ethniques au Sénégal, en raison de son caractère à la fois mystique et divertissant. Chez les Sérères et les Diolas, les tournois appelés « mbapatt » marquent la fin de l'hivernage et célèbrent l'abondance de la récolte. Ces jeux rassemblent les champions de plusieurs villages et les gagnants sont récompensés par des denrées, du bétail ou autre.",
+      "Tout autour de ce sport gravitent des rites à caractère mystique, effectués pour se protéger d'attaques spirituelles et assurer la victoire. Qui dit lutte dit folklore : les lutteurs pénètrent dans l'arène escortés d'une délégation chargée de l'attirail mystique. Potions, talismans et sorts sont présents dans un camp comme dans l'autre, pour se protéger ou intimider l'adversaire.",
+      "S'ensuit une animation « bàkk » où le lutteur et sa suite se mettent en formation face au tambour major qui, au rythme du tam-tam, chante les exploits du combattant. Celui-ci n'hésite pas à esquisser des pas de danse et à montrer ses muscles saillants pour déchaîner la foule.",
+      "De nos jours, ce qui était une épreuve de courage et d'adresse est devenu un sport de combat professionnalisé incluant des éléments de boxe, d'où l'appellation « lutte avec frappe ». Le CNG est l'organe de régulation de la discipline : il y a victoire en cas de chute d'un lutteur sur la tête, les fesses ou le dos, de 4 appuis (deux mains et deux genoux) ou par KO.",
+      "Plusieurs écoles de lutte forment des jeunes au métier de lutteur, « mbër » en wolof. Ce sport national est très apprécié au Sénégal pour sa valeur traditionnelle. Assister à un combat de lutte « lamb » vous permettra de faire l'expérience de l'authenticité sénégalaise et de vous connecter à une culture dans toute sa splendeur.",
+    ],
+  },
+];
+const blogDate = (iso) => new Date(iso + "T00:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+const setSEO = (title, description) => {
+  try {
+    document.title = title;
+    let m = document.querySelector('meta[name="description"]');
+    if (!m) { m = document.createElement("meta"); m.setAttribute("name", "description"); document.head.appendChild(m); }
+    m.setAttribute("content", description || "");
+  } catch { /* ignore */ }
+};
+
+function BlogPage({ go }) {
+  useEffect(() => {
+    setSEO("Blog — Africa Tourism Solutions", "Récits de voyage, destinations et culture du Sénégal par Africa Tourism Solutions : Gorée, Sine Saloum, Cap Skirring, désert de Lompoul et bien plus.");
+    window.scrollTo({ top: 0 });
+  }, []);
+  const [feat, ...rest] = BLOG;
+  const Card = ({ a, big }) => (
+    <button onClick={() => go("article", { slug: a.slug })} className="card-hover" style={{ textAlign: "left", background: "#fff", border: `1px solid ${T.line}`, borderRadius: 18, overflow: "hidden", cursor: "pointer", padding: 0, display: "flex", flexDirection: "column", width: "100%" }}>
+      <div style={{ position: "relative", aspectRatio: big ? "16 / 8" : "16 / 10", background: "#EEF2EF", overflow: "hidden" }}>
+        {a.hero
+          ? <img src={a.hero} alt={a.title} loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          : <div style={{ width: "100%", height: "100%", background: `linear-gradient(120deg, ${T.green}, ${T.indigo})`, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff" }}><Newspaper size={40} strokeWidth={1.5} /></div>}
+        <span style={{ position: "absolute", top: 12, left: 12, background: "rgba(255,255,255,.92)", color: "#1A1A1A", borderRadius: 999, padding: "4px 12px", fontSize: 11.5, fontWeight: 700 }}>{a.tag}</span>
+      </div>
+      <div style={{ padding: big ? "20px 22px" : "16px 18px", display: "flex", flexDirection: "column", flex: 1 }}>
+        <div style={{ fontSize: 12, color: "#8A968E", fontWeight: 600, marginBottom: 6 }}>{blogDate(a.date)}</div>
+        <h3 className="disp" style={{ fontWeight: 800, fontSize: big ? 24 : 18, margin: 0, lineHeight: 1.25, color: "#1A1A1A" }}>{a.title}</h3>
+        <p style={{ fontSize: 14, lineHeight: 1.6, color: "#5A6B61", marginTop: 8, marginBottom: 12 }}>{a.excerpt}</p>
+        <span style={{ marginTop: "auto", color: T.green, fontWeight: 700, fontSize: 13.5, display: "inline-flex", alignItems: "center", gap: 5 }}>Lire l'article <ArrowRight size={15} /></span>
+      </div>
+    </button>
+  );
+  return (
+    <Wrap>
+      <Eyebrow>Le blog ATS</Eyebrow>
+      <H2>Récits, destinations & culture du Sénégal</H2>
+      <p style={{ maxWidth: 640, lineHeight: 1.6, color: "#3B4A42", marginTop: -4 }}>Nos coups de cœur, nos aventures et nos conseils pour découvrir le Sénégal autrement.</p>
+      <div style={{ marginTop: 20 }}><Card a={feat} big /></div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 22, marginTop: 22 }}>
+        {rest.map((a) => <Card key={a.slug} a={a} />)}
+      </div>
+    </Wrap>
+  );
+}
+
+function ArticlePage({ slug, go }) {
+  const a = BLOG.find((x) => x.slug === slug) || BLOG[0];
+  const [lightbox, setLightbox] = useState(null);
+  useEffect(() => {
+    setSEO(`${a.title} — Africa Tourism Solutions`, a.excerpt);
+    window.scrollTo({ top: 0 });
+    let s;
+    try {
+      s = document.createElement("script");
+      s.type = "application/ld+json"; s.id = "ld-article";
+      s.text = JSON.stringify({ "@context": "https://schema.org", "@type": "BlogPosting", headline: a.title, datePublished: a.date, author: { "@type": "Organization", name: a.author || "Africa Tourism Solutions" }, image: a.hero || undefined, articleSection: a.tag, publisher: { "@type": "Organization", name: "Africa Tourism Solutions" } });
+      document.getElementById("ld-article")?.remove();
+      document.head.appendChild(s);
+    } catch { /* ignore */ }
+    return () => { try { s?.remove(); } catch { /* ignore */ } };
+  }, [slug]);
+  const more = BLOG.filter((x) => x.slug !== a.slug).slice(0, 3);
+  return (
+    <Wrap style={{ maxWidth: 820 }}>
+      <button onClick={() => go("blog")} style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "none", border: "none", cursor: "pointer", color: T.ink, fontWeight: 700, fontSize: 14, padding: 0, marginBottom: 16 }}><ChevronLeft size={18} /> Tous les articles</button>
+      <article>
+        <div style={{ fontSize: 12.5, color: "#8A968E", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".06em" }}>{a.tag} · <time dateTime={a.date}>{blogDate(a.date)}</time></div>
+        <h1 className="disp" style={{ fontWeight: 800, fontSize: "clamp(26px, 4vw, 38px)", lineHeight: 1.15, margin: "8px 0 0", color: "#1A1A1A" }}>{a.title}</h1>
+        {a.author && <div style={{ fontSize: 13.5, color: "#6B7A72", marginTop: 8 }}>Par {a.author}</div>}
+        {a.hero && <img src={a.hero} alt={a.title} style={{ width: "100%", borderRadius: 18, marginTop: 18, aspectRatio: "16 / 9", objectFit: "cover" }} />}
+        <div style={{ marginTop: 20, fontSize: 16.5, lineHeight: 1.8, color: "#2C3A33" }}>
+          {a.body.map((p, i) => <p key={i} style={{ margin: "0 0 18px" }}>{p}</p>)}
+        </div>
+        {a.images && a.images.length > 0 && (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 10, marginTop: 8 }}>
+            {a.images.map((src, i) => (
+              <button key={i} onClick={() => setLightbox(src)} className="card-hover" style={{ padding: 0, border: "none", borderRadius: 12, overflow: "hidden", cursor: "pointer", aspectRatio: "1 / 1", background: "#EEF2EF" }}>
+                <img src={src} alt={`${a.title} ${i + 1}`} loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              </button>
+            ))}
+          </div>
+        )}
+      </article>
+
+      <div style={{ marginTop: 40, borderTop: `1px solid ${T.line}`, paddingTop: 24 }}>
+        <h3 className="disp" style={{ fontWeight: 800, fontSize: 20, margin: "0 0 14px" }}>À lire aussi</h3>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 16 }}>
+          {more.map((x) => (
+            <button key={x.slug} onClick={() => go("article", { slug: x.slug })} className="card-hover" style={{ textAlign: "left", background: "#fff", border: `1px solid ${T.line}`, borderRadius: 14, overflow: "hidden", cursor: "pointer", padding: 0 }}>
+              <div style={{ aspectRatio: "16 / 10", background: "#EEF2EF" }}>{x.hero ? <img src={x.hero} alt={x.title} loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ width: "100%", height: "100%", background: `linear-gradient(120deg, ${T.green}, ${T.indigo})` }} />}</div>
+              <div style={{ padding: 12 }}><div style={{ fontSize: 11.5, color: "#8A968E", fontWeight: 600 }}>{blogDate(x.date)}</div><div className="disp" style={{ fontWeight: 700, fontSize: 15, marginTop: 3, color: "#1A1A1A" }}>{x.title}</div></div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {lightbox && createPortal(
+        <div onClick={() => setLightbox(null)} style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(0,0,0,.86)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <img src={lightbox} alt="" style={{ maxWidth: "100%", maxHeight: "100%", borderRadius: 10 }} />
+          <button onClick={() => setLightbox(null)} aria-label="Close" style={{ position: "absolute", top: 18, right: 18, background: "rgba(255,255,255,.15)", border: "none", color: "#fff", borderRadius: "50%", width: 42, height: 42, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><X size={22} /></button>
+        </div>, document.body)}
+    </Wrap>
+  );
+}
+
 // ---------------- FOOTER ----------------
 function Footer({ go, notify }) {
   const [email, setEmail] = useState("");
+  const head = { fontWeight: 700, marginBottom: 10, color: "#fff", fontSize: 13, letterSpacing: ".08em", textTransform: "uppercase" };
   return (
-    <footer style={{ background: "#ffffff", color: "#1A1A1A", borderTop: "1px solid #ECECEC", padding: "44px 20px", marginTop: 20 }}>
-      <div style={{ maxWidth: 1200, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px,1fr))", gap: 24, fontSize: 14 }}>
+    <footer style={{ background: T.ink, color: "#DCE7DF", padding: "52px 20px 24px", marginTop: 20 }}>
+      <style>{`.foot-link{transition:color .15s ease}.foot-link:hover{color:#fff !important}.foot-social:hover{background:rgba(255,255,255,.20) !important}`}</style>
+      <div style={{ maxWidth: 1200, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px,1fr))", gap: 28, fontSize: 14 }}>
         <div>
-          <div className="disp" style={{ fontWeight: 800, fontSize: 18, marginBottom: 8, color: "#1A1A1A" }}>Africa Tourism Solutions</div>
-          <p style={{ color: "#6B7A72", lineHeight: 1.6 }}>Tourism · DMC · Events · Logistics · Travel management. Dakar, Senegal. IATA-accredited.</p>
-          <div style={{ display: "flex", gap: 10, marginTop: 8, flexWrap: "wrap" }}>
-            {["Facebook", "Instagram", "X", "LinkedIn"].map((s) => (
-              <button key={s} onClick={() => notify(`Opening ATS ${s}…`)} style={{ background: "#F2F2F2", border: "none", color: "#1A1A1A", borderRadius: 8, padding: "6px 10px", cursor: "pointer", fontSize: 12.5, fontWeight: 600 }}>{s}</button>
+          <div className="disp" style={{ fontWeight: 800, fontSize: 19, marginBottom: 10, color: "#fff" }}>Africa Tourism Solutions</div>
+          <p style={{ color: "rgba(255,255,255,.72)", lineHeight: 1.6, marginTop: 0 }}>Tourism · DMC · Events · Logistics · Travel management. Dakar, Senegal. IATA-accredited.</p>
+          <div style={{ display: "flex", gap: 10, marginTop: 12, flexWrap: "wrap" }}>
+            {ATS_SOCIALS.map(([s, url]) => (
+              <a key={s} href={url} target="_blank" rel="noopener noreferrer" className="foot-social" style={{ background: "rgba(255,255,255,.10)", color: "#fff", borderRadius: 8, padding: "6px 11px", fontSize: 12.5, fontWeight: 600, textDecoration: "none", transition: "background .15s ease" }}>{s}</a>
             ))}
           </div>
         </div>
         <div>
-          <div style={{ fontWeight: 700, marginBottom: 8, color: "#1A1A1A" }}>Explore</div>
-          {[["tours", "Tours & experiences"], ["builder", "Trip Builder"], ["transport", "Transfers & car hire"], ["flights", "Flights"], ["events", "Events & MICE"], ["about", "About Us"], ["terms", "Terms & cancellation policy"]].map(([k, l]) => (
-            <button key={k} onClick={() => go(k)} style={{ display: "block", background: "none", border: "none", color: "#5A6B61", cursor: "pointer", padding: "4px 0", fontSize: 14, fontFamily: "inherit" }}>{l}</button>
+          <div style={head}>Explore</div>
+          {[["tours", "Tours & experiences"], ["builder", "Trip Builder"], ["transport", "Transfers & car hire"], ["flights", "Flights"], ["events", "Events & MICE"], ["blog", "Blog"], ["about", "About Us"], ["terms", "Terms & cancellation policy"]].map(([k, l]) => (
+            <button key={k} onClick={() => go(k)} className="foot-link" style={{ display: "block", background: "none", border: "none", color: "rgba(255,255,255,.74)", cursor: "pointer", padding: "4px 0", fontSize: 14, fontFamily: "inherit", textAlign: "left" }}>{l}</button>
           ))}
         </div>
         <div>
-          <div style={{ fontWeight: 700, marginBottom: 8, color: "#1A1A1A" }}>ATS Group</div>
-          <p style={{ color: "#6B7A72", lineHeight: 1.9 }}>ATS Travel · ATS Events · ATS Business · ATS Logistics · ATS Evasion · ATS School</p>
+          <div style={head}>ATS Group</div>
+          <p style={{ color: "rgba(255,255,255,.72)", lineHeight: 1.9, marginTop: 0 }}>ATS Travel · ATS Events · ATS Business · ATS Logistics · ATS Evasion · ATS School</p>
         </div>
         <div>
-          <div style={{ fontWeight: 700, marginBottom: 8, color: "#1A1A1A" }}>Newsletter</div>
-          <input style={{ ...input }} placeholder="you@email.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <div style={head}>Newsletter</div>
+          <input style={{ ...input, background: "rgba(255,255,255,.08)", border: "1px solid rgba(255,255,255,.20)", color: "#fff" }} placeholder="you@email.com" value={email} onChange={(e) => setEmail(e.target.value)} />
           <button style={{ ...btnGold, marginTop: 8, fontSize: 13.5, padding: "9px 18px" }} onClick={() => { notify(email ? "Subscribed — welcome to the ATS newsletter." : "Enter your email first"); setEmail(""); }}>Subscribe</button>
         </div>
       </div>
-      <div style={{ maxWidth: 1200, margin: "22px auto 0", fontSize: 12.5, color: "#9AA79F" }}>© 2026 Africa Tourism Solutions</div>
+      <div style={{ maxWidth: 1200, margin: "34px auto 0", paddingTop: 22, borderTop: "1px solid rgba(255,255,255,.14)", display: "flex", flexWrap: "wrap", gap: "14px 28px", alignItems: "flex-start", justifyContent: "space-between" }}>
+        <div style={{ fontSize: 13.5, lineHeight: 1.8, color: "rgba(255,255,255,.78)" }}>
+          <div>
+            <span style={{ color: "#fff", fontWeight: 700 }}>Contact:</span>{" "}
+            <a href="tel:+221774807878" className="foot-link" style={{ color: T.gold, fontWeight: 600, textDecoration: "none" }}>+221 77 480 78 78</a> ·{" "}
+            <a href="tel:+221338251279" className="foot-link" style={{ color: T.gold, fontWeight: 600, textDecoration: "none" }}>+221 33 825 12 79</a> ·{" "}
+            <a href="mailto:infos@africatourismsolutions.com" className="foot-link" style={{ color: T.gold, fontWeight: 600, textDecoration: "none", wordBreak: "break-all" }}>infos@africatourismsolutions.com</a>
+          </div>
+          <div>Immeuble SICAP, Point E, Lot 8, apt A · Hann Maristes 2, Dakar</div>
+        </div>
+        <div style={{ fontSize: 12.5, color: "rgba(255,255,255,.55)", alignSelf: "flex-end" }}>© 2026 Africa Tourism Solutions</div>
+      </div>
     </footer>
   );
 }
