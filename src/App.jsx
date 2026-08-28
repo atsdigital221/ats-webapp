@@ -1027,6 +1027,38 @@ function HeroSlider({ go, setBooking }) {
   );
 }
 
+// Full ATS ecosystem — original cards on a single scrollable row.
+function EcoServices({ go }) {
+  const ref = useRef(null);
+  const items = [
+    [Plane, "Flights", "IATA-accredited ticketing: domestic, international, multi-city and corporate.", "flights"],
+    [Hotel, "Accommodation", "Hotels, resorts, villas, eco-lodges and camps — vetted and contracted by ATS.", "builder"],
+    [Car, "Transport", "Airport transfers and vehicle hire at fixed rates — book instantly, no quote needed.", "transport"],
+    [Mic, "MICE", "Conferences, incentives, team building, destination weddings, government events.", "events"],
+    [Package, "ATS Logistics", "Event logistics, group movement and corporate transport coordination.", "transport"],
+    [UserRound, "Concierge", "Meet & greet, visa assistance, VIP services, private guides, translation.", "corporate"],
+  ];
+  const nudge = (d) => ref.current && ref.current.scrollBy({ left: d * 272, behavior: "smooth" });
+  const arrow = (side) => ({ position: "absolute", top: -46, [side]: 0, zIndex: 3, width: 38, height: 38, borderRadius: "50%", border: `1px solid ${T.line}`, background: "#fff", color: T.ink, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 6px 16px rgba(11,46,27,.12)" });
+  return (
+    <div style={{ position: "relative" }}>
+      <style>{`.eco-strip::-webkit-scrollbar{display:none}`}</style>
+      <button aria-label="Previous" onClick={() => nudge(-1)} style={arrow("left")}><ChevronLeft size={19} /></button>
+      <button aria-label="Next" onClick={() => nudge(1)} style={{ ...arrow("right"), right: 44 }}><ChevronRight size={19} /></button>
+      <div ref={ref} className="eco-strip" style={{ display: "flex", gap: 16, overflowX: "auto", scrollSnapType: "x mandatory", scrollbarWidth: "none", msOverflowStyle: "none", padding: "4px 0 10px" }}>
+        {items.map(([Icon, name, body, dest]) => (
+          <button key={name} className="card-hover" onClick={() => go(dest)} style={{ flex: "0 0 auto", width: 256, scrollSnapAlign: "start", background: "#fff", border: `1px solid ${T.line}`, borderRadius: 16, padding: 20, textAlign: "left", cursor: "pointer", fontFamily: "inherit", color: T.ink, display: "flex", flexDirection: "column" }}>
+            <Icon size={30} color={T.green} strokeWidth={1.7} />
+            <h3 className="disp" style={{ fontWeight: 700, fontSize: 18, margin: "10px 0 6px" }}>{name}</h3>
+            <p style={{ fontSize: 14, lineHeight: 1.55, opacity: 0.8, margin: 0, flex: 1 }}>{body}</p>
+            <div style={{ marginTop: 12, fontWeight: 700, fontSize: 13, color: T.laterite, display: "flex", alignItems: "center", gap: 4 }}>Open <ArrowRight size={14} /></div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ---------------- HOME ----------------
 function Home({ go, notify, setBooking, filters, setFilters, setChat, addBookingHome, user }) {
   const [country, setCountry] = useState(COUNTRIES[0]);
@@ -1147,23 +1179,7 @@ function Home({ go, notify, setBooking, filters, setFilters, setChat, addBooking
       {/* SERVICES */}
       <Wrap>
         <Eyebrow>More than tours</Eyebrow><H2>The full ATS ecosystem</H2>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: 16 }}>
-          {[
-            [Plane, "Flights", "IATA-accredited ticketing: domestic, international, multi-city and corporate.", "flights"],
-            [Hotel, "Accommodation", "Hotels, resorts, villas, eco-lodges and camps — vetted and contracted by ATS.", "builder"],
-            [Car, "Transport", "Airport transfers and vehicle hire at fixed rates — book instantly, no quote needed.", "transport"],
-            [Mic, "MICE", "Conferences, incentives, team building, destination weddings, government events.", "events"],
-            [Package, "ATS Logistics", "Event logistics, group movement and corporate transport coordination.", "transport"],
-            [UserRound, "Concierge", "Meet & greet, visa assistance, VIP services, private guides, translation.", "corporate"],
-          ].map(([Icon, name, body, dest]) => (
-            <button key={name} className="card-hover" onClick={() => go(dest)} style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 16, padding: 20, textAlign: "left", cursor: "pointer", fontFamily: "inherit", color: T.ink }}>
-              <Icon size={30} color={T.green} strokeWidth={1.7} />
-              <h3 className="disp" style={{ fontWeight: 700, fontSize: 18, margin: "10px 0 6px" }}>{name}</h3>
-              <p style={{ fontSize: 14, lineHeight: 1.55, opacity: 0.8, margin: 0 }}>{body}</p>
-              <div style={{ marginTop: 10, fontWeight: 700, fontSize: 13, color: T.laterite, display: "flex", alignItems: "center", gap: 4 }}>Open <ArrowRight size={14} /></div>
-            </button>
-          ))}
-        </div>
+        <EcoServices go={go} />
       </Wrap>
 
       {/* MA TONTINE VOYAGE */}
