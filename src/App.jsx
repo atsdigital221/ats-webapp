@@ -861,19 +861,19 @@ function Nav({ go, page, user, setSignin, bookings, currency, setCurrency, overH
       <div style={{ padding: "12px 20px" }}>
       <div style={{ maxWidth: 1200, margin: "0 auto", display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center", gap: 12 }}>
         {/* Left: logo */}
-        <button onClick={() => nav("home")} aria-label="Africa Tourism Solutions — home" style={{ justifySelf: "start", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", padding: 0 }}>
+        <button onClick={() => nav("home")} aria-label="Africa Tourism Solutions — home" style={{ gridColumn: 1, justifySelf: "start", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", padding: 0 }}>
           {logoOk
             ? <img src={transparent ? logoWhite : logoDark} alt="Africa Tourism Solutions" onError={() => setLogoOk(false)} style={{ height: 40, display: "block" }} />
             : <span className="disp" style={{ fontWeight: 800, fontSize: 18, color: ink }}>ATS</span>}
         </button>
 
         {/* Centered nav titles */}
-        <div className="nav-desktop" style={{ justifySelf: "center", alignItems: "center", gap: 26 }}>
+        <div className="nav-desktop" style={{ gridColumn: 2, justifySelf: "center", alignItems: "center", gap: 26 }}>
           {[...leftLinks, ...rightLinks].map(([k, l]) => <TopLink key={k} k={k} l={l} />)}
         </div>
 
         {/* Right: language/currency + 9-dots menu */}
-        <div style={{ justifySelf: "end", display: "flex", alignItems: "center", gap: 14 }}>
+        <div style={{ gridColumn: 3, justifySelf: "end", display: "flex", alignItems: "center", gap: 14 }}>
           <div className="nav-desktop" style={{ alignItems: "center", gap: 8 }}>
             <NavSelect ghost={transparent} ink={ink} value={lang} options={["EN", "FR"]} onChange={setLang} trigger={<Globe size={16} color={ink} strokeWidth={2} />} />
             <NavSelect ghost={transparent} ink={ink} value={cur} options={["XOF", "USD", "EUR"]} onChange={setCurrency} trigger={<span style={{ fontWeight: 600, fontSize: 12.5 }}>{cur}</span>} />
@@ -1303,7 +1303,7 @@ function Home({ go, notify, setBooking, filters, setFilters, setChat, addBooking
           }
         `}</style>
         <div className="hero-card" style={{
-          maxWidth: 1200, margin: "0 auto", position: "relative", borderRadius: 26, overflow: "hidden", minHeight: "50vh", color: "#fff",
+          maxWidth: 1200, margin: "0 auto", position: "relative", borderRadius: 26, overflow: "hidden", minHeight: "55vh", color: "#fff",
           padding: "clamp(48px,7vw,86px) clamp(28px,5vw,68px)",
           background: `linear-gradient(rgba(0,0,0,.34), rgba(0,0,0,.34)), linear-gradient(90deg, rgba(6,20,15,.7) 0%, rgba(6,20,15,.4) 45%, rgba(6,20,15,.16) 78%), url("${heroUrl}") center/cover no-repeat, linear-gradient(160deg, #006B33 0%, ${T.green} 65%, #00A84F 100%)`,
         }}>
@@ -1442,7 +1442,7 @@ function Home({ go, notify, setBooking, filters, setFilters, setChat, addBooking
             <div><Eyebrow>Senegal · from the ATS catalogue</Eyebrow><H2>Featured tours & experiences</H2></div>
             <button onClick={() => go("tours")} style={{ ...btnGreen, marginLeft: "auto", fontSize: 14 }}>See all tours →</button>
           </div>
-          <TourGrid tours={featured} go={go} setBooking={setBooking} />
+          <TourGrid tours={featured} go={go} setBooking={setBooking} slider />
         </Wrap>
       </section>
 
@@ -1563,12 +1563,22 @@ function useTourPhotos(tourId) {
   return photos;
 }
 
-function TourGrid({ tours, go, setBooking }) {
+function TourGrid({ tours, go, setBooking, slider }) {
+  const container = slider
+    ? { display: "flex", gap: 18, overflowX: "auto", scrollSnapType: "x mandatory", marginTop: 10, paddingTop: 12, paddingBottom: 46, scrollbarWidth: "none", msOverflowStyle: "none" }
+    : { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 18, marginTop: 18 };
+  const cardExtra = slider ? { flex: "0 0 auto", scrollSnapAlign: "start", boxSizing: "border-box" } : {};
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 18, marginTop: 18 }}>
+    <>
+      {slider && <style>{`
+        .tour-strip::-webkit-scrollbar{display:none}
+        .tour-card{width:calc((100% - 54px) / 4);box-sizing:border-box}
+        @media(max-width:1000px){.tour-card{width:min(320px,74vw)}}
+      `}</style>}
+      <div className={slider ? "tour-strip" : ""} style={container}>
       {tours.map((t) => (
-        <article key={t.id} className="card-hover" onClick={() => go("tour", { id: t.id })} style={{ background: T.paper, border: `1px solid ${T.line}`, borderRadius: 16, overflow: "hidden", display: "flex", flexDirection: "column", cursor: "pointer", color: "#1A1A1A" }}>
-          <Cover tour={t} ratio="4 / 3" size={58} />
+        <article key={t.id} className={slider ? "card-hover tour-card" : "card-hover"} onClick={() => go("tour", { id: t.id })} style={{ background: T.paper, border: `1px solid ${T.line}`, borderRadius: 16, overflow: "hidden", display: "flex", flexDirection: "column", cursor: "pointer", color: "#1A1A1A", ...cardExtra }}>
+          <Cover tour={t} ratio={slider ? "1 / 1" : "4 / 3"} size={58} />
 
           <div style={{ padding: 14, display: "flex", flexDirection: "column", flex: 1 }}>
             <div style={{ display: "flex", gap: 5, marginBottom: 7, flexWrap: "nowrap", overflow: "hidden" }}>
@@ -1594,7 +1604,8 @@ function TourGrid({ tours, go, setBooking }) {
           </div>
         </article>
       ))}
-    </div>
+      </div>
+    </>
   );
 }
 const pill = () => ({ fontSize: 10, fontWeight: 500, color: "#1A1A1A", background: "#F2F2F2", border: "none", padding: "3px 9px", borderRadius: 999, whiteSpace: "nowrap", flexShrink: 0 });
