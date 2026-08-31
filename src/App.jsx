@@ -1,6 +1,11 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
+import { geoOrthographic, geoPath, geoGraticule10, geoDistance } from "d3-geo";
+import { feature } from "topojson-client";
+import landTopo from "world-atlas/land-110m.json";
 import { supabase } from "./lib/supabase";
+
+const LAND = feature(landTopo, landTopo.objects.land);
 import {
   Landmark, PawPrint, Leaf, TreePalm, Mountain, Utensils, Palette, Route, Bird, Music,
   Compass, Map as MapIcon, Car, Plane, Bus, Clock, Users, Luggage, Fuel, Settings2, MapPin,
@@ -95,17 +100,17 @@ const tierLabel = { p12: "Private 1–2 pax", p34: "Private 3–4 pax", grp: "Gr
 const fromPrice = (t) => t.grid.grp.a;
 
 const COUNTRIES = [
-  { id: "sn", name: "Senegal", live: true, x: 14.6, y: 29.9, count: "35+ experiences" },
-  { id: "rw", name: "Rwanda", live: true, x: 71.2, y: 50.8, count: "Packages available" },
-  { id: "cv", name: "Cape Verde", live: false, x: 3.1, y: 28.6 },
-  { id: "gm", name: "Gambia", live: false, x: 13.4, y: 35.4 },
-  { id: "gn", name: "Guinea", live: false, x: 19.1, y: 35.0 },
-  { id: "ma", name: "Morocco", live: false, x: 24.5, y: 7.6 },
-  { id: "ci", name: "Ivory Coast", live: false, x: 26.1, y: 38.9 },
-  { id: "gh", name: "Ghana", live: false, x: 31.6, y: 38.3 },
-  { id: "et", name: "Ethiopia", live: false, x: 83.4, y: 37.6 },
-  { id: "ke", name: "Kenya", live: false, x: 80.9, y: 48.0 },
-  { id: "tz", name: "Tanzania & Zanzibar", live: false, x: 81.5, y: 55.6 },
+  { id: "sn", name: "Senegal", live: true, ll: [-14.5, 14.5], count: "35+ experiences" },
+  { id: "rw", name: "Rwanda", live: true, ll: [29.9, -1.9], count: "Packages available" },
+  { id: "cv", name: "Cape Verde", live: false, ll: [-23.6, 16.0] },
+  { id: "gm", name: "Gambia", live: false, ll: [-15.3, 13.4] },
+  { id: "gn", name: "Guinea", live: false, ll: [-11.0, 9.9] },
+  { id: "ma", name: "Morocco", live: false, ll: [-7.0, 31.8] },
+  { id: "ci", name: "Ivory Coast", live: false, ll: [-5.5, 7.5] },
+  { id: "gh", name: "Ghana", live: false, ll: [-1.0, 7.9] },
+  { id: "et", name: "Ethiopia", live: false, ll: [40.5, 9.1] },
+  { id: "ke", name: "Kenya", live: false, ll: [37.9, 0.2] },
+  { id: "tz", name: "Tanzania & Zanzibar", live: false, ll: [34.9, -6.4] },
 ];
 // [name, role, photo-slug] — photos live in bucket site/team/<slug>.webp
 const TEAM = [
@@ -833,7 +838,7 @@ function Nav({ go, page, user, setSignin, bookings, currency, setCurrency, overH
   );
 
   return (
-    <nav style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 50, background: transparent ? "linear-gradient(to bottom, rgba(0,0,0,.55) 0%, rgba(0,0,0,.10) 70%, rgba(0,0,0,0) 100%)" : "#fff", borderBottom: `1px solid ${transparent ? "transparent" : "#ECECEC"}`, transition: "background .25s ease, border-color .25s ease" }}>
+    <nav style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 50, background: transparent ? "linear-gradient(to bottom, rgba(0,0,0,.55) 0%, rgba(0,0,0,.10) 70%, rgba(0,0,0,0) 100%)" : "#fff", borderBottom: "none", transition: "background .25s ease" }}>
       <style>{`
         .nav-desktop{display:flex}
         .nav-top-link{transition:opacity .15s ease}
@@ -853,8 +858,8 @@ function Nav({ go, page, user, setSignin, bookings, currency, setCurrency, overH
         .ats-row:hover .ats-ico{background:${T.green};color:#fff}
         @media(prefers-reduced-motion:reduce){.ats-drawer,.ats-overlay{animation:none}}
       `}</style>
-      <div style={{ padding: "12px 16px" }}>
-      <div style={{ maxWidth: 1320, margin: "0 auto", display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center", gap: 12 }}>
+      <div style={{ padding: "12px 20px" }}>
+      <div style={{ maxWidth: 1200, margin: "0 auto", display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center", gap: 12 }}>
         {/* Left: logo */}
         <button onClick={() => nav("home")} aria-label="Africa Tourism Solutions — home" style={{ justifySelf: "start", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", padding: 0 }}>
           {logoOk
@@ -873,6 +878,10 @@ function Nav({ go, page, user, setSignin, bookings, currency, setCurrency, overH
             <NavSelect ghost={transparent} ink={ink} value={lang} options={["EN", "FR"]} onChange={setLang} trigger={<Globe size={16} color={ink} strokeWidth={2} />} />
             <NavSelect ghost={transparent} ink={ink} value={cur} options={["XOF", "USD", "EUR"]} onChange={setCurrency} trigger={<span style={{ fontWeight: 600, fontSize: 12.5 }}>{cur}</span>} />
           </div>
+          <button className="nav-desktop" onClick={() => { if (user) nav("account"); else { setSignin(true); setOpen(false); } }}
+            style={{ alignItems: "center", gap: 6, background: user ? T.green : "transparent", border: user ? "none" : `1.5px solid ${transparent ? "rgba(255,255,255,.55)" : T.line}`, color: user ? "#fff" : ink, borderRadius: 999, padding: "7px 14px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>
+            <UserRound size={16} strokeWidth={2.1} /> {user ? user.name.split(" ")[0] : "Sign in"}{user && bookings.length > 0 ? ` · ${bookings.length}` : ""}
+          </button>
           <button aria-label={open ? "Close menu" : "Open menu"} aria-expanded={open} onClick={() => setOpen((o) => !o)}
             style={{ background: "none", border: "none", cursor: "pointer", color: ink, display: "flex", alignItems: "center", justifyContent: "center", padding: 6 }}>
             {open ? <X size={24} /> : <NineDots color={ink} size={22} />}
@@ -997,29 +1006,42 @@ function HeroCard({ t, go, setBooking }) {
 
 function HeroSlider({ go, setBooking }) {
   const tours = HOME_POPULAR.map((id) => TOURS.find((t) => t.id === id)).filter(Boolean);
-  const [i, setI] = useState(0);
-  const max = Math.max(0, tours.length - 1);
-  const prev = () => setI((x) => Math.max(0, x - 1));
-  const next = () => setI((x) => Math.min(max, x + 1));
+  const CARD = 300, GAP = 24;
+  const [perPage, setPerPage] = useState(() => (typeof window !== "undefined" && window.innerWidth < 760 ? 1 : 2));
   useEffect(() => {
-    if (max === 0) return;
-    const id = setTimeout(() => setI((x) => (x >= max ? 0 : x + 1)), 4000);
+    const onR = () => setPerPage(window.innerWidth < 760 ? 1 : 2);
+    onR(); window.addEventListener("resize", onR);
+    return () => window.removeEventListener("resize", onR);
+  }, []);
+  const positions = Math.max(1, tours.length - perPage + 1); // slide 1 card at a time, keep perPage cards fully visible
+  const [i, setI] = useState(0);
+  useEffect(() => { setI((x) => Math.min(x, positions - 1)); }, [positions]);
+  const prev = () => setI((x) => (x - 1 + positions) % positions);
+  const next = () => setI((x) => (x + 1) % positions);
+  useEffect(() => {
+    if (positions < 2) return;
+    const id = setTimeout(() => setI((x) => (x + 1) % positions), 4500);
     return () => clearTimeout(id);
-  }, [i, max]);
+  }, [i, positions]);
   const arrow = (solid) => ({ width: 40, height: 40, borderRadius: "50%", border: `1.5px solid ${solid ? "#fff" : "rgba(255,255,255,.7)"}`, background: solid ? "#fff" : "transparent", color: solid ? T.ink : "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 });
-  const CARD = 300, GAP = 16;
+  const step = 350;
+  const headerW = perPage * CARD + (perPage - 1) * GAP; // width of the fully-visible cards (arrows sit here)
+  const PEEK = perPage > 1 ? 100 : 0;                    // extra sliver of the next card, clipped at the hero edge
+  const trackW = headerW + PEEK;
   return (
-    <div className="hero-slider" style={{ width: "min(680px, 78vw)" }}>
-      <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: ".16em", textTransform: "uppercase", marginBottom: 12, opacity: 0.9 }}>Popular Tours</div>
-      <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 16, paddingRight: 4 }}>
-        <div style={{ flex: 1, height: 2, background: "rgba(255,255,255,.35)", borderRadius: 2, position: "relative" }}>
-          <div style={{ position: "absolute", left: 0, top: 0, height: "100%", width: `${((i + 1) / tours.length) * 100}%`, background: "#fff", borderRadius: 2, transition: "width .3s ease" }} />
+    <div className="hero-slider" style={{ width: trackW, maxWidth: "100%", margin: "0 auto" }}>
+      <div style={{ width: headerW, maxWidth: "100%" }}>
+        <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: ".16em", textTransform: "uppercase", marginBottom: 12, opacity: 0.9 }}>Popular Tours</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 16, paddingRight: 4 }}>
+          <div style={{ flex: 1, height: 2, background: "rgba(255,255,255,.35)", borderRadius: 2, position: "relative" }}>
+            <div style={{ position: "absolute", left: 0, top: 0, height: "100%", width: `${((i + 1) / positions) * 100}%`, background: "#fff", borderRadius: 2, transition: "width .3s ease" }} />
+          </div>
+          <button onClick={prev} style={arrow(false)} aria-label="Previous"><ChevronLeft size={18} /></button>
+          <button onClick={next} style={arrow(true)} aria-label="Next"><ChevronRight size={18} /></button>
         </div>
-        <button onClick={prev} style={arrow(false)} aria-label="Previous"><ChevronLeft size={18} /></button>
-        <button onClick={next} style={arrow(true)} aria-label="Next"><ChevronRight size={18} /></button>
       </div>
-      <div style={{ overflow: "hidden" }}>
-        <div style={{ display: "flex", gap: GAP, transform: `translateX(-${i * (CARD + GAP)}px)`, transition: "transform .35s ease" }}>
+      <div style={{ overflow: "hidden", width: trackW, maxWidth: "100%" }}>
+        <div style={{ display: "flex", gap: GAP, transform: `translateX(-${i * step}px)`, transition: "transform .4s ease" }}>
           {tours.map((t) => <HeroCard key={t.id} t={t} go={go} setBooking={setBooking} />)}
         </div>
       </div>
@@ -1059,6 +1081,204 @@ function EcoServices({ go }) {
   );
 }
 
+// Interactive Africa-focused globe: drag to rotate (clamped to Africa), click a marker to recenter.
+function AfricaGlobe({ country, setCountry }) {
+  const SIZE = 480;
+  const CLAMP = { lamMin: -46, lamMax: 26, phiMin: -34, phiMax: 12 };
+  const clampRot = ([l, p]) => [Math.max(CLAMP.lamMin, Math.min(CLAMP.lamMax, l)), Math.max(CLAMP.phiMin, Math.min(CLAMP.phiMax, p))];
+  const [rot, setRot] = useState([-20, -3]);
+  const [zoom, setZoom] = useState(1);
+  const drag = useRef(null);
+  const anim = useRef(0);
+  const firstRun = useRef(true);
+  const rotRef = useRef(rot); rotRef.current = rot;
+
+  const R = (SIZE / 2 - 6) * zoom;
+  const projection = geoOrthographic().scale(R).translate([SIZE / 2, SIZE / 2]).rotate([rot[0], rot[1], 0]).clipAngle(90);
+  const path = geoPath(projection);
+  const centerLngLat = [-rot[0], -rot[1]];
+
+  useEffect(() => {
+    const onMove = (e) => {
+      if (!drag.current) return;
+      const dx = e.clientX - drag.current.x, dy = e.clientY - drag.current.y, k = 0.32 / zoom;
+      setRot(clampRot([drag.current.rot[0] + dx * k, drag.current.rot[1] - dy * k]));
+    };
+    const onUp = () => { drag.current = null; };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    return () => { window.removeEventListener("pointermove", onMove); window.removeEventListener("pointerup", onUp); };
+  }, [zoom]);
+
+  useEffect(() => {
+    if (firstRun.current) { firstRun.current = false; return; }
+    const dest = clampRot([-country.ll[0], -country.ll[1]]);
+    const start = rotRef.current.slice(); const t0 = performance.now(); const dur = 700;
+    cancelAnimationFrame(anim.current);
+    const tick = (now) => {
+      const k = Math.min(1, (now - t0) / dur);
+      const e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+      setRot([start[0] + (dest[0] - start[0]) * e, start[1] + (dest[1] - start[1]) * e]);
+      if (k < 1) anim.current = requestAnimationFrame(tick);
+    };
+    anim.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(anim.current);
+  }, [country.id]); // eslint-disable-line
+
+  const zbtn = { width: 34, height: 34, borderRadius: "50%", border: `1px solid ${T.line}`, background: "#fff", color: T.ink, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 700, boxShadow: "0 4px 12px rgba(11,46,27,.10)" };
+
+  return (
+    <div style={{ position: "relative", background: "transparent", padding: 6 }}>
+      <div style={{ position: "absolute", top: 10, right: 10, display: "flex", flexDirection: "column", gap: 8, zIndex: 2 }}>
+        <button aria-label="Zoom in" style={zbtn} onClick={() => setZoom((z) => Math.min(2.2, +(z + 0.25).toFixed(2)))}>+</button>
+        <button aria-label="Zoom out" style={zbtn} onClick={() => setZoom((z) => Math.max(1, +(z - 0.25).toFixed(2)))}>−</button>
+      </div>
+      <svg viewBox={`0 0 ${SIZE} ${SIZE}`} role="img" aria-label="Interactive globe of Africa with ATS destinations"
+        onPointerDown={(e) => { drag.current = { x: e.clientX, y: e.clientY, rot: rot.slice() }; }}
+        style={{ width: "100%", display: "block", cursor: "grab", touchAction: "pan-y" }}>
+        <defs>
+          <radialGradient id="glb" cx="40%" cy="32%" r="78%">
+            <stop offset="0%" stopColor="#FFFFFF" />
+            <stop offset="72%" stopColor="#F0F4F1" />
+            <stop offset="100%" stopColor="#E4EAE6" />
+          </radialGradient>
+        </defs>
+        <circle cx={SIZE / 2} cy={SIZE / 2} r={R} fill="url(#glb)" stroke="rgba(11,46,27,.14)" strokeWidth="1" />
+        <path d={path(geoGraticule10())} fill="none" stroke="rgba(11,46,27,.09)" strokeWidth="0.6" />
+        <path d={path(LAND)} fill="rgba(11,46,27,.58)" stroke="rgba(11,46,27,.35)" strokeWidth="0.4" />
+        {COUNTRIES.map((c) => {
+          const p = projection(c.ll);
+          if (!p || geoDistance(c.ll, centerLngLat) > Math.PI / 2) return null;
+          const on = country.id === c.id;
+          const col = c.live ? T.gold : "#9AA79F";
+          return (
+            <g key={c.id} style={{ cursor: "pointer" }} onPointerDown={(e) => e.stopPropagation()} onClick={() => setCountry(c)}>
+              {on && <circle cx={p[0]} cy={p[1]} r={11} fill="none" stroke={col} strokeWidth="1.6" opacity="0.9" />}
+              <circle cx={p[0]} cy={p[1]} r={on ? 6 : c.live ? 5 : 4} fill={col} stroke="#fff" strokeWidth="1.6" className={c.live ? "pulse" : ""} />
+              {on && (
+                <text x={p[0]} y={p[1] - 16} textAnchor="middle" fontSize="14" fontWeight="800" fill={T.ink} stroke="#fff" strokeWidth="3.4" paintOrder="stroke" style={{ pointerEvents: "none" }}>{c.name}</text>
+              )}
+            </g>
+          );
+        })}
+      </svg>
+      <div style={{ textAlign: "center", marginTop: 8 }}>
+        <span style={{ fontSize: 12.5, color: "#5A6B61" }}>Drag to rotate · tap a marker · Cape Verde, Zanzibar, Comoros &amp; Madagascar included</span>
+      </div>
+    </div>
+  );
+}
+
+// Service categories shown as a fanned arc of clickable cards.
+function CategoryCard({ id, label, dest, desc, go, offset, mobile }) {
+  const img = supabase.storage.from(PHOTO_BUCKET).getPublicUrl(`site/services/${id}.webp`).data.publicUrl;
+  const isC = offset === 0;
+  const rot = mobile ? 0 : offset * 4.5;
+  const ty = mobile ? 0 : Math.abs(offset) * 22;
+  return (
+    <button onClick={() => go(dest)} className="cat-card" aria-label={label}
+      style={{ flex: "0 0 auto", width: 210, background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: "inherit",
+        transform: `translateY(${ty}px) rotate(${rot}deg)${isC && !mobile ? " scale(1.05)" : ""}`, transformOrigin: "center bottom", zIndex: isC ? 3 : 2 }}>
+      <div style={{ aspectRatio: "3 / 4", borderRadius: 22, overflow: "hidden", background: `linear-gradient(150deg, ${T.green}, ${T.indigo})`, boxShadow: isC ? "0 26px 52px rgba(11,46,27,.26)" : "0 16px 34px rgba(11,46,27,.16)" }}>
+        {img && <img src={img} alt={label} loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />}
+      </div>
+      <div className="disp" style={{ fontWeight: 800, fontSize: 18, color: T.ink, textAlign: "center", marginTop: 14 }}>{label}</div>
+      <p style={{ fontSize: 13, lineHeight: 1.5, color: "#5A6B61", textAlign: "center", margin: "5px 4px 0" }}>{desc}</p>
+    </button>
+  );
+}
+
+function ServicesFan({ go }) {
+  const items = [
+    ["transport", "Transport", "transport", "Airport transfers or vehicle hire at fixed rates. Pick your dates and pay instantly — no quote needed."],
+    ["trip-builder", "Trip Builder", "builder", "Assemble your own trip — destination, hotel, transport, experiences — then reserve with a 20% deposit."],
+    ["tour", "Tours", "tours", "Browse 35+ guided experiences. Pick a date, pay in full or via Ma Tontine, and you're booked."],
+    ["flights", "Flights", "flights", "Domestic & international flights. Our IATA-accredited team handles booking, changes and group fares."],
+    ["mice", "MICE", "events", "Conferences, incentives, team building and events — send your brief, ATS handles logistics end to end."],
+  ];
+  const center = 2;
+  const [mobile, setMobile] = useState(typeof window !== "undefined" && window.innerWidth < 900);
+  useEffect(() => {
+    const f = () => setMobile(window.innerWidth < 900);
+    f(); window.addEventListener("resize", f);
+    return () => window.removeEventListener("resize", f);
+  }, []);
+  return (
+    <div>
+      <style>{`.cat-card{transition:transform .3s ease,filter .2s ease}.cat-card:hover{filter:brightness(1.04)}.cat-row::-webkit-scrollbar{display:none}`}</style>
+      <div className="cat-row" style={mobile
+        ? { display: "flex", gap: 18, overflowX: "auto", padding: "12px 4px 8px", scrollbarWidth: "none", msOverflowStyle: "none" }
+        : { display: "flex", justifyContent: "center", alignItems: "flex-start", gap: 10, paddingTop: 8 }}>
+        {items.map(([id, label, dest, desc], i) => (
+          <CategoryCard key={dest} id={id} label={label} dest={dest} desc={desc} go={go} offset={i - center} mobile={mobile} />
+        ))}
+      </div>
+      <div style={{ display: "flex", justifyContent: "center", gap: 9, marginTop: 22 }}>
+        {items.map((_, i) => <span key={i} style={{ width: i === center ? 22 : 9, height: 9, borderRadius: 999, background: i === center ? T.green : "rgba(11,46,27,.18)" }} />)}
+      </div>
+    </div>
+  );
+}
+
+// "Plan your trip with us" — image collage + features, decorative.
+function PlanTripSection({ go }) {
+  const img1 = useCoverUrl("city");
+  const img2 = useCoverUrl("goree");
+  const img3 = useCoverUrl("boat");
+  const grad = `linear-gradient(150deg, ${T.green}, ${T.indigo})`;
+  const features = [
+    [Sparkles, "Tailor-made trips", "Design your own itinerary from ATS's real catalogue of experiences."],
+    [CalendarCheck, "Reserve with 20%", "Secure your trip now and pay the balance in instalments — Ma Tontine Voyage."],
+  ];
+  return (
+    <section style={{ background: "#fff", position: "relative", overflow: "hidden", minHeight: "60vh", display: "flex", alignItems: "center", paddingBottom: 48 }}>
+      <style>{`
+        .plan-grid{display:grid;grid-template-columns:1.05fr 1fr;gap:48px;align-items:center;position:relative;z-index:1}
+        .plan-collage{position:relative;height:clamp(360px,50vh,500px)}
+        .plan-collage .a{position:absolute;left:0;top:4%;width:44%;height:92%;border-radius:170px 170px 26px 26px}
+        .plan-collage .b{position:absolute;left:48%;top:2%;width:46%;aspect-ratio:1;border-radius:48% 52% 52% 48% / 52% 48% 52% 48%;border:6px solid #fff}
+        .plan-collage .c{position:absolute;left:36%;top:50%;width:44%;aspect-ratio:1;border-radius:50%;border:6px solid #fff;z-index:2}
+        @media(max-width:900px){
+          .plan-grid{grid-template-columns:1fr;gap:30px}
+          .plan-collage{height:360px}
+        }
+      `}</style>
+      <Wrap style={{ width: "100%" }}>
+        <div className="plan-grid">
+          <div className="plan-collage">
+            {[["a", img1], ["b", img2], ["c", img3]].map(([cls, im]) => (
+              <div key={cls} className={cls} style={{ overflow: "hidden", boxShadow: "0 10px 24px rgba(11,46,27,.14)", background: grad }}>
+                {im && <img src={im} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />}
+              </div>
+            ))}
+          </div>
+          <div>
+            <div className="about-script" style={{ fontSize: 26, fontWeight: 600, color: T.green, lineHeight: 1 }}>Let's go together</div>
+            <h2 className="disp" style={{ fontSize: "clamp(30px,4vw,44px)", fontWeight: 800, letterSpacing: "-0.02em", color: T.ink, lineHeight: 1.08, margin: "4px 0 16px" }}>Plan your trip with us</h2>
+            <p style={{ color: "#5A6B61", lineHeight: 1.7, fontSize: 15.5, maxWidth: 460, margin: "0 0 26px" }}>
+              Build a fully custom trip — destination, hotel, transport and experiences — then confirm it with just a 20% deposit and pay the balance in instalments before departure.
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 20, marginBottom: 30 }}>
+              {features.map(([Ico, title, desc]) => (
+                <div key={title} style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
+                  <span style={{ width: 52, height: 52, flexShrink: 0, borderRadius: "50%", background: "rgba(0,146,69,.10)", color: T.green, display: "flex", alignItems: "center", justifyContent: "center" }}><Ico size={22} strokeWidth={2} /></span>
+                  <div>
+                    <div className="disp" style={{ fontWeight: 700, fontSize: 18, color: T.ink }}>{title}</div>
+                    <div style={{ fontSize: 14, lineHeight: 1.55, color: "#7A867E", marginTop: 3, maxWidth: 340 }}>{desc}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <button onClick={() => go("builder")} style={{ display: "inline-flex", alignItems: "center", gap: 12, background: T.ink, color: "#fff", border: "none", borderRadius: 999, padding: "15px 32px", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
+              Learn More <ArrowRight size={18} />
+            </button>
+          </div>
+        </div>
+      </Wrap>
+    </section>
+  );
+}
+
 // ---------------- HOME ----------------
 function Home({ go, notify, setBooking, filters, setFilters, setChat, addBookingHome, user }) {
   const [country, setCountry] = useState(COUNTRIES[0]);
@@ -1069,7 +1289,7 @@ function Home({ go, notify, setBooking, filters, setFilters, setChat, addBooking
 
   return (
     <>
-      <header style={{ background: T.paper, padding: "8px 16px 24px" }}>
+      <header style={{ background: T.paper, padding: "8px 20px 24px" }}>
         <style>{`
           @media(max-width:900px){
             .hero-scroll{display:none !important}
@@ -1077,16 +1297,15 @@ function Home({ go, notify, setBooking, filters, setFilters, setChat, addBooking
             .hero-copy{max-width:100% !important}
             .hero-copy .hero-btn{width:100% !important;justify-content:center !important}
             .hero-pop{position:static !important;right:auto !important;bottom:auto !important;margin-top:30px !important;width:100% !important}
-            .hero-slider{width:100% !important}
           }
           @media(max-width:520px){
             .hero-card{padding:30px 16px 22px !important}
           }
         `}</style>
         <div className="hero-card" style={{
-          maxWidth: 1320, margin: "0 auto", position: "relative", borderRadius: 26, overflow: "hidden", minHeight: "60vh", color: "#fff",
+          maxWidth: 1200, margin: "0 auto", position: "relative", borderRadius: 26, overflow: "hidden", minHeight: "50vh", color: "#fff",
           padding: "clamp(48px,7vw,86px) clamp(28px,5vw,68px)",
-          background: `linear-gradient(90deg, rgba(6,20,15,.68) 0%, rgba(6,20,15,.34) 42%, rgba(6,20,15,.06) 72%), url("${heroUrl}") center/cover no-repeat, linear-gradient(160deg, #006B33 0%, ${T.green} 65%, #00A84F 100%)`,
+          background: `linear-gradient(rgba(0,0,0,.34), rgba(0,0,0,.34)), linear-gradient(90deg, rgba(6,20,15,.7) 0%, rgba(6,20,15,.4) 45%, rgba(6,20,15,.16) 78%), url("${heroUrl}") center/cover no-repeat, linear-gradient(160deg, #006B33 0%, ${T.green} 65%, #00A84F 100%)`,
         }}>
           <div className="hero-copy" style={{ maxWidth: 620 }}>
             <h1 className="disp" style={{ fontSize: "clamp(42px,7vw,86px)", lineHeight: 0.98, fontWeight: 800, margin: 0, letterSpacing: "-0.02em" }}>Discover</h1>
@@ -1100,56 +1319,107 @@ function Home({ go, notify, setBooking, filters, setFilters, setChat, addBooking
           </div>
 
           {/* Popular trips slider (bottom-right on desktop, stacked on mobile) */}
-          <div className="hero-pop" style={{ position: "absolute", right: "clamp(20px,4vw,44px)", bottom: 30 }}>
+          <div className="hero-pop" style={{ position: "absolute", right: "calc(-1 * clamp(28px,5vw,68px))", bottom: 30 }}>
             <HeroSlider go={go} setBooking={setBooking} />
           </div>
         </div>
       </header>
 
-      {/* MAP */}
-      <Wrap>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 40, alignItems: "center" }}>
-          <div>
-            <Eyebrow>One platform · one continent</Eyebrow>
-            <H2>Choose your Africa</H2>
-            <p style={{ lineHeight: 1.6, opacity: 0.85, marginBottom: 20 }}>
-              Senegal is live with 35+ documented experiences across six regions; Rwanda packages are available. New destinations open progressively.
-            </p>
-            <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 14, padding: 18 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                {country.live ? <span style={{ width: 12, height: 12, borderRadius: "50%", background: T.green, boxShadow: "0 0 0 4px rgba(0,146,69,.18)" }} /> : <Globe size={24} color={T.laterite} />}
-                <div>
-                  <div className="disp" style={{ fontWeight: 700, fontSize: 18 }}>{country.name}</div>
-                  <div style={{ fontSize: 13, color: country.live ? T.green : T.laterite, fontWeight: 600 }}>
-                    {country.live ? `Live now · ${country.count}` : "Coming soon"}
-                  </div>
+      {/* HOW IT WORKS */}
+      <section style={{ background: "#F6FAF7" }}>
+        <Wrap>
+          <div style={{ textAlign: "center", marginBottom: 30 }}>
+            <div className="about-script" style={{ fontSize: 24, fontWeight: 600, color: T.green, lineHeight: 1 }}>How it works</div>
+            <h2 className="disp" style={{ fontWeight: 800, fontSize: "clamp(26px,3.6vw,38px)", letterSpacing: "-0.02em", color: T.ink, margin: "2px 0 8px" }}>Plan your trip in 4 simple steps</h2>
+            <p style={{ maxWidth: 560, margin: "0 auto", color: "#5A6B61", fontSize: 15.5, lineHeight: 1.6 }}>From choosing an experience to travelling on the ground — everything ATS offers, in one simple flow.</p>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 18 }}>
+            {[
+              [Compass, "Choose your experience", "Browse 35+ tours, transfers and flights — or build a fully custom trip."],
+              [CalendarCheck, "Reserve with 20%", "Secure any trip with a small deposit through Ma Tontine Voyage."],
+              [Clock, "Pay in instalments", "Spread the balance until departure — card, Wave, Orange Money, PayPal…"],
+              [Plane, "Travel with ATS", "Meet your local team on the ground and enjoy Senegal, worry-free."],
+            ].map(([Ico, title, body], i) => (
+              <div key={title} style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 18, padding: "22px 20px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+                  <span style={{ width: 40, height: 40, borderRadius: 12, background: "rgba(0,146,69,.10)", color: T.green, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Ico size={20} strokeWidth={2} /></span>
+                  <span className="disp" style={{ fontSize: 34, fontWeight: 800, color: "rgba(11,46,27,.12)", lineHeight: 1 }}>{i + 1}</span>
                 </div>
+                <div className="disp" style={{ fontWeight: 800, fontSize: 17, color: T.ink, marginBottom: 6 }}>{title}</div>
+                <p style={{ margin: 0, fontSize: 14, lineHeight: 1.6, color: "#5A6B61" }}>{body}</p>
               </div>
-              {country.live ? (
-                <button style={{ ...btnGreen, marginTop: 12, fontSize: 13.5, padding: "9px 18px" }} onClick={() => go("tours")}>
-                  Explore {country.name} →
-                </button>
-              ) : (
-                <button style={{ ...btnGold, marginTop: 12, background: T.indigo, color: "#fff", fontSize: 13.5, padding: "9px 18px" }}
-                  onClick={() => notify(`You're on the waitlist for ${country.name} — we'll email you at launch.`)}>
-                  Notify me when {country.name} opens
-                </button>
+            ))}
+          </div>
+        </Wrap>
+      </section>
+
+      {/* SERVICE CATEGORIES */}
+      <section style={{ background: "#fff" }}>
+        <Wrap>
+          <div style={{ textAlign: "center", marginBottom: 40 }}>
+            <div className="about-script" style={{ fontSize: 24, fontWeight: 600, color: T.green, lineHeight: 1 }}>Wonderful services for you</div>
+            <h2 className="disp" style={{ fontWeight: 800, fontSize: "clamp(26px,3.6vw,38px)", letterSpacing: "-0.02em", color: T.ink, margin: "2px 0 0" }}>Our Services</h2>
+          </div>
+          <ServicesFan go={go} />
+        </Wrap>
+      </section>
+
+      {/* MAP */}
+      <section style={{ background: "#fff" }}>
+        <style>{`
+          @media(max-width:760px){
+            .africa-grid{gap:26px !important}
+            .africa-globe-wrap{margin:0 auto !important;max-width:400px !important;order:-1}
+          }
+        `}</style>
+        <Wrap>
+          <div className="africa-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 48, alignItems: "center" }}>
+            <div>
+              <div className="about-script" style={{ fontSize: 24, fontWeight: 600, color: T.green, lineHeight: 1, marginBottom: 2 }}>One platform · one continent</div>
+              <H2>Choose your Africa</H2>
+              <p style={{ lineHeight: 1.6, opacity: 0.85, marginBottom: 24, maxWidth: 460 }}>
+                Senegal is live with 35+ documented experiences across six regions; Rwanda packages are available. New destinations open progressively.
+              </p>
+              <div style={{ display: "flex", gap: 30, marginBottom: 28, flexWrap: "wrap" }}>
+                {[["35+", "Experiences"], ["6", "Regions"], ["4", "Islands"]].map(([n, l]) => (
+                  <div key={l}>
+                    <div className="disp" style={{ fontWeight: 800, fontSize: 28, color: T.green, lineHeight: 1 }}>{n}</div>
+                    <div style={{ fontSize: 12.5, color: "#7A867E", marginTop: 5 }}>{l}</div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ fontSize: 11.5, fontWeight: 700, letterSpacing: ".14em", textTransform: "uppercase", color: "#93A29A", marginBottom: 10 }}>Available now</div>
+              <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 18 }}>
+                {COUNTRIES.filter((c) => c.live).map((c) => {
+                  const on = country.id === c.id;
+                  return (
+                    <button key={c.id} onClick={() => setCountry(c)} style={{ display: "flex", alignItems: "center", gap: 11, background: "#fff", border: `1.5px solid ${on ? T.green : T.line}`, boxShadow: on ? "0 10px 24px rgba(0,146,69,.14)" : "none", borderRadius: 14, padding: "12px 16px", cursor: "pointer", fontFamily: "inherit", textAlign: "left", transition: "border-color .2s ease, box-shadow .2s ease" }}>
+                      <span style={{ width: 11, height: 11, borderRadius: "50%", background: T.green, boxShadow: "0 0 0 4px rgba(0,146,69,.16)", flexShrink: 0 }} />
+                      <span>
+                        <span className="disp" style={{ display: "block", fontWeight: 800, fontSize: 16, color: T.ink }}>{c.name}</span>
+                        <span style={{ fontSize: 12.5, color: T.green, fontWeight: 600 }}>Live now · {c.count}</span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              <div style={{ fontSize: 11.5, fontWeight: 700, letterSpacing: ".14em", textTransform: "uppercase", color: "#93A29A", margin: "6px 0 10px" }}>Coming soon</div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 24 }}>
+                {COUNTRIES.filter((c) => !c.live).map((c) => {
+                  const on = country.id === c.id;
+                  return <button key={c.id} onClick={() => setCountry(c)} style={{ background: on ? "rgba(0,107,51,.10)" : "#fff", border: `1px solid ${on ? T.indigo : T.line}`, color: on ? T.indigo : "#5A6B61", borderRadius: 999, padding: "6px 13px", fontSize: 12.5, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>{c.name}</button>;
+                })}
+              </div>
+              {country.live && (
+                <button style={{ ...btnGold, fontSize: 14, padding: "12px 24px" }} onClick={() => go("tours")}>Explore {country.name} →</button>
               )}
             </div>
+            <div className="africa-globe-wrap" style={{ maxWidth: 500, margin: "0 0 0 auto", width: "100%" }}>
+              <AfricaGlobe country={country} setCountry={setCountry} />
+            </div>
           </div>
-          <svg viewBox="0 0 100 100" role="img" aria-label="Dotted map of Africa with ATS destinations, islands included" style={{ width: "100%", maxWidth: 470, margin: "0 auto", display: "block" }}>
-            {DOTS.map(([x, y], i) => <circle key={i} cx={x} cy={y} r="0.62" fill={T.green} opacity="0.55" />)}
-            {COUNTRIES.map((c) => (
-              <g key={c.id} style={{ cursor: "pointer" }} onClick={() => setCountry(c)}>
-                <circle cx={c.x} cy={c.y} r={c.live ? 1.6 : 1.4} fill={c.live ? T.gold : T.indigo} stroke="#fff" strokeWidth="0.4" className={c.live ? "pulse" : ""} />
-                <circle cx={c.x} cy={c.y} r="2.2" fill="transparent" />
-                {country.id === c.id && <circle cx={c.x} cy={c.y} r="2.3" fill="none" stroke={T.gold} strokeWidth="0.6" />}
-              </g>
-            ))}
-            <text x="50" y="98" textAnchor="middle" fontSize="2.8" fill={T.ink} opacity="0.55">Tap a marker — Cape Verde, Zanzibar, Comoros & Madagascar included</text>
-          </svg>
-        </div>
-      </Wrap>
+        </Wrap>
+      </section>
 
       {/* QUICK TRANSFER BOOKING (ATS Logistics) */}
       <section style={{ background: "#F8F8F8" }}>
@@ -1166,7 +1436,7 @@ function Home({ go, notify, setBooking, filters, setFilters, setChat, addBooking
       </section>
 
       {/* FEATURED TOURS */}
-      <section style={{ background: "#fff", borderTop: `1px solid ${T.line}`, borderBottom: `1px solid ${T.line}` }}>
+      <section style={{ background: "#fff", borderTop: `1px solid ${T.line}` }}>
         <Wrap>
           <div style={{ display: "flex", alignItems: "end", flexWrap: "wrap", gap: 12 }}>
             <div><Eyebrow>Senegal · from the ATS catalogue</Eyebrow><H2>Featured tours & experiences</H2></div>
@@ -1176,34 +1446,8 @@ function Home({ go, notify, setBooking, filters, setFilters, setChat, addBooking
         </Wrap>
       </section>
 
-      {/* SERVICES */}
-      <Wrap>
-        <Eyebrow>More than tours</Eyebrow><H2>The full ATS ecosystem</H2>
-        <EcoServices go={go} />
-      </Wrap>
-
-      {/* MA TONTINE VOYAGE */}
-      <section style={{ background: T.indigo, color: T.paper }}>
-        <Wrap style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(290px, 1fr))", gap: 36, alignItems: "center" }}>
-          <div>
-            <Eyebrow><span style={{ color: T.gold }}>Ma Tontine Voyage</span></Eyebrow>
-            <H2>Reserve now. Pay in instalments.</H2>
-            <p style={{ lineHeight: 1.6, opacity: 0.9 }}>
-              Confirm any trip with a <strong style={{ color: T.gold }}>20% deposit</strong> and pay the balance in scheduled instalments before departure — card, PayPal, bank transfer, Orange Money, Wave or M-Pesa. Automatic receipts and reminders by email, SMS and WhatsApp.
-            </p>
-            <button style={{ ...btnGold, marginTop: 18 }} onClick={() => go("builder")}>Open the Trip Builder</button>
-          </div>
-          <div style={{ background: "rgba(255,255,255,.08)", border: "1px solid rgba(255,255,255,.2)", borderRadius: 18, padding: 22 }}>
-            <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: ".1em", textTransform: "uppercase", color: T.gold }}>Example payment plan</div>
-            <div className="disp" style={{ fontSize: 21, fontWeight: 700, margin: "8px 0 14px" }}>Teranga Package 7 days · {fmtXOF(865000)} pp</div>
-            {[["Today — 20% deposit", fmtXOF(173000), true], ["Month 1", fmtXOF(230700)], ["Month 2", fmtXOF(230700)], ["Month 3 — before departure", fmtXOF(230600)]].map(([l, v, hot]) => (
-              <div key={l} style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid rgba(255,255,255,.15)", fontSize: 14.5 }}>
-                <span style={{ opacity: 0.9 }}>{l}</span><strong style={{ color: hot ? T.gold : T.paper }}>{v}</strong>
-              </div>
-            ))}
-          </div>
-        </Wrap>
-      </section>
+      {/* PLAN YOUR TRIP */}
+      <PlanTripSection go={go} />
 
       {/* PORTALS */}
       <Wrap>
