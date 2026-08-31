@@ -987,10 +987,10 @@ const ATS_SOCIALS = [
 // Featured trips shown in the hero slider (edit this list to change which trips appear).
 const HOME_POPULAR = ["goree", "bandia", "lompoul", "toubacouta", "stlouis", "food"];
 
-function HeroCard({ t, go, setBooking }) {
+function HeroCard({ t, go, setBooking, w = 300 }) {
   const img = useCoverUrl(t.id);
   return (
-    <div style={{ width: 300, flexShrink: 0, background: "rgba(255,255,255,.14)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,.22)", borderRadius: 16, padding: 12, display: "flex", gap: 12, color: "#fff" }}>
+    <div style={{ width: w, flexShrink: 0, boxSizing: "border-box", background: "rgba(255,255,255,.14)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,.22)", borderRadius: 16, padding: 12, display: "flex", gap: 12, color: "#fff" }}>
       <button onClick={() => go("tour", { id: t.id })} aria-label={t.name} style={{ width: 96, height: 100, borderRadius: 12, overflow: "hidden", border: "none", padding: 0, cursor: "pointer", flexShrink: 0, background: `linear-gradient(140deg, ${T.green}, ${T.indigo})` }}>
         {img && <img src={img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />}
       </button>
@@ -1024,12 +1024,22 @@ function HeroSlider({ go, setBooking }) {
     return () => clearTimeout(id);
   }, [i, positions]);
   const arrow = (solid) => ({ width: 40, height: 40, borderRadius: "50%", border: `1.5px solid ${solid ? "#fff" : "rgba(255,255,255,.7)"}`, background: solid ? "#fff" : "transparent", color: solid ? T.ink : "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 });
-  const step = 350;
-  const headerW = perPage * CARD + (perPage - 1) * GAP; // width of the fully-visible cards (arrows sit here)
+  const mobile = perPage === 1;
+  const wrapRef = useRef(null);
+  const [wrapW, setWrapW] = useState(0);
+  useEffect(() => {
+    const m = () => { if (wrapRef.current) setWrapW(wrapRef.current.clientWidth); };
+    m(); window.addEventListener("resize", m);
+    return () => window.removeEventListener("resize", m);
+  }, [perPage]);
+  const cardW = mobile ? (wrapW || 300) : CARD;
+  const gap = mobile ? 0 : GAP;
+  const step = mobile ? (wrapW || 300) : 350;
+  const headerW = mobile ? "100%" : perPage * CARD + (perPage - 1) * GAP;
   const PEEK = perPage > 1 ? 100 : 0;                    // extra sliver of the next card, clipped at the hero edge
-  const trackW = headerW + PEEK;
+  const trackW = mobile ? "100%" : perPage * CARD + (perPage - 1) * GAP + PEEK;
   return (
-    <div className="hero-slider" style={{ width: trackW, maxWidth: "100%", margin: "0 auto" }}>
+    <div ref={wrapRef} className="hero-slider" style={{ width: trackW, maxWidth: "100%", margin: "0 auto" }}>
       <div style={{ width: headerW, maxWidth: "100%" }}>
         <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: ".16em", textTransform: "uppercase", marginBottom: 12, opacity: 0.9 }}>Popular Tours</div>
         <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 16, paddingRight: 4 }}>
@@ -1041,8 +1051,8 @@ function HeroSlider({ go, setBooking }) {
         </div>
       </div>
       <div style={{ overflow: "hidden", width: trackW, maxWidth: "100%" }}>
-        <div style={{ display: "flex", gap: GAP, transform: `translateX(-${i * step}px)`, transition: "transform .4s ease" }}>
-          {tours.map((t) => <HeroCard key={t.id} t={t} go={go} setBooking={setBooking} />)}
+        <div style={{ display: "flex", gap, transform: `translateX(-${i * step}px)`, transition: "transform .4s ease" }}>
+          {tours.map((t) => <HeroCard key={t.id} t={t} go={go} setBooking={setBooking} w={cardW} />)}
         </div>
       </div>
     </div>
@@ -1578,7 +1588,7 @@ function TourGrid({ tours, go, setBooking, slider }) {
       <div className={slider ? "tour-strip" : ""} style={container}>
       {tours.map((t) => (
         <article key={t.id} className={slider ? "card-hover tour-card" : "card-hover"} onClick={() => go("tour", { id: t.id })} style={{ background: T.paper, border: `1px solid ${T.line}`, borderRadius: 16, overflow: "hidden", display: "flex", flexDirection: "column", cursor: "pointer", color: "#1A1A1A", ...cardExtra }}>
-          <Cover tour={t} ratio={slider ? "1 / 1" : "4 / 3"} size={58} />
+          <Cover tour={t} ratio="4 / 3" size={58} />
 
           <div style={{ padding: 14, display: "flex", flexDirection: "column", flex: 1 }}>
             <div style={{ display: "flex", gap: 5, marginBottom: 7, flexWrap: "nowrap", overflow: "hidden" }}>
