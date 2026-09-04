@@ -599,7 +599,8 @@ export default function ATSPlatformPreview() {
     if (!amount || amount <= 0) { notify("Nothing to pay for this item."); return; }
     notify("Redirecting to secure payment…");
     const rec = await saveRecord({ ...b, status: "pending" });
-    const { data, error } = await supabase.functions.invoke("create-payment", {
+    const fn = b.payMethod === "stripe" ? "create-stripe-checkout" : "create-payment";
+    const { data, error } = await supabase.functions.invoke(fn, {
       body: {
         amount,
         description: `${b.tour?.name || "ATS booking"}${b.plan === "deposit" ? " — 20% deposit" : ""}`,
@@ -615,14 +616,15 @@ export default function ATSPlatformPreview() {
   };
 
   // ---- Pay one Ma Tontine instalment via PayDunya (client-chosen amount) ----
-  const payInstallment = async (rec, amountArg) => {
+  const payInstallment = async (rec, amountArg, payMethod = "paydunya") => {
     if (!rec._id) { notify("This booking can't be paid online yet."); return; }
     const st = tontineState(rec);
     const amount = Math.round(amountArg != null ? amountArg : st.minNext);
     if (!amount || amount <= 0) { notify("Nothing left to pay on this booking."); return; }
     const nextNo = st.payCount + 1;
     notify("Redirecting to secure payment…");
-    const { data, error } = await supabase.functions.invoke("create-payment", {
+    const fn = payMethod === "stripe" ? "create-stripe-checkout" : "create-payment";
+    const { data, error } = await supabase.functions.invoke(fn, {
       body: {
         amount,
         description: `${rec.tour?.name || "ATS booking"} — payment ${nextNo}/${st.plannedTotal}`,
@@ -688,14 +690,19 @@ export default function ATSPlatformPreview() {
     const params = new URLSearchParams(window.location.search);
     const p = params.get("payment");
     const token = params.get("token");
+    const provider = params.get("provider");
     if (!p) return;
     window.history.replaceState({}, "", window.location.pathname);
     setPage({ name: "payment", status: p });
     window.scrollTo({ top: 0 });
     if (p === "success" && token) {
-      // Safety net: confirm server-side even if the async IPN didn't arrive
+      // PayDunya safety net: confirm server-side even if the async IPN didn't arrive
       supabase.functions.invoke("confirm-payment", { body: { token } })
         .then(() => supabase.auth.getSession())
+        .then(({ data }) => { const uid = data.session?.user?.id; if (uid) reloadBookings(uid); });
+    } else if (p === "success" && provider === "stripe") {
+      // Stripe: the webhook confirms authoritatively; refresh bookings so the paid status shows.
+      supabase.auth.getSession()
         .then(({ data }) => { const uid = data.session?.user?.id; if (uid) reloadBookings(uid); });
     }
   }, []);
@@ -3993,7 +4000,7 @@ function AccountPage({ user, bookings, setSignin, notify, signOut, patchBooking,
       })}
 
       {detail && <BookingDetail rec={detail} onClose={() => setDetail(null)} notify={notify} patchBooking={patchBooking} cancelBooking={cancelBooking} user={user} onPay={(r) => setPayTarget(r)} />}
-      {payTarget && <InstallmentModal rec={payTarget} onClose={() => setPayTarget(null)} onConfirm={(amt) => { const r = payTarget; setPayTarget(null); payInstallment(r, amt); }} />}
+      {payTarget && <InstallmentModal rec={payTarget} onClose={() => setPayTarget(null)} onConfirm={(amt, pm) => { const r = payTarget; setPayTarget(null); payInstallment(r, amt, pm); }} />}
     </Wrap>
   );
 }
@@ -4002,6 +4009,7 @@ function AccountPage({ user, bookings, setSignin, notify, signOut, patchBooking,
 function InstallmentModal({ rec, onClose, onConfirm }) {
   const ts = tontineState(rec);
   const [amount, setAmount] = useState(String(ts.minNext));
+  const [payMethod, setPayMethod] = useState("paydunya");
   const val = Math.round(Number(amount) || 0);
   const valid = val >= ts.minNext && val <= ts.remaining;
   const paysOff = val >= ts.remaining - 1;
@@ -4034,9 +4042,22 @@ function InstallmentModal({ rec, onClose, onConfirm }) {
           Enter an amount from {fmtXOF(ts.minNext)} to {fmtXOF(ts.remaining)}.
         </div>
       )}
+      <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+        <button onClick={() => setPayMethod("paydunya")}
+          style={{ flex: 1, border: `1.5px solid ${payMethod === "paydunya" ? T.green : T.line}`, background: payMethod === "paydunya" ? T.green : "#fff", color: payMethod === "paydunya" ? "#fff" : T.ink, borderRadius: 10, padding: "9px 8px", fontWeight: 700, fontSize: 12.5, cursor: "pointer", lineHeight: 1.3 }}>
+          Mobile Money / local<br /><span style={{ fontWeight: 500, fontSize: 11, opacity: 0.85 }}>in XOF</span>
+        </button>
+        <button onClick={() => setPayMethod("stripe")}
+          style={{ flex: 1, border: `1.5px solid ${payMethod === "stripe" ? T.green : T.line}`, background: payMethod === "stripe" ? T.green : "#fff", color: payMethod === "stripe" ? "#fff" : T.ink, borderRadius: 10, padding: "9px 8px", fontWeight: 700, fontSize: 12.5, cursor: "pointer", lineHeight: 1.3 }}>
+          International card<br /><span style={{ fontWeight: 500, fontSize: 11, opacity: 0.85 }}>in USD</span>
+        </button>
+      </div>
+      {payMethod === "stripe" && valid && (
+        <div style={{ fontSize: 12, opacity: 0.7, marginTop: 6 }}>Charged in USD: <strong>${(val / 590).toFixed(2)}</strong> (1 USD = 590 XOF).</div>
+      )}
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 14 }}>
         <button style={{ ...btnGold, fontSize: 13.5, padding: "10px 18px", opacity: valid ? 1 : 0.5, cursor: valid ? "pointer" : "not-allowed" }}
-          disabled={!valid} onClick={() => onConfirm(val)}>Pay {valid ? fmtXOF(val) : ""}</button>
+          disabled={!valid} onClick={() => onConfirm(val, payMethod)}>Pay {valid ? fmtXOF(val) : ""}</button>
         <button style={{ background: "none", border: `1.5px solid ${T.line}`, borderRadius: 10, cursor: "pointer", fontWeight: 700, color: T.ink, padding: "10px 18px", fontSize: 13.5 }}
           onClick={onClose}>Cancel</button>
       </div>
@@ -4303,6 +4324,7 @@ function BookingModal({ tour, user, onClose, onConfirm }) {
   const [sched, setSched] = useState("3m");
   const [tranches, setTranches] = useState(3); // client-chosen number of instalments for the 80% balance
   const [accepted, setAccepted] = useState(false); // mandatory T&C acceptance for paid bookings
+  const [payMethod, setPayMethod] = useState("paydunya"); // "paydunya" (mobile money/local card) | "stripe" (international card, full payment only)
   const [promoCode, setPromoCode] = useState(() => { try { return (tour.initialPromo || localStorage.getItem("ats_ref") || "").toUpperCase(); } catch { return (tour.initialPromo || "").toUpperCase(); } });
   const [promo, setPromo] = useState(null); // validate-promo result
   const [promoChecking, setPromoChecking] = useState(false);
@@ -4560,10 +4582,29 @@ function BookingModal({ tour, user, onClose, onConfirm }) {
               )}
             </div>
 
+            <div style={{ marginTop: 18 }}>
+              <div style={sect}>Payment method</div>
+              <div style={{ display: "flex", gap: 10 }}>
+                <button onClick={() => setPayMethod("paydunya")}
+                  style={{ flex: 1, border: `1.5px solid ${payMethod === "paydunya" ? T.green : T.line}`, background: payMethod === "paydunya" ? T.green : "#fff", color: payMethod === "paydunya" ? "#fff" : T.ink, borderRadius: 12, padding: "11px 8px", fontWeight: 700, fontSize: 13.5, cursor: "pointer", lineHeight: 1.35 }}>
+                  Mobile Money / local card<br /><span style={{ fontWeight: 500, fontSize: 11.5, opacity: 0.85 }}>Orange Money, Wave, Visa — in XOF</span>
+                </button>
+                <button onClick={() => setPayMethod("stripe")}
+                  style={{ flex: 1, border: `1.5px solid ${payMethod === "stripe" ? T.green : T.line}`, background: payMethod === "stripe" ? T.green : "#fff", color: payMethod === "stripe" ? "#fff" : T.ink, borderRadius: 12, padding: "11px 8px", fontWeight: 700, fontSize: 13.5, cursor: "pointer", lineHeight: 1.35 }}>
+                  International card<br /><span style={{ fontWeight: 500, fontSize: 11.5, opacity: 0.85 }}>Visa / Mastercard — in USD</span>
+                </button>
+              </div>
+              {payMethod === "stripe" && (
+                <div style={{ fontSize: 12, opacity: 0.7, marginTop: 6 }}>
+                  Charged in USD: <strong>${(((plan === "deposit" ? calc.deposit : payTotal)) / 590).toFixed(2)}</strong> (rate 1 USD = 590 XOF).
+                </div>
+              )}
+            </div>
+
             <TermsCheck checked={accepted} onChange={setAccepted} />
             <button style={{ width: "100%", marginTop: 12, background: T.gold, color: T.ink, border: "none", borderRadius: 12, padding: 14, fontWeight: 800, fontSize: 16, cursor: (billValid(bill) && dateFrom && accepted) ? "pointer" : "not-allowed", opacity: (billValid(bill) && dateFrom && accepted) ? 1 : 0.55 }}
               disabled={!billValid(bill) || !dateFrom || !accepted}
-              onClick={() => onConfirm({ tour, date: dateFrom, dateFrom, dateTo: dateFrom, adults, children, infants, plan, months, schedule: plan === "deposit" ? selectedOpt.label : "", total: calc.total, deposit: calc.deposit, contact: { ...bill, name: `${bill.firstName} ${bill.lastName}`.trim() }, addons: chosenAddons, promoCode: promoValid ? promo.code : "" })}>
+              onClick={() => onConfirm({ tour, date: dateFrom, dateFrom, dateTo: dateFrom, adults, children, infants, plan, months, schedule: plan === "deposit" ? selectedOpt.label : "", total: calc.total, deposit: calc.deposit, contact: { ...bill, name: `${bill.firstName} ${bill.lastName}`.trim() }, addons: chosenAddons, promoCode: promoValid ? promo.code : "", payMethod })}>
               {plan === "deposit" ? `Reserve with ${fmtXOF(calc.deposit)} deposit` : `Pay in full — ${fmtXOF(payTotal)}`}
             </button>
           </>
