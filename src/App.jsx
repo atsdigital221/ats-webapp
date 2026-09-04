@@ -1520,6 +1520,11 @@ function PortalTabs({ go }) {
 // e.g. tour-photos/goree/cover.jpg, tour-photos/goree/2.jpg, ...
 const PHOTO_BUCKET = "tour-photos";
 const coverUrl = (id) => supabase.storage.from(PHOTO_BUCKET).getPublicUrl(`${id}/cover.jpg`).data.publicUrl;
+// Payment provider logos (Supabase Storage · site/)
+const PAY_LOGOS = {
+  paydunya: supabase.storage.from(PHOTO_BUCKET).getPublicUrl("site/logo-paydunya.webp").data.publicUrl,
+  stripe: supabase.storage.from(PHOTO_BUCKET).getPublicUrl("site/logo-stripe.webp").data.publicUrl,
+};
 
 // Resolve a tour's cover by listing its folder — matches "cover.*" (any extension),
 // falls back to the first image. Avoids the hard-coded ".jpg" assumption.
@@ -1913,7 +1918,7 @@ function TourDetail({ tourId, go, setBooking }) {
 
         {/* Sticky booking sidebar (desktop) */}
         <aside className="tour-aside">
-          <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 16, padding: 22, position: "sticky", top: 80 }}>
+          <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 16, padding: 22, position: "sticky", top: 80, maxHeight: "calc(100vh - 100px)", overflowY: "auto" }}>
             {t.quote ? (
               <div className="disp" style={{ fontWeight: 800, fontSize: 22, color: "#1A1A1A" }}>Price on request</div>
             ) : (
@@ -1965,7 +1970,7 @@ function TourDetail({ tourId, go, setBooking }) {
                     <span style={{ color: CORP_DISCOUNT > 0 ? T.green : "inherit" }}>{fmtXOF(CORP_DISCOUNT > 0 ? corpPrice(estTotal) : estTotal)}</span>
                   </strong>
                 </div>
-                <div style={{ background: "#F8F5EF", border: "1px solid #ECE7DD", borderRadius: 10, padding: "10px 12px", fontSize: 12.5, lineHeight: 1.6, marginTop: 10, color: "#3B4A42" }}>
+                <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 10, padding: "10px 12px", fontSize: 12.5, lineHeight: 1.6, marginTop: 10, color: "#3B4A42" }}>
                   <strong style={{ color: "#1A1A1A" }}>Ma Tontine Voyage:</strong> reserve with {fmtXOF(estTotal * 0.2)} (20%), balance in instalments before departure{CORP_DISCOUNT > 0 ? " (corporate rate applies to full payment)" : ""}.
                 </div>
               </>
@@ -2106,6 +2111,7 @@ const rowsToFields = (rows) => Object.fromEntries((rows || []).map(([l, v]) => [
 
 function TripBuilder({ notify, go, user, saveRecord }) {
   const [step, setStep] = useState(0);
+  const [preview, setPreview] = useState(null); // tour shown in the detail bottom-sheet
   const [trip, setTrip] = useState({ dest: "Senegal", days: 7, pax: 2, hotel: "3★ Standard hotel", tours: [], addons: {}, transport: "Standard SUV (≤4)" });
   const toggleTour = (id) => setTrip((tr) => {
     if (tr.tours.includes(id)) { const a = { ...tr.addons }; delete a[id]; return { ...tr, tours: tr.tours.filter((x) => x !== id), addons: a }; }
@@ -2115,6 +2121,15 @@ function TripBuilder({ notify, go, user, saveRecord }) {
     const cur = { ...(tr.addons || {}) }; const list = cur[id] ? [...cur[id]] : [];
     cur[id] = list.includes(name) ? list.filter((n) => n !== name) : [...list, name];
     return { ...tr, addons: cur };
+  });
+  // Apply the popup's choices: select the tour (if needed) + set its add-ons, in sync with the Experience list.
+  const applyPreview = (id, sel) => setTrip((tr) => {
+    const tours = tr.tours.includes(id) ? tr.tours : [...tr.tours, id];
+    return { ...tr, tours, addons: { ...(tr.addons || {}), [id]: sel } };
+  });
+  const removePreview = (id) => setTrip((tr) => {
+    const a = { ...(tr.addons || {}) }; delete a[id];
+    return { ...tr, tours: tr.tours.filter((x) => x !== id), addons: a };
   });
   const [contact, setContact] = useState({ name: "", email: "", phone: "", notes: "" });
   const [sending, setSending] = useState(false);
@@ -2221,11 +2236,14 @@ function TripBuilder({ notify, go, user, saveRecord }) {
               <label style={label}>Pick your experiences ({trip.tours.length} selected)</label>
               <div style={{ maxHeight: 300, overflowY: "auto" }}>
                 {TOURS.map((t) => (
-                  <label key={t.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 4px", borderBottom: `1px solid ${T.line}`, cursor: "pointer", fontSize: 14 }}>
-                    <input type="checkbox" checked={trip.tours.includes(t.id)} style={{ width: 16, height: 16, accentColor: T.green }} onChange={() => toggleTour(t.id)} />
-                    <span style={{ flex: 1, display: "flex", alignItems: "center", gap: 8 }}><CatIcon tour={t} size={17} color={T.green} /> {t.name}</span>
-                    <strong style={{ fontSize: 13 }}>{fromPrice(t) ? fmtXOF(fromPrice(t)) : "on request"}</strong>
-                  </label>
+                  <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 4px", borderBottom: `1px solid ${T.line}`, fontSize: 14 }}>
+                    <input type="checkbox" checked={trip.tours.includes(t.id)} style={{ width: 16, height: 16, accentColor: T.green, cursor: "pointer", flexShrink: 0 }} onChange={() => toggleTour(t.id)} />
+                    <button onClick={() => setPreview(t)} title="See details" style={{ flex: 1, display: "flex", alignItems: "center", gap: 8, background: "none", border: "none", padding: 0, cursor: "pointer", textAlign: "left", color: T.ink, fontSize: 14 }}>
+                      <CatIcon tour={t} size={17} color={T.green} /> <span style={{ textDecoration: "underline", textDecorationColor: T.line, textUnderlineOffset: 3 }}>{t.name}</span>
+                    </button>
+                    <strong style={{ fontSize: 13, whiteSpace: "nowrap" }}>{fromPrice(t) ? fmtXOF(fromPrice(t)) : "on request"}</strong>
+                    <button onClick={() => setPreview(t)} aria-label="Details" style={{ background: "none", border: `1px solid ${T.line}`, borderRadius: 8, padding: "4px 9px", cursor: "pointer", color: T.green, fontSize: 12, fontWeight: 700, flexShrink: 0 }}>Détails</button>
+                  </div>
                 ))}
               </div>
 
@@ -2313,7 +2331,137 @@ function TripBuilder({ notify, go, user, saveRecord }) {
           </div>
         </aside>
       </div>
+      {preview && (
+        <TourPreviewSheet
+          tour={preview}
+          pax={trip.pax}
+          selected={trip.tours.includes(preview.id)}
+          currentAddons={(trip.addons && trip.addons[preview.id]) || []}
+          onApply={(sel) => applyPreview(preview.id, sel)}
+          onRemove={() => removePreview(preview.id)}
+          onClose={() => setPreview(null)}
+        />
+      )}
     </Wrap>
+  );
+}
+
+// Gallery arrow style for the tour bottom-sheet.
+const galArrow = (side) => ({ position: "absolute", top: "50%", [side]: 8, transform: "translateY(-50%)", width: 34, height: 34, borderRadius: "50%", background: "rgba(255,255,255,.92)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#1A1A1A", boxShadow: "0 2px 8px rgba(0,0,0,.2)" });
+
+// Detail bottom-sheet for a tour inside the Trip Builder — gallery, info, add-on picker, Add/Back.
+function TourPreviewSheet({ tour, pax = 1, selected, currentAddons, onApply, onRemove, onClose }) {
+  const price = fromPrice(tour);
+  const [imgs, setImgs] = useState([]);
+  const [idx, setIdx] = useState(0);
+  const [sel, setSel] = useState(() => (Array.isArray(currentAddons) ? currentAddons : []));
+  const toggle = (name) => setSel((s) => (s.includes(name) ? s.filter((n) => n !== name) : [...s, name]));
+
+  useEffect(() => {
+    let alive = true;
+    supabase.storage.from(PHOTO_BUCKET).list(tour.id, { limit: 100, sortBy: { column: "name", order: "asc" } }).then(({ data }) => {
+      if (!alive || !data) return;
+      const urls = data.filter((f) => f.name && !f.name.startsWith("."))
+        .map((f) => supabase.storage.from(PHOTO_BUCKET).getPublicUrl(`${tour.id}/${f.name}`).data.publicUrl);
+      urls.sort((a, b) => (b.includes("/cover.") ? 1 : 0) - (a.includes("/cover.") ? 1 : 0)); // cover first
+      setImgs(urls); setIdx(0);
+    });
+    return () => { alive = false; };
+  }, [tour.id]);
+
+  const n = imgs.length;
+  const move = (d) => setIdx((i) => (n ? (i + d + n) % n : 0));
+
+  return createPortal(
+    <div role="dialog" aria-modal="true" onClick={onClose}
+      style={{ position: "fixed", inset: 0, zIndex: 80, background: "rgba(20,32,26,.55)", display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+      <div onClick={(e) => e.stopPropagation()}
+        style={{ background: "#fff", color: T.ink, width: "100%", maxWidth: 640, maxHeight: "90vh", borderRadius: "20px 20px 0 0", display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "0 -8px 40px rgba(0,0,0,.25)" }}>
+        <div style={{ overflowY: "auto" }}>
+          {/* Gallery */}
+          {n > 0 && (
+            <div>
+              <div style={{ position: "relative", background: "#000" }}>
+                <img src={imgs[idx]} alt={`${tour.name} ${idx + 1}`} style={{ width: "100%", height: 220, objectFit: "cover", display: "block" }} />
+                {n > 1 && (
+                  <>
+                    <button onClick={() => move(-1)} aria-label="Previous" style={galArrow("left")}><ChevronLeft size={20} /></button>
+                    <button onClick={() => move(1)} aria-label="Next" style={galArrow("right")}><ChevronRight size={20} /></button>
+                    <div style={{ position: "absolute", bottom: 8, right: 10, background: "rgba(0,0,0,.55)", color: "#fff", fontSize: 12, fontWeight: 700, borderRadius: 999, padding: "2px 9px" }}>{idx + 1}/{n}</div>
+                  </>
+                )}
+              </div>
+              {n > 1 && (
+                <div style={{ display: "flex", gap: 6, padding: "8px 12px 0", overflowX: "auto" }}>
+                  {imgs.map((u, i) => (
+                    <button key={i} onClick={() => setIdx(i)} aria-label={`Photo ${i + 1}`} style={{ flex: "0 0 auto", width: 56, height: 42, borderRadius: 8, overflow: "hidden", border: `2px solid ${i === idx ? T.green : "transparent"}`, padding: 0, cursor: "pointer", background: "none" }}>
+                      <img src={u} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          <div style={{ padding: "14px 20px 4px" }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#8A968E", textTransform: "uppercase", letterSpacing: ".1em" }}>{tour.pole} · {tour.dur}{tour.tag ? ` · ${tour.tag}` : ""}</div>
+            <h3 className="disp" style={{ fontSize: 22, fontWeight: 800, margin: "6px 0 8px", color: "#1A1A1A", display: "flex", alignItems: "center", gap: 8, lineHeight: 1.2 }}><CatIcon tour={tour} size={20} color={T.green} /> {tour.name}</h3>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+              <span className="disp" style={{ fontWeight: 800, fontSize: 20, color: "#1A1A1A" }}>{price ? fmtXOF(price) : "On request"}</span>
+              {price ? <span style={{ fontSize: 12.5, opacity: 0.6 }}>/ person (group rate)</span> : null}
+            </div>
+            <p style={{ fontSize: 14, lineHeight: 1.6, color: "#3B4A42", marginTop: 10 }}>{tour.desc}</p>
+            {tour.sub && <div style={{ fontSize: 12.5, opacity: 0.7, marginTop: 4, lineHeight: 1.5 }}>{tour.sub}</div>}
+
+            {Array.isArray(tour.steps) && tour.steps.length > 0 && (
+              <div style={{ marginTop: 16 }}>
+                <div style={sect}>Itinerary &amp; inclusions</div>
+                <ol style={{ margin: 0, padding: 0, listStyle: "none" }}>
+                  {tour.steps.map((s, i) => (
+                    <li key={i} style={{ display: "flex", gap: 10, padding: "7px 0", borderBottom: `1px solid ${T.line}`, fontSize: 13.5, lineHeight: 1.5, color: "#3B4A42" }}>
+                      <span style={{ width: 22, height: 22, borderRadius: "50%", background: T.paperDark, color: T.green, fontWeight: 800, fontSize: 12, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{i + 1}</span>
+                      <span>{s}</span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            )}
+
+            {Array.isArray(tour.addons) && tour.addons.length > 0 && (
+              <div style={{ marginTop: 16, marginBottom: 8 }}>
+                <div style={sect}>Add-ons (optional) — {sel.length} selected</div>
+                {tour.addons.map((a) => {
+                  const on = sel.includes(a.name);
+                  return (
+                    <label key={a.name} style={{ display: "flex", gap: 9, alignItems: "flex-start", padding: "7px 0", fontSize: 13.5, cursor: "pointer", lineHeight: 1.4, borderBottom: `1px solid ${T.line}` }}>
+                      <input type="checkbox" checked={on} onChange={() => toggle(a.name)} style={{ width: 16, height: 16, accentColor: T.green, marginTop: 2, flexShrink: 0 }} />
+                      <span style={{ flex: 1, color: "#3B4A42" }}>{a.name}</span>
+                      <strong style={{ whiteSpace: "nowrap", fontSize: 12.5 }}>{a.price ? fmtXOF(a.per === "person" ? a.price * pax : a.price) + (a.per === "person" ? ` (×${pax})` : "") : "on request"}</strong>
+                    </label>
+                  );
+                })}
+                <div style={{ fontSize: 11.5, opacity: 0.6, marginTop: 6 }}>Your selection is saved to the trip when you tap “{selected ? "Enregistrer" : "Ajouter à mon voyage"}”.</div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div style={{ display: "flex", gap: 10, padding: "12px 20px", borderTop: `1px solid ${T.line}`, background: "#fff", alignItems: "center" }}>
+          <button onClick={onClose} style={{ flex: "0 0 auto", background: "#fff", color: "#1A1A1A", border: `1.5px solid ${T.line}`, borderRadius: 12, padding: "12px 16px", fontWeight: 700, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+            <ChevronLeft size={16} /> Retour
+          </button>
+          {selected && (
+            <button onClick={() => { onRemove(); onClose(); }} style={{ flex: "0 0 auto", background: "#fff", color: "#B3261E", border: "1.5px solid #E7C9C6", borderRadius: 12, padding: "12px 14px", fontWeight: 700, fontSize: 13.5, cursor: "pointer" }}>
+              Retirer
+            </button>
+          )}
+          <button onClick={() => { onApply(sel); onClose(); }} style={{ flex: 1, background: T.gold, color: T.ink, border: "none", borderRadius: 12, padding: "12px 16px", fontWeight: 800, fontSize: 14.5, cursor: "pointer" }}>
+            {selected ? "Enregistrer" : "Ajouter à mon voyage"}
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -4044,12 +4192,14 @@ function InstallmentModal({ rec, onClose, onConfirm }) {
       )}
       <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
         <button onClick={() => setPayMethod("paydunya")}
-          style={{ flex: 1, border: `1.5px solid ${payMethod === "paydunya" ? T.green : T.line}`, background: payMethod === "paydunya" ? T.green : "#fff", color: payMethod === "paydunya" ? "#fff" : T.ink, borderRadius: 10, padding: "9px 8px", fontWeight: 700, fontSize: 12.5, cursor: "pointer", lineHeight: 1.3 }}>
-          Mobile Money / local<br /><span style={{ fontWeight: 500, fontSize: 11, opacity: 0.85 }}>in XOF</span>
+          style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 5, background: "#fff", color: T.ink, border: `2px solid ${payMethod === "paydunya" ? T.green : T.line}`, borderRadius: 10, padding: "9px 8px", cursor: "pointer", boxShadow: payMethod === "paydunya" ? "0 0 0 3px rgba(0,146,69,.12)" : "none" }}>
+          <img src={PAY_LOGOS.paydunya} alt="PayDunya" style={{ height: 17, maxWidth: "75%", objectFit: "contain" }} />
+          <span style={{ fontWeight: 700, fontSize: 12 }}>Mobile Money / local <span style={{ fontWeight: 500, opacity: 0.7 }}>· XOF</span></span>
         </button>
         <button onClick={() => setPayMethod("stripe")}
-          style={{ flex: 1, border: `1.5px solid ${payMethod === "stripe" ? T.green : T.line}`, background: payMethod === "stripe" ? T.green : "#fff", color: payMethod === "stripe" ? "#fff" : T.ink, borderRadius: 10, padding: "9px 8px", fontWeight: 700, fontSize: 12.5, cursor: "pointer", lineHeight: 1.3 }}>
-          International card<br /><span style={{ fontWeight: 500, fontSize: 11, opacity: 0.85 }}>in USD</span>
+          style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 5, background: "#fff", color: T.ink, border: `2px solid ${payMethod === "stripe" ? T.green : T.line}`, borderRadius: 10, padding: "9px 8px", cursor: "pointer", boxShadow: payMethod === "stripe" ? "0 0 0 3px rgba(0,146,69,.12)" : "none" }}>
+          <img src={PAY_LOGOS.stripe} alt="Stripe" style={{ height: 17, maxWidth: "75%", objectFit: "contain" }} />
+          <span style={{ fontWeight: 700, fontSize: 12 }}>International card <span style={{ fontWeight: 500, opacity: 0.7 }}>· USD</span></span>
         </button>
       </div>
       {payMethod === "stripe" && valid && (
@@ -4586,12 +4736,16 @@ function BookingModal({ tour, user, onClose, onConfirm }) {
               <div style={sect}>Payment method</div>
               <div style={{ display: "flex", gap: 10 }}>
                 <button onClick={() => setPayMethod("paydunya")}
-                  style={{ flex: 1, border: `1.5px solid ${payMethod === "paydunya" ? T.green : T.line}`, background: payMethod === "paydunya" ? T.green : "#fff", color: payMethod === "paydunya" ? "#fff" : T.ink, borderRadius: 12, padding: "11px 8px", fontWeight: 700, fontSize: 13.5, cursor: "pointer", lineHeight: 1.35 }}>
-                  Mobile Money / local card<br /><span style={{ fontWeight: 500, fontSize: 11.5, opacity: 0.85 }}>Orange Money, Wave, Visa — in XOF</span>
+                  style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 7, background: "#fff", color: T.ink, border: `2px solid ${payMethod === "paydunya" ? T.green : T.line}`, borderRadius: 12, padding: "12px 8px", cursor: "pointer", boxShadow: payMethod === "paydunya" ? "0 0 0 3px rgba(0,146,69,.12)" : "none" }}>
+                  <img src={PAY_LOGOS.paydunya} alt="PayDunya" style={{ height: 20, maxWidth: "72%", objectFit: "contain" }} />
+                  <span style={{ fontWeight: 700, fontSize: 12.5 }}>Mobile Money / local card</span>
+                  <span style={{ fontWeight: 500, fontSize: 11, opacity: 0.7, lineHeight: 1.3, textAlign: "center" }}>Orange Money, Wave, Visa — in XOF</span>
                 </button>
                 <button onClick={() => setPayMethod("stripe")}
-                  style={{ flex: 1, border: `1.5px solid ${payMethod === "stripe" ? T.green : T.line}`, background: payMethod === "stripe" ? T.green : "#fff", color: payMethod === "stripe" ? "#fff" : T.ink, borderRadius: 12, padding: "11px 8px", fontWeight: 700, fontSize: 13.5, cursor: "pointer", lineHeight: 1.35 }}>
-                  International card<br /><span style={{ fontWeight: 500, fontSize: 11.5, opacity: 0.85 }}>Visa / Mastercard — in USD</span>
+                  style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 7, background: "#fff", color: T.ink, border: `2px solid ${payMethod === "stripe" ? T.green : T.line}`, borderRadius: 12, padding: "12px 8px", cursor: "pointer", boxShadow: payMethod === "stripe" ? "0 0 0 3px rgba(0,146,69,.12)" : "none" }}>
+                  <img src={PAY_LOGOS.stripe} alt="Stripe" style={{ height: 20, maxWidth: "72%", objectFit: "contain" }} />
+                  <span style={{ fontWeight: 700, fontSize: 12.5 }}>International card</span>
+                  <span style={{ fontWeight: 500, fontSize: 11, opacity: 0.7, lineHeight: 1.3, textAlign: "center" }}>Visa / Mastercard — in USD</span>
                 </button>
               </div>
               {payMethod === "stripe" && (
