@@ -668,7 +668,25 @@ export default function ATSPlatformPreview() {
   };
 
   const [pendingPay, setPendingPay] = useState(null);
-  const go = (name, params = {}) => { setPage({ name, ...params }); window.scrollTo({ top: 0 }); };
+  const go = (name, params = {}) => {
+    const p = { name, ...params };
+    try { window.history.pushState({ atsPage: p }, ""); } catch { /* ignore */ }
+    setPage(p);
+    window.scrollTo({ top: 0 });
+  };
+
+  // Browser back/forward: keep in-app navigation in the history stack so the
+  // back button steps through pages instead of leaving the site.
+  useEffect(() => {
+    try { window.history.replaceState({ atsPage: page }, ""); } catch { /* ignore */ }
+    const onPop = (e) => {
+      const p = (e.state && e.state.atsPage) || { name: "home" };
+      setPage(p);
+      window.scrollTo({ top: 0 });
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
   const confirmBooking = (b) => {
     setBooking(null);
     // Quote / itinerary requests: no payment, just save + notify
@@ -1025,7 +1043,7 @@ function HeroCard({ t, go, setBooking, w = 300 }) {
       </button>
       <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
         <div className="disp" style={{ fontWeight: 700, fontSize: 15.5, lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.name.split(" — ")[0]}</div>
-        <div style={{ fontWeight: 700, fontSize: 13.5, marginTop: 3 }}>{fmtXOF(fromPrice(t))} <span style={{ fontWeight: 500, opacity: .8, fontSize: 11.5 }}>/ person</span></div>
+        <div style={{ fontWeight: 700, fontSize: 13.5, marginTop: 3 }}>from {fmtXOF(fromPrice(t))} <span style={{ fontWeight: 500, opacity: .8, fontSize: 11.5 }}>/ person · 5+ pax</span></div>
         <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, opacity: .85, marginTop: 5 }}><Clock size={13} /> {t.dur}</div>
         <button onClick={() => setBooking(t)} style={{ marginTop: "auto", alignSelf: "flex-start", background: "transparent", border: "1px solid rgba(255,255,255,.65)", color: "#fff", borderRadius: 999, padding: "6px 16px", fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}>Book Now</button>
       </div>
@@ -1364,33 +1382,8 @@ function Home({ go, notify, setBooking, filters, setFilters, setChat, addBooking
         </div>
       </header>
 
-      {/* HOW IT WORKS */}
-      <section style={{ background: "#F6FAF7" }}>
-        <Wrap>
-          <div style={{ textAlign: "center", marginBottom: 30 }}>
-            <div className="about-script" style={{ fontSize: 24, fontWeight: 600, color: T.green, lineHeight: 1 }}>How it works</div>
-            <h2 className="disp" style={{ fontWeight: 800, fontSize: "clamp(26px,3.6vw,38px)", letterSpacing: "-0.02em", color: T.ink, margin: "2px 0 8px" }}>Plan your trip in 4 simple steps</h2>
-            <p style={{ maxWidth: 560, margin: "0 auto", color: "#5A6B61", fontSize: 15.5, lineHeight: 1.6 }}>From choosing an experience to travelling on the ground — everything ATS offers, in one simple flow.</p>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 18 }}>
-            {[
-              [Compass, "Choose your experience", "Browse 35+ tours, transfers and flights — or build a fully custom trip."],
-              [CalendarCheck, "Reserve with 20%", "Secure any trip with a small deposit through Ma Tontine Voyage."],
-              [Clock, "Pay in instalments", "Spread the balance until departure — card, Wave, Orange Money, PayPal…"],
-              [Plane, "Travel with ATS", "Meet your local team on the ground and enjoy Senegal, worry-free."],
-            ].map(([Ico, title, body], i) => (
-              <div key={title} style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 18, padding: "22px 20px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
-                  <span style={{ width: 40, height: 40, borderRadius: 12, background: "rgba(0,146,69,.10)", color: T.green, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Ico size={20} strokeWidth={2} /></span>
-                  <span className="disp" style={{ fontSize: 34, fontWeight: 800, color: "rgba(11,46,27,.12)", lineHeight: 1 }}>{i + 1}</span>
-                </div>
-                <div className="disp" style={{ fontWeight: 800, fontSize: 17, color: T.ink, marginBottom: 6 }}>{title}</div>
-                <p style={{ margin: 0, fontSize: 14, lineHeight: 1.6, color: "#5A6B61" }}>{body}</p>
-              </div>
-            ))}
-          </div>
-        </Wrap>
-      </section>
+      {/* PLAN YOUR TRIP */}
+      <PlanTripSection go={go} />
 
       {/* SERVICE CATEGORIES */}
       <section style={{ background: "#fff" }}>
@@ -1461,7 +1454,7 @@ function Home({ go, notify, setBooking, filters, setFilters, setChat, addBooking
       </section>
 
       {/* QUICK TRANSFER BOOKING (ATS Logistics) */}
-      <section style={{ background: "#F8F8F8" }}>
+      <section style={{ background: "#fff" }}>
         <Wrap style={{ padding: "36px 20px" }}>
           <div style={{ display: "flex", alignItems: "end", gap: 12, flexWrap: "wrap", marginBottom: 16 }}>
             <div><Eyebrow>ATS Logistics</Eyebrow><h2 className="disp" style={{ fontSize: 24, fontWeight: 800, margin: "6px 0 0" }}>Need a transfer or a car? Book it now.</h2></div>
@@ -1469,7 +1462,7 @@ function Home({ go, notify, setBooking, filters, setFilters, setChat, addBooking
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 20, alignItems: "stretch" }}>
             <TransferWidget addBooking={addBookingHome} compact user={user} />
-            <div style={{ borderRadius: 16, overflow: "hidden", minHeight: 320, background: `linear-gradient(160deg, rgba(0,50,25,.25), rgba(0,107,51,.15)), url("${supabase.storage.from(PHOTO_BUCKET).getPublicUrl("site/transfer.jpg").data.publicUrl}") center/cover no-repeat, linear-gradient(140deg, ${T.green}, ${T.indigo})` }} />
+            <div style={{ borderRadius: 16, overflow: "hidden", minHeight: 320, background: `linear-gradient(160deg, rgba(0,0,0,.35), rgba(0,0,0,.20)), url("${supabase.storage.from(PHOTO_BUCKET).getPublicUrl("site/transfer.jpg").data.publicUrl}") center/cover no-repeat, linear-gradient(140deg, ${T.green}, ${T.indigo})` }} />
           </div>
         </Wrap>
       </section>
@@ -1484,9 +1477,6 @@ function Home({ go, notify, setBooking, filters, setFilters, setChat, addBooking
           <TourGrid tours={featured} go={go} setBooking={setBooking} favorites={favorites} toggleFavorite={toggleFavorite} slider />
         </Wrap>
       </section>
-
-      {/* PLAN YOUR TRIP */}
-      <PlanTripSection go={go} />
 
       {/* PORTALS */}
       <Wrap>
@@ -1639,16 +1629,15 @@ function TourGrid({ tours, go, setBooking, slider, favorites = [], toggleFavorit
               {!t.quote && <span style={pill()}>Group discounts</span>}
             </div>
             <h3 className="disp" style={{ fontSize: 14.5, fontWeight: 700, lineHeight: 1.2, margin: 0, color: "#1A1A1A" }}>{t.name}</h3>
-            <p style={{ fontSize: 12.5, lineHeight: 1.45, color: "#555", flex: 1, marginTop: 5, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{t.desc}</p>
-            <div style={{ fontSize: 11.5, color: "#777", margin: "8px 0 4px" }}>{t.dur}</div>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ fontSize: 11.5, color: "#777", margin: "6px 0 0" }}>{t.dur}</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: "auto", paddingTop: 12 }}>
               <div style={{ minWidth: 0 }}>
                 {t.quote ? (
                   <div style={{ fontWeight: 700, fontSize: 14, color: "#1A1A1A" }}>Price on request</div>
                 ) : (
                   <>
-                    <div style={{ fontWeight: 700, fontSize: 14, color: "#1A1A1A" }}><PrefPrice base={fromPrice(t)} /></div>
-                    <div style={{ fontSize: 11, color: "#888" }}>group rate · 1–2 pax: {fmtXOF(t.grid.p12.a)}</div>
+                    <div style={{ fontWeight: 700, fontSize: 14, color: "#1A1A1A" }}><PrefPrice base={fromPrice(t)} pp={false} /> <span style={{ fontWeight: 500, fontSize: 11.5, color: "#888" }}>for 5+ pax</span></div>
+                    <div style={{ fontSize: 11, color: "#888" }}>1–2 pax: {fmtXOF(t.grid.p12.a)}</div>
                   </>
                 )}
               </div>
@@ -1966,6 +1955,7 @@ function TourDetail({ tourId, go, setBooking, favorites = [], toggleFavorite }) 
                   <span style={{ fontSize: 13, opacity: 0.6 }}>/ person</span>
                 </div>
                 <div style={{ fontSize: 12.5, opacity: 0.6 }}>{tierLabel[tier]}{CORP_DISCOUNT > 0 ? ` · corporate rate −${CORP_DISCOUNT}% (paid in full)` : ""}</div>
+                {tier !== "grp" && <div style={{ fontSize: 12, color: T.green, fontWeight: 600, marginTop: 3 }}>from {fmtXOF(fromPrice(t))} / person at 5+ pax</div>}
 
                 <div style={{ marginTop: 14 }}>
                   <label style={label}>Travelers</label>
@@ -2232,6 +2222,32 @@ function TripBuilder({ notify, go, user, saveRecord }) {
 
   return (
     <Wrap>
+      {/* HOW IT WORKS — intro at the top of the Trip Builder */}
+      <div style={{ marginBottom: 34 }}>
+        <div style={{ textAlign: "center", marginBottom: 26 }}>
+          <div className="about-script" style={{ fontSize: 24, fontWeight: 600, color: T.green, lineHeight: 1 }}>How it works</div>
+          <h2 className="disp" style={{ fontWeight: 800, fontSize: "clamp(26px,3.6vw,38px)", letterSpacing: "-0.02em", color: T.ink, margin: "2px 0 8px" }}>Plan your trip in 4 simple steps</h2>
+          <p style={{ maxWidth: 560, margin: "0 auto", color: "#5A6B61", fontSize: 15.5, lineHeight: 1.6 }}>From choosing an experience to travelling on the ground — everything ATS offers, in one simple flow.</p>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 18 }}>
+          {[
+            [Compass, "Choose your experience", "Browse 35+ tours, transfers and flights — or build a fully custom trip."],
+            [CalendarCheck, "Reserve with 20%", "Secure any trip with a small deposit through Ma Tontine Voyage."],
+            [Clock, "Pay in instalments", "Spread the balance until departure — card, Wave, Orange Money, PayPal…"],
+            [Plane, "Travel with ATS", "Meet your local team on the ground and enjoy Senegal, worry-free."],
+          ].map(([Ico, title, body], i) => (
+            <div key={title} style={{ background: "#F6FAF7", border: `1px solid ${T.line}`, borderRadius: 18, padding: "22px 20px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+                <span style={{ width: 40, height: 40, borderRadius: 12, background: "rgba(0,146,69,.10)", color: T.green, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Ico size={20} strokeWidth={2} /></span>
+                <span className="disp" style={{ fontSize: 34, fontWeight: 800, color: "rgba(11,46,27,.12)", lineHeight: 1 }}>{i + 1}</span>
+              </div>
+              <div className="disp" style={{ fontWeight: 800, fontSize: 17, color: T.ink, marginBottom: 6 }}>{title}</div>
+              <p style={{ margin: 0, fontSize: 14, lineHeight: 1.6, color: "#5A6B61" }}>{body}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
       <Eyebrow>Dynamic trip builder</Eyebrow><H2>Build your own trip</H2>
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 18 }}>
         {steps.map((s, i) => (
