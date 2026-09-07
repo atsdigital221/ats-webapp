@@ -2036,25 +2036,23 @@ function TourDetail({ tourId, go, setBooking, favorites = [], toggleFavorite }) 
           <button style={{ ...btnGold, width: "100%", borderRadius: 12, background: T.indigo, color: "#fff" }} onClick={() => openBooking("quote")}>Request a quote</button>
         ) : (
           <>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontWeight: 800, fontSize: 18, color: "#1A1A1A" }} className="disp">{fmtXOF(estTotal)}</div>
-                <div style={{ fontSize: 11.5, opacity: 0.6 }}>{fmtXOF(ppUnit)} /pers · {pax} pax</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 7 }}>
+              <div style={{ minWidth: 0, flexShrink: 0 }}>
+                <div style={{ fontWeight: 800, fontSize: 16, color: "#1A1A1A" }} className="disp">{fmtXOF(estTotal)}</div>
+                <div style={{ fontSize: 11, opacity: 0.6 }}>{fmtXOF(ppUnit)} /pers · {pax} pax</div>
               </div>
-              <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6 }}>
                 <button onClick={() => setPax(Math.max(1, pax - 1))} style={btnCircle} aria-label="Fewer">−</button>
-                <span style={{ fontWeight: 700, minWidth: 16, textAlign: "center" }}>{pax}</span>
+                <span style={{ fontWeight: 700, minWidth: 14, textAlign: "center" }}>{pax}</span>
                 <button onClick={() => setPax(pax + 1)} style={btnCircle} aria-label="More">+</button>
+                <input type="date" min={minDate} value={dateFrom} onChange={(e) => setTripDate(e.target.value)} style={{ ...input, width: 132, minWidth: 0, flexShrink: 1, padding: "9px 10px", fontSize: 13, WebkitAppearance: "none", appearance: "none" }} />
               </div>
-            </div>
-            <div style={{ marginBottom: 8 }}>
-              <input type="date" min={minDate} value={dateFrom} onChange={(e) => setTripDate(e.target.value)} style={input} />
             </div>
             <div style={{ display: "flex", gap: 8 }}>
-              <button disabled={!dateOk} style={{ ...btnGold, flex: 1, borderRadius: 12, fontSize: 14, padding: "12px 8px", opacity: dateOk ? 1 : 0.5 }} onClick={() => dateOk && openBooking("full")}>Pay in full</button>
-              <button disabled={!tontinePossible} style={{ flex: 1, background: "#1A1A1A", color: "#fff", border: "none", borderRadius: 12, padding: "12px 8px", fontWeight: 800, cursor: tontinePossible ? "pointer" : "not-allowed", fontSize: 14, opacity: tontinePossible ? 1 : 0.5 }} onClick={() => tontinePossible && openBooking("deposit")}>Ma Tontine</button>
+              <button disabled={!dateOk} style={{ ...btnGold, flex: 1, borderRadius: 12, fontSize: 14, padding: "11px 8px", opacity: dateOk ? 1 : 0.5 }} onClick={() => dateOk && openBooking("full")}>Pay in full</button>
+              <button disabled={!tontinePossible} style={{ flex: 1, background: "#1A1A1A", color: "#fff", border: "none", borderRadius: 12, padding: "11px 8px", fontWeight: 800, cursor: tontinePossible ? "pointer" : "not-allowed", fontSize: 14, opacity: tontinePossible ? 1 : 0.5 }} onClick={() => tontinePossible && openBooking("deposit")}>Ma Tontine</button>
             </div>
-            {!dateOk && <div style={{ fontSize: 11.5, color: "#8A968E", marginTop: 6, textAlign: "center" }}>Choose a travel date above to book.</div>}
+            {!dateOk && <div style={{ fontSize: 11, color: "#8A968E", marginTop: 5, textAlign: "center" }}>Choose a travel date to book.</div>}
           </>
         )}
       </div>
