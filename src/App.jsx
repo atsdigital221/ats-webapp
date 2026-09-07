@@ -4556,76 +4556,58 @@ function BookingModal({ tour, user, onClose, onConfirm }) {
     </div>
   );
 
+  const headerBlock = (
+    <div style={{ marginBottom: 6 }}>
+      <div style={{ fontSize: 12, fontWeight: 700, color: "#8A968E", textTransform: "uppercase", letterSpacing: ".1em" }}>{tour.pole} · {tour.dur}</div>
+      <h3 className="disp" style={{ fontSize: 24, fontWeight: 800, lineHeight: 1.2, margin: "6px 0 0", color: "#1A1A1A" }}>{tour.name}</h3>
+    </div>
+  );
+
+  if (tour.quote) {
+    return (
+      <Wrap>
+        <button onClick={onClose} style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "none", border: "none", cursor: "pointer", color: T.ink, fontWeight: 700, fontSize: 14, padding: 0, marginBottom: 14 }}>
+          <ChevronLeft size={18} /> Back
+        </button>
+        <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 20, width: "100%", maxWidth: 720, margin: "0 auto", padding: "26px 30px", color: T.ink }}>
+          {headerBlock}
+          <div style={sect}>Travel date</div>
+          <input type="date" min={minDate} value={dateFrom} onChange={(e) => setTripDate(e.target.value)} style={input} />
+          <div style={sect}>Travelers</div>
+          <Counter label="Adults" sub="" value={adults} set={setAdults} min={1} />
+          <Counter label="Children (3–12)" sub="" value={children} set={setChildren} />
+          <Counter label="Infants (under 3)" sub="Free" value={infants} set={setInfants} />
+          <div style={sect}>Your request</div>
+          <textarea style={{ ...input, minHeight: 70, resize: "vertical" }} placeholder="Dates flexible? Interests? Budget range?" value={msg} onChange={(e) => setMsg(e.target.value)} />
+          <button style={{ width: "100%", marginTop: 14, background: T.indigo, color: "#fff", border: "none", borderRadius: 12, padding: 14, fontWeight: 800, fontSize: 16, cursor: "pointer" }}
+            onClick={() => onConfirm({ tour, date, adults, children, infants, plan: "quote", months: 0, total: 0, deposit: 0 })}>
+            Send quote request
+          </button>
+          <div style={{ marginTop: 10, fontSize: 12, opacity: 0.6, textAlign: "center" }}>An ATS advisor replies with a personalised price by email/WhatsApp.</div>
+        </div>
+      </Wrap>
+    );
+  }
+
   return (
     <Wrap>
       <button onClick={onClose} style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "none", border: "none", cursor: "pointer", color: T.ink, fontWeight: 700, fontSize: 14, padding: 0, marginBottom: 14 }}>
         <ChevronLeft size={18} /> Back
       </button>
-      <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 20, width: "100%", maxWidth: 720, margin: "0 auto", padding: "26px 30px", color: T.ink }}>
-        <div style={{ marginBottom: 6 }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: "#8A968E", textTransform: "uppercase", letterSpacing: ".1em" }}>{tour.pole} · {tour.dur}</div>
-          <h3 className="disp" style={{ fontSize: 24, fontWeight: 800, lineHeight: 1.2, margin: "6px 0 0", color: "#1A1A1A" }}>{tour.name}</h3>
-        </div>
-
-        {tour.agentBooking && (
-          <div style={{ marginTop: 12, background: "#F8F5EF", border: "1px solid #ECE7DD", borderRadius: 10, padding: "10px 13px", fontSize: 13, lineHeight: 1.5, color: "#3B4A42", display: "flex", gap: 8, alignItems: "flex-start" }}>
-            <UserRound size={16} color={T.green} style={{ flexShrink: 0, marginTop: 1 }} />
-            <span>You're booking on behalf of a client{tour.initialPromo ? <> — your code <strong>{tour.initialPromo}</strong> is applied</> : ""}. Enter the client's billing details below.</span>
-          </div>
-        )}
-
-        <div style={sect}>Travel date</div>
-        <input type="date" min={minDate} value={dateFrom} onChange={(e) => setTripDate(e.target.value)} style={input} />
-
-        <div style={sect}>Travelers</div>
-        <Counter label="Adults" sub={tour.quote ? "" : `${fmtXOF(tg.a)} each at current basis`} value={adults} set={setAdults} min={1} />
-        <Counter label="Children (3–12)" sub={tour.quote ? "" : tg.c ? `${fmtXOF(tg.c)} each` : "child rate confirmed at booking"} value={children} set={setChildren} />
-        <Counter label="Infants (under 3)" sub="Free" value={infants} set={setInfants} />
-        {!tour.quote && (
-          <div style={{ marginTop: 10, background: "#f8f8f8", border: "1px solid #ECECEC", borderRadius: 10, padding: "10px 13px", fontSize: 13.5, color: "#3B4A42" }}>
-            Basis applied: <strong style={{ color: "#1A1A1A" }}>{tierLabel[tier]}</strong> — {tier !== "grp" ? "add travelers to unlock lower per-person rates." : "best per-person rate unlocked."}
-          </div>
-        )}
-
-        {tour.quote ? (
-          <>
-            <div style={sect}>Your request</div>
-            <textarea style={{ ...input, minHeight: 70, resize: "vertical" }} placeholder="Dates flexible? Interests? Budget range?" value={msg} onChange={(e) => setMsg(e.target.value)} />
-            <button style={{ width: "100%", marginTop: 14, background: T.indigo, color: "#fff", border: "none", borderRadius: 12, padding: 14, fontWeight: 800, fontSize: 16, cursor: "pointer" }}
-              onClick={() => onConfirm({ tour, date, adults, children, infants, plan: "quote", months: 0, total: 0, deposit: 0 })}>
-              Send quote request
-            </button>
-            <div style={{ marginTop: 10, fontSize: 12, opacity: 0.6, textAlign: "center" }}>An ATS advisor replies with a personalised price by email/WhatsApp.</div>
-          </>
-        ) : (
-          <>
-            {rates && (
-              <>
-                <div style={sect}>Transport — choose your vehicle (optional)</div>
-                <select value={vehicle} onChange={(e) => setVehicle(+e.target.value)} style={{ ...input, fontWeight: 600 }}>
-                  <option value={-1}>No transport — I'll arrange my own</option>
-                  {VEHICLES.map((v, i) => (
-                    <option key={v.name} value={i} disabled={v.cap < seats}>
-                      {v.name} · up to {v.cap} — {fmtXOF(rates[i])}{v.cap < seats ? " (too small for your group)" : ""}
-                    </option>
-                  ))}
-                </select>
-                <div style={{ fontSize: 12.5, opacity: 0.65, marginTop: 6 }}>Per vehicle, round trip / at disposal for the day — ATS Logistics rate card.</div>
-              </>
+      <div style={{ maxWidth: 1040, margin: "0 auto" }}>
+        <div className="checkout-grid" style={{ display: "grid", gridTemplateColumns: "minmax(0,1.6fr) minmax(300px,1fr)", gap: 24, alignItems: "start" }}>
+          {/* LEFT — booking + billing + payment */}
+          <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 20, padding: "26px 30px", color: T.ink }}>
+            {tour.agentBooking && (
+              <div style={{ marginBottom: 4, background: "#F8F5EF", border: "1px solid #ECE7DD", borderRadius: 10, padding: "10px 13px", fontSize: 13, lineHeight: 1.5, color: "#3B4A42", display: "flex", gap: 8, alignItems: "flex-start" }}>
+                <UserRound size={16} color={T.green} style={{ flexShrink: 0, marginTop: 1 }} />
+                <span>You're booking on behalf of a client{tour.initialPromo ? <> — your code <strong>{tour.initialPromo}</strong> is applied</> : ""}. Enter the client's billing details below.</span>
+              </div>
             )}
 
-            {tour.addons.length > 0 && (
-              <>
-                <div style={sect}>Add-ons</div>
-                {tour.addons.map((x) => (
-                  <label key={x.name} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 0", borderBottom: `1px solid ${T.line}`, cursor: "pointer", fontSize: 14 }}>
-                    <input type="checkbox" checked={addons.includes(x.name)} onChange={() => toggle(x.name)} style={{ width: 17, height: 17, accentColor: T.green, flexShrink: 0 }} />
-                    <span style={{ flex: 1 }}>{x.name}</span>
-                    <strong style={{ whiteSpace: "nowrap" }}>{x.price ? fmtXOF(x.price) + (x.per === "person" ? " /pp" : "") : "on request"}</strong>
-                  </label>
-                ))}
-              </>
-            )}
+            <div style={{ ...sect, marginTop: 0 }}>Reservation & billing details</div>
+            <BillingFields bill={bill} setBill={setBill} />
+            {!dateFrom && <div style={{ fontSize: 12.5, color: T.laterite, marginTop: 8 }}>Choose your travel date in the order panel to enable payment.</div>}
 
             <div style={sect}>Payment</div>
             <div style={{ display: "flex", gap: 8 }}>
@@ -4635,11 +4617,10 @@ function BookingModal({ tour, user, onClose, onConfirm }) {
                 Ma Tontine Voyage · 20% deposit
               </button>
             </div>
-
             {!tontineAvailable && (
               <div style={{ marginTop: 10, background: "#f8f8f8", border: "1px solid #ECECEC", borderRadius: 10, padding: "10px 12px", fontSize: 13, lineHeight: 1.5, color: "#5A6B61" }}>
                 {!date
-                  ? "Select a travel date above to unlock Ma Tontine Voyage instalment plans."
+                  ? "Select a travel date in the order panel to unlock Ma Tontine Voyage instalment plans."
                   : `⏳ Your travel date is in ${daysUntil} day${daysUntil > 1 ? "s" : ""} — too soon for instalments (minimum 15 days). Please pay in full, or pick a later date.`}
               </div>
             )}
@@ -4659,7 +4640,6 @@ function BookingModal({ tour, user, onClose, onConfirm }) {
                   })}
                 </div>
                 <div style={{ fontSize: 12, opacity: 0.6, marginTop: 6 }}>Greyed periods require a travel date further in the future than the period itself.</div>
-
                 <div style={{ fontSize: 12.5, opacity: 0.7, margin: "14px 0 6px" }}>Split the balance into instalments (you choose the exact amount each time):</div>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                   {Array.from({ length: maxTr }, (_, i) => i + 1).map((n) => (
@@ -4673,17 +4653,39 @@ function BookingModal({ tour, user, onClose, onConfirm }) {
               </div>
             )}
 
-            <div style={sect}>Reservation & billing details</div>
-            <BillingFields bill={bill} setBill={setBill} />
-            {!dateFrom && <div style={{ fontSize: 12.5, color: T.laterite, marginTop: 8 }}>Please choose your travel date above to book.</div>}
-
+            <div style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".1em", color: T.green, marginTop: 20, marginBottom: 12, borderTop: `1px solid ${T.line}`, paddingTop: 18 }}>Order summary</div>
+            <Row l={`Tour · ${tierLabel[tier]} · ${adults} ad${children ? ` + ${children} ch` : ""}`} v={fmtXOF(calc.base)} />
+            {calc.transport > 0 && <Row l={`Transport · ${VEHICLES[vehicle].name}`} v={fmtXOF(calc.transport)} />}
+            {chosenAddons.map((a) => <Row key={a.name} l={`+ ${a.name}${a.per === "person" ? ` (×${pax})` : ""}`} v={a.amount != null ? fmtXOF(a.amount) : "on request"} />)}
+            {discActive && <div style={{ display: "flex", padding: "4px 0", color: T.green, fontWeight: 600 }}><span>{discLabel} · −{discPct}%</span><span style={{ marginLeft: "auto" }}>−{fmtXOF(calc.total - payTotal)}</span></div>}
+            <div style={{ borderTop: `1px solid ${T.line}`, marginTop: 8, paddingTop: 10, display: "flex", fontSize: 17 }}>
+              <strong>Total</strong>
+              <strong style={{ marginLeft: "auto" }}>
+                {discActive && <span style={{ fontWeight: 500, fontSize: 13, opacity: 0.5, textDecoration: "line-through", marginRight: 6 }}>{fmtXOF(calc.total)}</span>}
+                {fmtXOF(payTotal)} <span style={{ fontWeight: 500, fontSize: 13, opacity: 0.6 }}>{fmtUSD(payTotal)}</span>
+              </strong>
+            </div>
+            {(childAsAdult || onRequestAddons.length > 0) && (
+              <div style={{ marginTop: 8, fontSize: 12.5, color: T.laterite, lineHeight: 1.5 }}>
+                {childAsAdult && "Child rate for this tour is confirmed at booking (adult rate shown). "}
+                {onRequestAddons.length > 0 && `${onRequestAddons.length} selected add-on(s) priced on request — quoted before payment.`}
+              </div>
+            )}
+            {plan === "deposit" && tontineAvailable && (
+              <div style={{ marginTop: 10, background: "#f8f8f8", border: "1px solid #ECECEC", borderRadius: 10, padding: "10px 12px", fontSize: 13.5, lineHeight: 1.6, color: "#3B4A42" }}>
+                <strong style={{ color: "#1A1A1A" }}>Due today: {fmtXOF(calc.deposit)}</strong> (20% deposit)<br />
+                Then the balance of {fmtXOF(calc.total - calc.deposit)} split into <strong>{months} instalment{months > 1 ? "s" : ""}</strong>, so a minimum of <strong>{fmtXOF(calc.installment)}</strong> per payment.<br />
+                <span style={{ display: "flex", gap: 7, marginTop: 6, alignItems: "flex-start" }}><Info size={15} color={T.green} style={{ flexShrink: 0, marginTop: 2 }} /><span>That amount is only a <strong>minimum</strong>: at each payment you're free to pay <strong>more</strong> — even the whole remaining balance at once — to finish sooner. You never pay less than the minimum.</span></span>
+                <span style={{ display: "block", marginTop: 6 }}>Fully settled before your travel date{date ? ` (${date})` : ""}. Reminders by email, SMS and WhatsApp.</span>
+              </div>
+            )}
             {plan === "full" && corporate && (
               <div style={{ marginTop: 14, background: "#f8f8f8", border: "1px solid #ECECEC", borderRadius: 10, padding: "10px 13px", fontSize: 13, color: "#3B4A42", display: "flex", gap: 8, alignItems: "center" }}>
                 <Building2 size={16} color={T.green} style={{ flexShrink: 0 }} /> Your corporate rate (−{CORP_DISCOUNT}%) is applied automatically.
               </div>
             )}
             {plan === "full" && !corporate && (
-              <div style={{ marginTop: 14 }}>
+              <div style={{ marginTop: 14, borderTop: `1px solid ${T.line}`, paddingTop: 14 }}>
                 <label style={{ ...label, marginTop: 0 }}>Promo / ambassador code (optional)</label>
                 <input style={input} value={promoCode} onChange={(e) => setPromoCode(e.target.value.toUpperCase())} placeholder="e.g. AWA10" autoComplete="off" />
                 {promoCode.trim() && (
@@ -4696,43 +4698,15 @@ function BookingModal({ tour, user, onClose, onConfirm }) {
               </div>
             )}
 
-            <div style={{ marginTop: 16, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 14, padding: 16, fontSize: 14.5 }}>
-              <Row l={`Tour · ${tierLabel[tier]} · ${adults} ad${children ? ` + ${children} ch` : ""}`} v={fmtXOF(calc.base)} />
-              {calc.transport > 0 && <Row l={`Transport · ${VEHICLES[vehicle].name}`} v={fmtXOF(calc.transport)} />}
-              {chosenAddons.map((a) => <Row key={a.name} l={`+ ${a.name}${a.per === "person" ? ` (×${pax})` : ""}`} v={a.amount != null ? fmtXOF(a.amount) : "on request"} />)}
-              {discActive && <div style={{ display: "flex", padding: "4px 0", color: T.green, fontWeight: 600 }}><span>{discLabel} · −{discPct}%</span><span style={{ marginLeft: "auto" }}>−{fmtXOF(calc.total - payTotal)}</span></div>}
-              <div style={{ borderTop: `1px solid ${T.line}`, marginTop: 8, paddingTop: 10, display: "flex", fontSize: 17 }}>
-                <strong>Total</strong>
-                <strong style={{ marginLeft: "auto" }}>
-                  {discActive && <span style={{ fontWeight: 500, fontSize: 13, opacity: 0.5, textDecoration: "line-through", marginRight: 6 }}>{fmtXOF(calc.total)}</span>}
-                  {fmtXOF(payTotal)} <span style={{ fontWeight: 500, fontSize: 13, opacity: 0.6 }}>{fmtUSD(payTotal)}</span>
-                </strong>
-              </div>
-              {(childAsAdult || onRequestAddons.length > 0) && (
-                <div style={{ marginTop: 8, fontSize: 12.5, color: T.laterite, lineHeight: 1.5 }}>
-                  {childAsAdult && "Child rate for this tour is confirmed at booking (adult rate shown). "}
-                  {onRequestAddons.length > 0 && `${onRequestAddons.length} selected add-on(s) priced on request — quoted before payment.`}
-                </div>
-              )}
-              {plan === "deposit" && tontineAvailable && (
-                <div style={{ marginTop: 10, background: "#f8f8f8", border: "1px solid #ECECEC", borderRadius: 10, padding: "10px 12px", fontSize: 13.5, lineHeight: 1.6, color: "#3B4A42" }}>
-                  <strong style={{ color: "#1A1A1A" }}>Due today: {fmtXOF(calc.deposit)}</strong> (20% deposit)<br />
-                  Then the balance of {fmtXOF(calc.total - calc.deposit)} split into <strong>{months} instalment{months > 1 ? "s" : ""}</strong>, so a minimum of <strong>{fmtXOF(calc.installment)}</strong> per payment.<br />
-                  <span style={{ display: "flex", gap: 7, marginTop: 6, alignItems: "flex-start" }}><Info size={15} color={T.green} style={{ flexShrink: 0, marginTop: 2 }} /><span>That amount is only a <strong>minimum</strong>: at each payment you're free to pay <strong>more</strong> — even the whole remaining balance at once — to finish sooner. You never pay less than the minimum.</span></span>
-                  <span style={{ display: "block", marginTop: 6 }}>Fully settled before your travel date{date ? ` (${date})` : ""}. Reminders by email, SMS and WhatsApp.</span>
-                </div>
-              )}
-            </div>
-
-            <div style={{ marginTop: 18 }}>
+            <div style={{ marginTop: 20 }}>
               <div style={sect}>Payment method</div>
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 7, background: "#fff", color: T.ink, border: `2px solid ${T.green}`, borderRadius: 12, padding: "14px 8px", boxShadow: "0 0 0 3px rgba(0,146,69,.12)" }}>
-                <img src={PAY_LOGOS.stripe} alt="Stripe" style={{ height: 22, maxWidth: "58%", objectFit: "contain" }} />
-                <span style={{ fontWeight: 700, fontSize: 13 }}>International card</span>
-                <span style={{ fontWeight: 500, fontSize: 11.5, opacity: 0.7, lineHeight: 1.3, textAlign: "center" }}>Visa / Mastercard — secure payment in USD</span>
-              </div>
-              <div style={{ fontSize: 12, opacity: 0.7, marginTop: 8 }}>
-                Charged in USD: <strong>${(((plan === "deposit" ? calc.deposit : payTotal)) / 590).toFixed(2)}</strong> (rate 1 USD = 590 XOF).
+              <div style={{ position: "relative", display: "inline-flex", alignItems: "center", gap: 12, background: "#fff", color: T.ink, border: `1.5px solid ${T.line}`, borderRadius: 12, padding: "10px 40px 10px 16px" }}>
+                <img src={PAY_LOGOS.stripe} alt="Stripe" style={{ height: 20, objectFit: "contain", flexShrink: 0 }} />
+                <div style={{ display: "flex", flexDirection: "column", lineHeight: 1.35 }}>
+                  <span style={{ fontWeight: 700, fontSize: 13 }}>Pay with credit card</span>
+                  <span style={{ fontWeight: 500, fontSize: 11.5, opacity: 0.7 }}>Visa / Mastercard — secure payment in USD</span>
+                </div>
+                <CircleCheck size={18} color="#fff" fill={T.green} style={{ position: "absolute", top: 8, right: 8 }} />
               </div>
             </div>
 
@@ -4742,8 +4716,60 @@ function BookingModal({ tour, user, onClose, onConfirm }) {
               onClick={() => onConfirm({ tour, date: dateFrom, dateFrom, dateTo: dateFrom, adults, children, infants, plan, months, schedule: plan === "deposit" ? selectedOpt.label : "", total: calc.total, deposit: calc.deposit, contact: { ...bill, name: `${bill.firstName} ${bill.lastName}`.trim() }, addons: chosenAddons, promoCode: promoValid ? promo.code : "", payMethod })}>
               {plan === "deposit" ? `Reserve with ${fmtXOF(calc.deposit)} deposit` : `Pay in full — ${fmtXOF(payTotal)}`}
             </button>
-          </>
-        )}
+            {!accepted && (
+              <div style={{ fontSize: 11.5, color: T.laterite, opacity: 0.85, marginTop: 8, textAlign: "center" }}>
+                Please accept the Terms & Conditions above before paying.
+              </div>
+            )}
+          </div>
+
+          {/* RIGHT — tour configuration + order summary + coupon */}
+          <aside>
+            <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 20, padding: "26px 30px", color: T.ink, fontSize: 14.5 }}>
+              {headerBlock}
+
+              <div style={sect}>Travel date</div>
+              <input type="date" min={minDate} value={dateFrom} onChange={(e) => setTripDate(e.target.value)} style={input} />
+
+              <div style={sect}>Travelers</div>
+              <Counter label="Adults" sub={`${fmtXOF(tg.a)} each at current basis`} value={adults} set={setAdults} min={1} />
+              <Counter label="Children (3–12)" sub={tg.c ? `${fmtXOF(tg.c)} each` : "child rate confirmed at booking"} value={children} set={setChildren} />
+              <Counter label="Infants (under 3)" sub="Free" value={infants} set={setInfants} />
+              <div style={{ marginTop: 10, background: "#f8f8f8", border: "1px solid #ECECEC", borderRadius: 10, padding: "10px 13px", fontSize: 13.5, color: "#3B4A42" }}>
+                Basis applied: <strong style={{ color: "#1A1A1A" }}>{tierLabel[tier]}</strong> — {tier !== "grp" ? "add travelers to unlock lower per-person rates." : "best per-person rate unlocked."}
+              </div>
+
+              {rates && (
+                <>
+                  <div style={sect}>Transport — choose your vehicle (optional)</div>
+                  <select value={vehicle} onChange={(e) => setVehicle(+e.target.value)} style={{ ...input, fontWeight: 600 }}>
+                    <option value={-1}>No transport — I'll arrange my own</option>
+                    {VEHICLES.map((v, i) => (
+                      <option key={v.name} value={i} disabled={v.cap < seats}>
+                        {v.name} · up to {v.cap} — {fmtXOF(rates[i])}{v.cap < seats ? " (too small for your group)" : ""}
+                      </option>
+                    ))}
+                  </select>
+                  <div style={{ fontSize: 12.5, opacity: 0.65, marginTop: 6 }}>Per vehicle, round trip / at disposal for the day — ATS Logistics rate card.</div>
+                </>
+              )}
+
+              {tour.addons.length > 0 && (
+                <>
+                  <div style={sect}>Add-ons</div>
+                  {tour.addons.map((x) => (
+                    <label key={x.name} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 0", borderBottom: `1px solid ${T.line}`, cursor: "pointer", fontSize: 14 }}>
+                      <input type="checkbox" checked={addons.includes(x.name)} onChange={() => toggle(x.name)} style={{ width: 17, height: 17, accentColor: T.green, flexShrink: 0 }} />
+                      <span style={{ flex: 1 }}>{x.name}</span>
+                      <strong style={{ whiteSpace: "nowrap" }}>{x.price ? fmtXOF(x.price) + (x.per === "person" ? " /pp" : "") : "on request"}</strong>
+                    </label>
+                  ))}
+                </>
+              )}
+
+            </div>
+          </aside>
+        </div>
       </div>
     </Wrap>
   );
