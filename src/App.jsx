@@ -4157,7 +4157,7 @@ function AccountPage({ user, bookings, setSignin, notify, signOut, patchBooking,
 function InstallmentModal({ rec, onClose, onConfirm }) {
   const ts = tontineState(rec);
   const [amount, setAmount] = useState(String(ts.minNext));
-  const [payMethod, setPayMethod] = useState("paydunya");
+  const [payMethod, setPayMethod] = useState("stripe"); // PayDunya temporarily disabled — Stripe only
   const val = Math.round(Number(amount) || 0);
   const valid = val >= ts.minNext && val <= ts.remaining;
   const paysOff = val >= ts.remaining - 1;
@@ -4190,19 +4190,11 @@ function InstallmentModal({ rec, onClose, onConfirm }) {
           Enter an amount from {fmtXOF(ts.minNext)} to {fmtXOF(ts.remaining)}.
         </div>
       )}
-      <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
-        <button onClick={() => setPayMethod("paydunya")}
-          style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 5, background: "#fff", color: T.ink, border: `2px solid ${payMethod === "paydunya" ? T.green : T.line}`, borderRadius: 10, padding: "9px 8px", cursor: "pointer", boxShadow: payMethod === "paydunya" ? "0 0 0 3px rgba(0,146,69,.12)" : "none" }}>
-          <img src={PAY_LOGOS.paydunya} alt="PayDunya" style={{ height: 17, maxWidth: "75%", objectFit: "contain" }} />
-          <span style={{ fontWeight: 700, fontSize: 12 }}>Mobile Money / local <span style={{ fontWeight: 500, opacity: 0.7 }}>· XOF</span></span>
-        </button>
-        <button onClick={() => setPayMethod("stripe")}
-          style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 5, background: "#fff", color: T.ink, border: `2px solid ${payMethod === "stripe" ? T.green : T.line}`, borderRadius: 10, padding: "9px 8px", cursor: "pointer", boxShadow: payMethod === "stripe" ? "0 0 0 3px rgba(0,146,69,.12)" : "none" }}>
-          <img src={PAY_LOGOS.stripe} alt="Stripe" style={{ height: 17, maxWidth: "75%", objectFit: "contain" }} />
-          <span style={{ fontWeight: 700, fontSize: 12 }}>International card <span style={{ fontWeight: 500, opacity: 0.7 }}>· USD</span></span>
-        </button>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5, background: "#fff", color: T.ink, border: `2px solid ${T.green}`, borderRadius: 10, padding: "11px 8px", marginTop: 14, boxShadow: "0 0 0 3px rgba(0,146,69,.12)" }}>
+        <img src={PAY_LOGOS.stripe} alt="Stripe" style={{ height: 18, maxWidth: "60%", objectFit: "contain" }} />
+        <span style={{ fontWeight: 700, fontSize: 12 }}>International card <span style={{ fontWeight: 500, opacity: 0.7 }}>· Visa / Mastercard · USD</span></span>
       </div>
-      {payMethod === "stripe" && valid && (
+      {valid && (
         <div style={{ fontSize: 12, opacity: 0.7, marginTop: 6 }}>Charged in USD: <strong>${(val / 590).toFixed(2)}</strong> (1 USD = 590 XOF).</div>
       )}
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 14 }}>
@@ -4474,7 +4466,7 @@ function BookingModal({ tour, user, onClose, onConfirm }) {
   const [sched, setSched] = useState("3m");
   const [tranches, setTranches] = useState(3); // client-chosen number of instalments for the 80% balance
   const [accepted, setAccepted] = useState(false); // mandatory T&C acceptance for paid bookings
-  const [payMethod, setPayMethod] = useState("paydunya"); // "paydunya" (mobile money/local card) | "stripe" (international card, full payment only)
+  const [payMethod, setPayMethod] = useState("stripe"); // PayDunya temporarily disabled — Stripe only
   const [promoCode, setPromoCode] = useState(() => { try { return (tour.initialPromo || localStorage.getItem("ats_ref") || "").toUpperCase(); } catch { return (tour.initialPromo || "").toUpperCase(); } });
   const [promo, setPromo] = useState(null); // validate-promo result
   const [promoChecking, setPromoChecking] = useState(false);
@@ -4734,25 +4726,14 @@ function BookingModal({ tour, user, onClose, onConfirm }) {
 
             <div style={{ marginTop: 18 }}>
               <div style={sect}>Payment method</div>
-              <div style={{ display: "flex", gap: 10 }}>
-                <button onClick={() => setPayMethod("paydunya")}
-                  style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 7, background: "#fff", color: T.ink, border: `2px solid ${payMethod === "paydunya" ? T.green : T.line}`, borderRadius: 12, padding: "12px 8px", cursor: "pointer", boxShadow: payMethod === "paydunya" ? "0 0 0 3px rgba(0,146,69,.12)" : "none" }}>
-                  <img src={PAY_LOGOS.paydunya} alt="PayDunya" style={{ height: 20, maxWidth: "72%", objectFit: "contain" }} />
-                  <span style={{ fontWeight: 700, fontSize: 12.5 }}>Mobile Money / local card</span>
-                  <span style={{ fontWeight: 500, fontSize: 11, opacity: 0.7, lineHeight: 1.3, textAlign: "center" }}>Orange Money, Wave, Visa — in XOF</span>
-                </button>
-                <button onClick={() => setPayMethod("stripe")}
-                  style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 7, background: "#fff", color: T.ink, border: `2px solid ${payMethod === "stripe" ? T.green : T.line}`, borderRadius: 12, padding: "12px 8px", cursor: "pointer", boxShadow: payMethod === "stripe" ? "0 0 0 3px rgba(0,146,69,.12)" : "none" }}>
-                  <img src={PAY_LOGOS.stripe} alt="Stripe" style={{ height: 20, maxWidth: "72%", objectFit: "contain" }} />
-                  <span style={{ fontWeight: 700, fontSize: 12.5 }}>International card</span>
-                  <span style={{ fontWeight: 500, fontSize: 11, opacity: 0.7, lineHeight: 1.3, textAlign: "center" }}>Visa / Mastercard — in USD</span>
-                </button>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 7, background: "#fff", color: T.ink, border: `2px solid ${T.green}`, borderRadius: 12, padding: "14px 8px", boxShadow: "0 0 0 3px rgba(0,146,69,.12)" }}>
+                <img src={PAY_LOGOS.stripe} alt="Stripe" style={{ height: 22, maxWidth: "58%", objectFit: "contain" }} />
+                <span style={{ fontWeight: 700, fontSize: 13 }}>International card</span>
+                <span style={{ fontWeight: 500, fontSize: 11.5, opacity: 0.7, lineHeight: 1.3, textAlign: "center" }}>Visa / Mastercard — secure payment in USD</span>
               </div>
-              {payMethod === "stripe" && (
-                <div style={{ fontSize: 12, opacity: 0.7, marginTop: 6 }}>
-                  Charged in USD: <strong>${(((plan === "deposit" ? calc.deposit : payTotal)) / 590).toFixed(2)}</strong> (rate 1 USD = 590 XOF).
-                </div>
-              )}
+              <div style={{ fontSize: 12, opacity: 0.7, marginTop: 8 }}>
+                Charged in USD: <strong>${(((plan === "deposit" ? calc.deposit : payTotal)) / 590).toFixed(2)}</strong> (rate 1 USD = 590 XOF).
+              </div>
             </div>
 
             <TermsCheck checked={accepted} onChange={setAccepted} />
