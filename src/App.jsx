@@ -496,6 +496,7 @@ export default function ATSPlatformPreview() {
   const [toast, setToast] = useState(null);
   const [user, setUser] = useState(null);
   const [bookings, setBookings] = useState([]);
+  const [favorites, setFavorites] = useState([]); // array of tour_id strings (per signed-in user)
   const [booking, setBooking] = useState(null);
   const [signin, setSignin] = useState(false);
   const [chat, setChat] = useState(false);
@@ -564,19 +565,33 @@ export default function ATSPlatformPreview() {
     const { data, error } = await supabase.from("bookings").select("id, data, status, created_at").eq("user_id", uid).order("created_at", { ascending: false });
     if (!error && data) setBookings(data.map(mapRow));
   };
+  // ---- Favorites (per user) ----
+  const reloadFavorites = async (uid) => {
+    const { data, error } = await supabase.from("favorites").select("tour_id").eq("user_id", uid);
+    if (!error && data) setFavorites(data.map((r) => r.tour_id));
+  };
+  const toggleFavorite = async (tourId) => {
+    if (!user) { setSignin(true); notify("Sign in to save your favorites."); return; }
+    const isFav = favorites.includes(tourId);
+    setFavorites((f) => (isFav ? f.filter((x) => x !== tourId) : [...f, tourId])); // optimistic
+    if (isFav) await supabase.from("favorites").delete().eq("user_id", user.id).eq("tour_id", tourId);
+    else await supabase.from("favorites").insert({ user_id: user.id, tour_id: tourId });
+    notify(isFav ? "Removed from favorites" : "Saved to favorites");
+  };
   useEffect(() => {
-    if (!user) { setBookings([]); return; }
+    if (!user) { setBookings([]); setFavorites([]); return; }
     const sync = async () => {
       if (pending.length) {
         await supabase.from("bookings").insert(pending.map((b) => ({ user_id: user.id, data: b })));
         setPending([]);
       }
       await reloadBookings(user.id);
+      await reloadFavorites(user.id);
     };
     sync();
   }, [user?.id]);
 
-  const signOut = async () => { await supabase.auth.signOut(); setUser(null); setBookings([]); go("home"); notify("Signed out"); };
+  const signOut = async () => { await supabase.auth.signOut(); setUser(null); setBookings([]); setFavorites([]); go("home"); notify("Signed out"); };
 
   // ---- Persist a record (booking / quote / itinerary request) ----
   const saveRecord = async (b) => {
@@ -707,7 +722,7 @@ export default function ATSPlatformPreview() {
     }
   }, []);
 
-  const ctx = { go, notify, setBooking, user, setUser, role, isAdmin: role === "admin" || role === "super_admin", isSuper: role === "super_admin", bookings, filters, setFilters, setSignin, setChat, signOut, saveRecord, patchBooking, cancelBooking, payInstallment, currency, setCurrency };
+  const ctx = { go, notify, setBooking, user, setUser, role, isAdmin: role === "admin" || role === "super_admin", isSuper: role === "super_admin", bookings, favorites, toggleFavorite, filters, setFilters, setSignin, setChat, signOut, saveRecord, patchBooking, cancelBooking, payInstallment, currency, setCurrency };
 
   return (
     <div style={{ background: T.paper, color: T.ink, fontFamily: "'Century Gothic','Poppins',system-ui,sans-serif", minHeight: "100vh" }}>
@@ -774,7 +789,14 @@ export default function ATSPlatformPreview() {
 const GLASS = { background: "rgba(255,255,255,.45)", backdropFilter: "blur(14px)", WebkitBackdropFilter: "blur(14px)", border: "1px solid rgba(255,255,255,.55)", boxShadow: "0 6px 22px rgba(11,46,27,.12)" };
 
 // Compact custom dropdown for the nav (language / currency)
-function NavSelect({ value, options, onChange, trigger, full, ghost, ink }) {
+// Small country flag (via flagcdn) — used for the language selector.
+const LANG_FLAG = { EN: "gb", FR: "fr" };
+const Flag = ({ lang, size = 22 }) => (
+  <img src={`https://flagcdn.com/w40/${LANG_FLAG[lang] || "gb"}.png`} alt={lang} loading="lazy"
+    style={{ width: size, height: Math.round(size * 0.68), objectFit: "cover", borderRadius: 3, display: "block", boxShadow: "0 0 0 1px rgba(0,0,0,.08)" }} />
+);
+
+function NavSelect({ value, options, onChange, trigger, full, ghost, ink, optionRender }) {
   const [open, setOpen] = useState(false);
   const c = ghost ? (ink || "#fff") : T.ink;
   return (
@@ -788,7 +810,7 @@ function NavSelect({ value, options, onChange, trigger, full, ghost, ink }) {
       {open && (
         <div role="listbox" style={{ position: "absolute", top: "calc(100% + 6px)", right: 0, left: full ? 0 : "auto", zIndex: 42, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 12, boxShadow: "0 14px 34px rgba(0,0,0,.16)", overflow: "hidden", minWidth: 130 }}>
           {options.map((o) => (
-            <button key={o} onClick={() => { onChange(o); setOpen(false); }} style={{ display: "block", width: "100%", textAlign: "left", padding: "10px 16px", border: "none", background: value === o ? T.paperDark : "#fff", color: T.ink, fontWeight: value === o ? 700 : 600, fontSize: 13, cursor: "pointer", whiteSpace: "nowrap" }}>{o}</button>
+            <button key={o} onClick={() => { onChange(o); setOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 9, width: "100%", textAlign: "left", padding: "10px 16px", border: "none", background: value === o ? T.paperDark : "#fff", color: T.ink, fontWeight: value === o ? 700 : 600, fontSize: 13, cursor: "pointer", whiteSpace: "nowrap" }}>{optionRender ? optionRender(o) : o}</button>
           ))}
         </div>
       )}
@@ -840,16 +862,23 @@ function Nav({ go, page, user, setSignin, bookings, currency, setCurrency, overH
   ) : (
     <button onClick={() => { setSignin(true); setOpen(false); }} style={{ display: "inline-flex", alignItems: "center", gap: 7, justifyContent: "center", color: "#fff", background: T.green, padding: "11px 16px", borderRadius: 12, border: "none", cursor: "pointer", fontWeight: 700, width: full ? "100%" : "auto" }}><UserRound size={17} strokeWidth={2.2} /> Sign in</button>
   );
-  const TopLink = ({ k, l }) => (
-    <button onClick={() => nav(k)} className="nav-top-link" style={{ background: "none", border: "none", cursor: "pointer", color: page.name === k ? T.gold : ink, fontWeight: page.name === k ? 600 : 500, fontSize: 14.5, padding: "6px 4px", whiteSpace: "nowrap", fontFamily: "inherit" }}>{l}</button>
-  );
+  const topNav = [["tours", "Tours", MapIcon], ["transport", "Transport", Car], ["flights", "Flights", Plane], ["builder", "Trip Builder", Sparkles]];
+  const TopLink = ({ k, l, Ico }) => {
+    const active = page.name === k;
+    return (
+      <button onClick={() => nav(k)} className={`nav-top-link${transparent ? " nav-top-link--hero" : ""}`} style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "none", border: `1.5px solid ${active ? (transparent ? "rgba(255,255,255,.9)" : T.ink) : "transparent"}`, borderRadius: 999, cursor: "pointer", color: ink, fontWeight: active ? 700 : 600, fontSize: 14.5, padding: "8px 16px", whiteSpace: "nowrap", fontFamily: "inherit", transition: "border-color .15s ease, background .15s ease" }}>
+        {Ico && <Ico size={18} strokeWidth={2} />} {l}
+      </button>
+    );
+  };
 
   return (
     <nav style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 50, background: transparent ? "linear-gradient(to bottom, rgba(0,0,0,.55) 0%, rgba(0,0,0,.10) 70%, rgba(0,0,0,0) 100%)" : "#fff", borderBottom: "none", transition: "background .25s ease" }}>
       <style>{`
         .nav-desktop{display:flex}
-        .nav-top-link{transition:opacity .15s ease}
-        .nav-top-link:hover{opacity:.65}
+        .nav-top-link{transition:background .15s ease}
+        .nav-top-link:hover{background:rgba(11,46,27,.07) !important}
+        .nav-top-link--hero:hover{background:rgba(255,255,255,.20) !important}
         @media(max-width:980px){ .nav-desktop{display:none !important} }
         .nav-menu-link{position:relative;transition:background .18s ease,transform .18s ease}
         .nav-menu-link:hover{background:rgba(0,146,69,.10) !important;transform:translateX(4px)}
@@ -876,15 +905,11 @@ function Nav({ go, page, user, setSignin, bookings, currency, setCurrency, overH
 
         {/* Centered nav titles */}
         <div className="nav-desktop" style={{ gridColumn: 2, justifySelf: "center", alignItems: "center", gap: 26 }}>
-          {[...leftLinks, ...rightLinks].map(([k, l]) => <TopLink key={k} k={k} l={l} />)}
+          {topNav.map(([k, l, Ico]) => <TopLink key={k} k={k} l={l} Ico={Ico} />)}
         </div>
 
         {/* Right: language/currency + 9-dots menu */}
         <div style={{ gridColumn: 3, justifySelf: "end", display: "flex", alignItems: "center", gap: 14 }}>
-          <div className="nav-desktop" style={{ alignItems: "center", gap: 8 }}>
-            <NavSelect ghost={transparent} ink={ink} value={lang} options={["EN", "FR"]} onChange={setLang} trigger={<Globe size={16} color={ink} strokeWidth={2} />} />
-            <NavSelect ghost={transparent} ink={ink} value={cur} options={["XOF", "USD", "EUR"]} onChange={setCurrency} trigger={<span style={{ fontWeight: 600, fontSize: 12.5 }}>{cur}</span>} />
-          </div>
           <button className="nav-desktop" onClick={() => { if (user) nav("account"); else { setSignin(true); setOpen(false); } }}
             style={{ alignItems: "center", gap: 6, background: user ? T.green : "transparent", border: user ? "none" : `1.5px solid ${transparent ? "rgba(255,255,255,.55)" : T.line}`, color: user ? "#fff" : ink, borderRadius: 999, padding: "7px 14px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>
             <UserRound size={16} strokeWidth={2.1} /> {user ? user.name.split(" ")[0] : "Sign in"}{user && bookings.length > 0 ? ` · ${bookings.length}` : ""}
@@ -926,7 +951,8 @@ function Nav({ go, page, user, setSignin, bookings, currency, setCurrency, overH
                 {logoOk ? <img src={logoDark} alt="Africa Tourism Solutions" onError={() => setLogoOk(false)} style={{ height: 34, display: "block" }} /> : <span className="disp" style={{ fontWeight: 800, fontSize: 20 }}>ATS</span>}
               </button>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <NavSelect value={lang} options={["EN", "FR"]} onChange={setLang} trigger={<Globe size={18} color="#111" strokeWidth={2} />} />
+                <NavSelect value={lang} options={["EN", "FR"]} onChange={setLang} trigger={<Flag lang={lang} size={26} />} optionRender={(o) => <><Flag lang={o} size={22} /> {o === "FR" ? "Français" : "English"}</>} />
+                <NavSelect value={cur} options={["XOF", "USD", "EUR"]} onChange={setCurrency} trigger={<span style={{ fontWeight: 700, fontSize: 13 }}>{cur}</span>} />
                 <button aria-label="Close menu" onClick={() => setOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", color: T.ink, display: "flex", padding: 6 }}><X size={24} /></button>
               </div>
             </div>
@@ -936,10 +962,6 @@ function Nav({ go, page, user, setSignin, bookings, currency, setCurrency, overH
               <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                 {mainMenu.map(([k, l, Ico]) => <Row key={k} k={k} l={l} Ico={Ico} active={page.name === k} onClick={() => nav(k)} />)}
               </div>
-
-              <div style={{ height: 1, background: T.line, margin: "18px 6px" }} />
-              <div style={secLabel}>Display currency</div>
-              <NavSelect full value={cur} options={["XOF", "USD", "EUR"]} onChange={setCurrency} trigger={<span style={{ fontWeight: 700, fontSize: 13 }}>{cur}</span>} />
 
               <div style={{ height: 1, background: T.line, margin: "18px 6px" }} />
               <div style={secLabel}>Your account</div>
@@ -1297,7 +1319,7 @@ function PlanTripSection({ go }) {
 }
 
 // ---------------- HOME ----------------
-function Home({ go, notify, setBooking, filters, setFilters, setChat, addBookingHome, user }) {
+function Home({ go, notify, setBooking, filters, setFilters, setChat, addBookingHome, user, favorites, toggleFavorite }) {
   const [country, setCountry] = useState(COUNTRIES[0]);
   const [search, setSearch] = useState({ dest: "Senegal", exp: "All", dateFrom: "", dateTo: "", pax: 2 });
   const featured = ["goree","bandia","lacrose","toubacouta","stlouis","lompoul","food","boat"].map((id) => TOURS.find((t) => t.id === id));
@@ -1459,7 +1481,7 @@ function Home({ go, notify, setBooking, filters, setFilters, setChat, addBooking
             <div><Eyebrow>Senegal · from the ATS catalogue</Eyebrow><H2>Featured tours & experiences</H2></div>
             <button onClick={() => go("tours")} style={{ ...btnGreen, marginLeft: "auto", fontSize: 14 }}>See all tours →</button>
           </div>
-          <TourGrid tours={featured} go={go} setBooking={setBooking} slider />
+          <TourGrid tours={featured} go={go} setBooking={setBooking} favorites={favorites} toggleFavorite={toggleFavorite} slider />
         </Wrap>
       </section>
 
@@ -1585,7 +1607,7 @@ function useTourPhotos(tourId) {
   return photos;
 }
 
-function TourGrid({ tours, go, setBooking, slider }) {
+function TourGrid({ tours, go, setBooking, slider, favorites = [], toggleFavorite }) {
   const container = slider
     ? { display: "flex", gap: 18, overflowX: "auto", scrollSnapType: "x mandatory", marginTop: 10, paddingTop: 12, paddingBottom: 46, scrollbarWidth: "none", msOverflowStyle: "none" }
     : { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 18, marginTop: 18 };
@@ -1600,7 +1622,16 @@ function TourGrid({ tours, go, setBooking, slider }) {
       <div className={slider ? "tour-strip" : ""} style={container}>
       {tours.map((t) => (
         <article key={t.id} className={slider ? "card-hover tour-card" : "card-hover"} onClick={() => go("tour", { id: t.id })} style={{ background: T.paper, border: `1px solid ${T.line}`, borderRadius: 16, overflow: "hidden", display: "flex", flexDirection: "column", cursor: "pointer", color: "#1A1A1A", ...cardExtra }}>
-          <Cover tour={t} ratio="4 / 3" size={58} />
+          <div style={{ position: "relative" }}>
+            <Cover tour={t} ratio="4 / 3" size={58} />
+            {toggleFavorite && (
+              <span role="button" tabIndex={0} aria-label={favorites.includes(t.id) ? "Remove from favorites" : "Save to favorites"}
+                onClick={(e) => { e.stopPropagation(); toggleFavorite(t.id); }}
+                style={{ position: "absolute", top: 10, right: 10, width: 34, height: 34, borderRadius: "50%", background: "rgba(255,255,255,.92)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 8px rgba(0,0,0,.2)", cursor: "pointer" }}>
+                <Heart size={17} fill={favorites.includes(t.id) ? "#C0392B" : "none"} color={favorites.includes(t.id) ? "#C0392B" : "#1A1A1A"} />
+              </span>
+            )}
+          </div>
 
           <div style={{ padding: 14, display: "flex", flexDirection: "column", flex: 1 }}>
             <div style={{ display: "flex", gap: 5, marginBottom: 7, flexWrap: "nowrap", overflow: "hidden" }}>
@@ -1632,7 +1663,7 @@ function TourGrid({ tours, go, setBooking, slider }) {
 }
 const pill = () => ({ fontSize: 10, fontWeight: 500, color: "#1A1A1A", background: "#F2F2F2", border: "none", padding: "3px 9px", borderRadius: 999, whiteSpace: "nowrap", flexShrink: 0 });
 
-function ToursPage({ go, setBooking, filters, setFilters }) {
+function ToursPage({ go, setBooking, filters, setFilters, favorites, toggleFavorite }) {
   const [q, setQ] = useState("");
   const tags = ["All", ...new Set(TOURS.map((t) => t.tag))];
   const query = q.trim().toLowerCase();
@@ -1678,7 +1709,7 @@ function ToursPage({ go, setBooking, filters, setFilters }) {
         <div style={{ marginTop: 30, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 14, padding: 24 }}>
           No tours match {query ? "your search" : "these filters"} yet. <button style={{ ...btnGreen, marginLeft: 8, fontSize: 13, padding: "8px 14px" }} onClick={() => { setFilters({ pole: "All", tag: "All" }); setQ(""); }}>Reset</button>
         </div>
-      ) : <TourGrid tours={tours} go={go} setBooking={setBooking} />}
+      ) : <TourGrid tours={tours} go={go} setBooking={setBooking} favorites={favorites} toggleFavorite={toggleFavorite} />}
     </Wrap>
   );
 }
@@ -1725,10 +1756,10 @@ const ZONE_COORDS = {
 };
 const tourCoords = (t) => ZONE_COORDS[t.zone] || [14.4974, -14.4524];
 
-function TourDetail({ tourId, go, setBooking }) {
+function TourDetail({ tourId, go, setBooking, favorites = [], toggleFavorite }) {
   const t = TOURS.find((x) => x.id === tourId) || TOURS[0];
   const [mlat, mlon] = tourCoords(t);
-  const [fav, setFav] = useState(false);
+  const fav = favorites.includes(t.id);
   const [pax, setPax] = useState(2);
   const [extras, setExtras] = useState([]);
   const [vehicle, setVehicle] = useState(-1);      // -1 = no transport
@@ -1815,10 +1846,16 @@ function TourDetail({ tourId, go, setBooking }) {
               style={{ background: tile(i) ? `center/cover no-repeat url(${tile(i)})` : `linear-gradient(140deg, ${T.green}, ${T.indigo})`, fontSize: i === 0 ? 72 : 40 }}>
               {!tile(i) && <CatIcon tour={t} size={i === 0 ? 72 : 40} color="rgba(255,255,255,.9)" strokeWidth={1.4} />}
               {i === 4 && galleryCount > 5 && <span style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.45)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 700 }}>+{galleryCount - 5} photos</span>}
+              {i === 0 && (
+                <span role="button" tabIndex={0} aria-label={fav ? "Remove from favorites" : "Save to favorites"}
+                  onClick={(e) => { e.stopPropagation(); toggleFavorite && toggleFavorite(t.id); }}
+                  style={{ position: "absolute", top: 12, right: 12, width: 40, height: 40, borderRadius: "50%", background: "rgba(255,255,255,.92)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 10px rgba(0,0,0,.22)", cursor: "pointer" }}>
+                  <Heart size={20} fill={fav ? "#C0392B" : "none"} color={fav ? "#C0392B" : "#1A1A1A"} />
+                </span>
+              )}
             </button>
           ))}
         </div>
-        <div style={{ fontSize: 12, opacity: 0.55, marginTop: 6 }}>Photos coming soon — tap any tile to preview (swipe on mobile). Real imagery will replace these placeholders.</div>
       </Wrap>
 
       <Wrap style={{ paddingTop: 0 }}>
@@ -1985,10 +2022,7 @@ function TourDetail({ tourId, go, setBooking }) {
                 {!dateOk && <div style={{ fontSize: 12.5, color: "#8A968E", marginTop: 8, textAlign: "center" }}>Choose a travel date to book.</div>}
               </>
             )}
-            <button style={{ width: "100%", marginTop: 8, background: "#fff", color: "#1A1A1A", border: "1.5px solid #1A1A1A", borderRadius: 12, padding: "11px 14px", fontWeight: 700, cursor: "pointer", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }} onClick={() => go("builder")}>
-              <Sparkles size={16} /> Build a 100% custom trip
-            </button>
-            <button style={{ background: "none", border: "none", cursor: "pointer", marginTop: 10, fontWeight: 600, color: "#1A1A1A", fontSize: 14, width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }} onClick={() => setFav(!fav)}>
+            <button style={{ background: "none", border: "none", cursor: "pointer", marginTop: 10, fontWeight: 600, color: "#1A1A1A", fontSize: 14, width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }} onClick={() => toggleFavorite && toggleFavorite(t.id)}>
               <Heart size={16} fill={fav ? "#C0392B" : "none"} color={fav ? "#C0392B" : "#1A1A1A"} /> {fav ? "Saved to favorites" : "Save to favorites"}
             </button>
             <div style={{ fontSize: 12, opacity: 0.6, marginTop: 10, lineHeight: 1.5, textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}><Shield size={13} /> Instalments available · free cancellation 48h</div>
@@ -4062,7 +4096,7 @@ const planColor = (p) => p === "deposit" ? T.laterite : p === "quote" ? T.indigo
 const statusLabel = { pending: "In progress", confirmed: "Confirmed", paid: "Paid", cancelled: "Cancelled", settled: "Fully paid" };
 const statusColor = (s) => s === "cancelled" ? "#B3261E" : s === "settled" || s === "confirmed" || s === "paid" ? T.green : T.laterite;
 
-function AccountPage({ user, bookings, setSignin, notify, signOut, patchBooking, cancelBooking, payInstallment, role, go }) {
+function AccountPage({ user, bookings, favorites = [], toggleFavorite, setSignin, notify, signOut, patchBooking, cancelBooking, payInstallment, role, go }) {
   const [filter, setFilter] = useState("all");
   const [detail, setDetail] = useState(null);
   const [payTarget, setPayTarget] = useState(null);
@@ -4073,7 +4107,7 @@ function AccountPage({ user, bookings, setSignin, notify, signOut, patchBooking,
       <button style={btnGold} onClick={() => setSignin(true)}>Sign in</button>
     </Wrap>
   );
-  const tabs = [["all", "All"], ["booking", "Bookings"], ["quote", "Quotes"], ["itinerary", "Itineraries"]];
+  const tabs = [["all", "All"], ["booking", "Bookings"], ["quote", "Quotes"], ["itinerary", "Itineraries"], ["favorites", "Favorites"]];
   const bucket = (b) => b.plan === "quote" ? "quote" : b.plan === "itinerary" ? "itinerary" : "booking";
   const list = bookings.filter((b) => filter === "all" || bucket(b) === filter);
 
@@ -4097,12 +4131,20 @@ function AccountPage({ user, bookings, setSignin, notify, signOut, patchBooking,
 
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 18 }}>
         {tabs.map(([k, l]) => {
-          const n = k === "all" ? bookings.length : bookings.filter((b) => bucket(b) === k).length;
+          const n = k === "all" ? bookings.length : k === "favorites" ? favorites.length : bookings.filter((b) => bucket(b) === k).length;
           return <button key={k} onClick={() => setFilter(k)} style={{ border: "none", cursor: "pointer", background: filter === k ? T.green : "#fff", color: filter === k ? "#fff" : T.ink, borderRadius: 999, padding: "8px 16px", fontWeight: 600, fontSize: 13, boxShadow: `inset 0 0 0 1px ${T.line}` }}>{l} {n > 0 && `· ${n}`}</button>;
         })}
       </div>
 
-      {list.length === 0 ? (
+      {filter === "favorites" ? (
+        favorites.length === 0 ? (
+          <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 14, padding: 24 }}>No favorites yet — tap the heart on any tour to save it here.</div>
+        ) : (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 16 }}>
+            {favorites.map((id) => <FavoriteCard key={id} id={id} go={go} onRemove={() => toggleFavorite(id)} />)}
+          </div>
+        )
+      ) : list.length === 0 ? (
         <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 14, padding: 24 }}>Nothing here yet — book a tour, request a quote or build a trip and it will appear in this space.</div>
       ) : list.map((b, i) => {
         const ts = b.plan === "deposit" ? tontineState(b) : null;
@@ -4150,6 +4192,31 @@ function AccountPage({ user, bookings, setSignin, notify, signOut, patchBooking,
       {detail && <BookingDetail rec={detail} onClose={() => setDetail(null)} notify={notify} patchBooking={patchBooking} cancelBooking={cancelBooking} user={user} onPay={(r) => setPayTarget(r)} />}
       {payTarget && <InstallmentModal rec={payTarget} onClose={() => setPayTarget(null)} onConfirm={(amt, pm) => { const r = payTarget; setPayTarget(null); payInstallment(r, amt, pm); }} />}
     </Wrap>
+  );
+}
+
+// A saved tour card shown in the account "My favorites" grid.
+function FavoriteCard({ id, go, onRemove }) {
+  const t = TOURS.find((x) => x.id === id);
+  const img = useCoverUrl(id);
+  if (!t) return null;
+  return (
+    <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 14, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+      <button onClick={() => go("tour", { id })} aria-label={t.name}
+        style={{ border: "none", padding: 0, cursor: "pointer", height: 118, display: "flex", alignItems: "center", justifyContent: "center", background: img ? `center/cover no-repeat url(${img})` : `linear-gradient(140deg, ${T.green}, ${T.indigo})` }}>
+        {!img && <CatIcon tour={t} size={40} color="rgba(255,255,255,.9)" strokeWidth={1.4} />}
+      </button>
+      <div style={{ padding: "10px 12px", display: "flex", flexDirection: "column", gap: 7 }}>
+        <div style={{ fontWeight: 700, fontSize: 14, lineHeight: 1.3 }}>{t.name}</div>
+        <div style={{ fontSize: 12.5, opacity: 0.7 }}>{t.pole} · {fromPrice(t) ? fmtXOF(fromPrice(t)) : "on request"}</div>
+        <div style={{ display: "flex", gap: 8, marginTop: 2 }}>
+          <button onClick={() => go("tour", { id })} style={{ ...btnGreen, fontSize: 12.5, padding: "7px 14px" }}>View</button>
+          <button onClick={onRemove} aria-label="Remove from favorites" style={{ background: "none", border: `1.5px solid ${T.line}`, borderRadius: 10, cursor: "pointer", padding: "7px 10px", display: "flex", alignItems: "center" }}>
+            <Heart size={15} fill="#C0392B" color="#C0392B" />
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -4716,11 +4783,22 @@ function BookingModal({ tour, user, onClose, onConfirm }) {
               onClick={() => onConfirm({ tour, date: dateFrom, dateFrom, dateTo: dateFrom, adults, children, infants, plan, months, schedule: plan === "deposit" ? selectedOpt.label : "", total: calc.total, deposit: calc.deposit, contact: { ...bill, name: `${bill.firstName} ${bill.lastName}`.trim() }, addons: chosenAddons, promoCode: promoValid ? promo.code : "", payMethod })}>
               {plan === "deposit" ? `Reserve with ${fmtXOF(calc.deposit)} deposit` : `Pay in full — ${fmtXOF(payTotal)}`}
             </button>
-            {!accepted && (
-              <div style={{ fontSize: 11.5, color: T.laterite, opacity: 0.85, marginTop: 8, textAlign: "center" }}>
-                Please accept the Terms & Conditions above before paying.
-              </div>
-            )}
+            {(() => {
+              const missing = [];
+              if (!dateFrom) missing.push("travel date");
+              if (!bill.firstName) missing.push("first name");
+              if (!bill.lastName) missing.push("last name");
+              if (!bill.email) missing.push("email");
+              if (!bill.phone) missing.push("phone");
+              if (!accepted) missing.push("accept the Terms & Conditions");
+              if (!missing.length) return null;
+              return (
+                <div style={{ marginTop: 10, background: "#f8f8f8", border: "1px solid #ECECEC", borderRadius: 10, padding: "10px 12px", fontSize: 12.5, color: "#B3261E", lineHeight: 1.5, display: "flex", gap: 8, alignItems: "flex-start" }}>
+                  <Info size={15} color="#B3261E" style={{ flexShrink: 0, marginTop: 1 }} />
+                  <span>To unlock payment, please complete: <strong>{missing.join(", ")}</strong>.</span>
+                </div>
+              );
+            })()}
           </div>
 
           {/* RIGHT — tour configuration + order summary + coupon */}
@@ -4777,7 +4855,7 @@ function BookingModal({ tour, user, onClose, onConfirm }) {
 const sect = { margin: "22px 0 9px", fontWeight: 700, fontSize: 12.5, textTransform: "uppercase", letterSpacing: ".08em", color: T.green };
 
 const COUNTRY_LIST = ["Senegal", "Gambia", "Mali", "Mauritania", "Guinea", "Ivory Coast", "France", "Morocco", "United States", "United Kingdom", "Canada", "Other"];
-const billValid = (b) => b.firstName && b.lastName && b.email && b.phone && b.address && b.city && b.country;
+const billValid = (b) => b.firstName && b.lastName && b.email && b.phone;
 
 function BillingFields({ bill, setBill }) {
   const set = (k) => (e) => setBill({ ...bill, [k]: e.target.value });
@@ -4791,11 +4869,11 @@ function BillingFields({ bill, setBill }) {
         <div style={{ flex: 1, minWidth: 160 }}><label style={label}>Email *</label><input style={input} type="email" value={bill.email || ""} onChange={set("email")} autoComplete="email" /></div>
         <div style={{ flex: 1, minWidth: 160 }}><label style={label}>Phone / WhatsApp *</label><input style={input} value={bill.phone || ""} onChange={set("phone")} placeholder="+221 …" autoComplete="tel" /></div>
       </div>
-      <div><label style={label}>Address *</label>
+      <div><label style={label}>Address <span style={{ opacity: 0.5, fontWeight: 400 }}>(optional)</span></label>
       <input style={input} value={bill.address || ""} onChange={set("address")} placeholder="Street, building, apt" autoComplete="street-address" /></div>
       <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
-        <div style={{ flex: 1, minWidth: 160 }}><label style={label}>City *</label><input style={input} value={bill.city || ""} onChange={set("city")} autoComplete="address-level2" /></div>
-        <div style={{ flex: 1, minWidth: 160 }}><label style={label}>Country *</label>
+        <div style={{ flex: 1, minWidth: 160 }}><label style={label}>City <span style={{ opacity: 0.5, fontWeight: 400 }}>(optional)</span></label><input style={input} value={bill.city || ""} onChange={set("city")} autoComplete="address-level2" /></div>
+        <div style={{ flex: 1, minWidth: 160 }}><label style={label}>Country <span style={{ opacity: 0.5, fontWeight: 400 }}>(optional)</span></label>
           <select style={input} value={bill.country || ""} onChange={set("country")}>
             <option value="">Select…</option>
             {COUNTRY_LIST.map((c) => <option key={c} value={c}>{c}</option>)}
