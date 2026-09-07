@@ -1753,6 +1753,9 @@ function TourDetail({ tourId, go, setBooking, favorites = [], toggleFavorite }) 
   const [extras, setExtras] = useState([]);
   const [vehicle, setVehicle] = useState(-1);      // -1 = no transport
   const [preview, setPreview] = useState(null);   // gallery lightbox index
+  const [flash, setFlash] = useState("");          // ephemeral alert on the mobile bar
+  const flashTimer = useRef();
+  const showFlash = (m) => { setFlash(m); clearTimeout(flashTimer.current); flashTimer.current = setTimeout(() => setFlash(""), 2600); };
   const todayStr = new Date().toISOString().slice(0, 10);
   const minDate = new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10); // earliest = day after tomorrow
   const [dateFrom, setDateFrom] = useState("");
@@ -2032,10 +2035,14 @@ function TourDetail({ tourId, go, setBooking, favorites = [], toggleFavorite }) 
         }
       `}</style>
       <div className="tour-bottombar" style={{ position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 60, background: "#fff", borderTop: `1px solid ${T.line}`, boxShadow: "0 -8px 24px rgba(0,0,0,.12)", padding: "10px 14px calc(10px + env(safe-area-inset-bottom))" }}>
+        {flash && (
+          <div role="status" style={{ position: "absolute", left: 14, right: 14, bottom: "calc(100% + 8px)", background: T.ink, color: "#fff", padding: "10px 14px", borderRadius: 12, fontSize: 12.5, fontWeight: 600, textAlign: "center", boxShadow: "0 10px 26px rgba(0,0,0,.3)", animation: "flashIn .2s ease" }}>{flash}</div>
+        )}
         {t.quote ? (
           <button style={{ ...btnGold, width: "100%", borderRadius: 12, background: T.indigo, color: "#fff" }} onClick={() => openBooking("quote")}>Request a quote</button>
         ) : (
           <>
+            {tier !== "grp" && <div style={{ fontSize: 11, color: T.green, fontWeight: 600, marginBottom: 6, textAlign: "center" }}>from {fmtXOF(fromPrice(t))} / person at 5+ pax</div>}
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 7 }}>
               <div style={{ minWidth: 0, flexShrink: 0 }}>
                 <div style={{ fontWeight: 800, fontSize: 16, color: "#1A1A1A" }} className="disp">{fmtXOF(estTotal)}</div>
@@ -2049,8 +2056,8 @@ function TourDetail({ tourId, go, setBooking, favorites = [], toggleFavorite }) 
               </div>
             </div>
             <div style={{ display: "flex", gap: 8 }}>
-              <button disabled={!dateOk} style={{ ...btnGold, flex: 1, borderRadius: 12, fontSize: 14, padding: "11px 8px", opacity: dateOk ? 1 : 0.5 }} onClick={() => dateOk && openBooking("full")}>Pay in full</button>
-              <button disabled={!tontinePossible} style={{ flex: 1, background: "#1A1A1A", color: "#fff", border: "none", borderRadius: 12, padding: "11px 8px", fontWeight: 800, cursor: tontinePossible ? "pointer" : "not-allowed", fontSize: 14, opacity: tontinePossible ? 1 : 0.5 }} onClick={() => tontinePossible && openBooking("deposit")}>Ma Tontine</button>
+              <button style={{ ...btnGold, flex: 1, borderRadius: 12, fontSize: 14, padding: "11px 8px", opacity: dateOk ? 1 : 0.5 }} onClick={() => dateOk ? openBooking("full") : showFlash("Choose a travel date above to book.")}>Pay in full</button>
+              <button style={{ flex: 1, background: "#1A1A1A", color: "#fff", border: "none", borderRadius: 12, padding: "11px 8px", fontWeight: 800, cursor: "pointer", fontSize: 14, opacity: tontinePossible ? 1 : 0.5 }} onClick={() => tontinePossible ? openBooking("deposit") : showFlash(dateOk ? "Ma Tontine needs a travel date at least 15 days away." : "Choose a travel date above to book.")}>Ma Tontine</button>
             </div>
             {!dateOk && <div style={{ fontSize: 11, color: "#8A968E", marginTop: 5, textAlign: "center" }}>Choose a travel date to book.</div>}
           </>
