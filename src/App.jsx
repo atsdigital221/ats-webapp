@@ -725,7 +725,10 @@ export default function ATSPlatformPreview() {
     const token = params.get("token");
     const provider = params.get("provider");
     if (!p) return;
-    window.history.replaceState({}, "", window.location.pathname);
+    // Leave a "home" entry behind the payment page and push the payment page on top,
+    // so the browser back button returns to the app instead of bouncing to the payment provider.
+    window.history.replaceState({ atsPage: { name: "home" } }, "", window.location.pathname);
+    window.history.pushState({ atsPage: { name: "payment", status: p } }, "", window.location.pathname);
     setPage({ name: "payment", status: p });
     window.scrollTo({ top: 0 });
     if (p === "success" && token) {
@@ -1045,7 +1048,7 @@ function HeroCard({ t, go, setBooking, w = 300 }) {
         <div className="disp" style={{ fontWeight: 700, fontSize: 15.5, lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.name.split(" — ")[0]}</div>
         <div style={{ fontWeight: 700, fontSize: 13.5, marginTop: 3 }}>from {fmtXOF(fromPrice(t))} <span style={{ fontWeight: 500, opacity: .8, fontSize: 11.5 }}>/ person · 5+ pax</span></div>
         <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, opacity: .85, marginTop: 5 }}><Clock size={13} /> {t.dur}</div>
-        <button onClick={() => setBooking(t)} style={{ marginTop: "auto", alignSelf: "flex-start", background: "transparent", border: "1px solid rgba(255,255,255,.65)", color: "#fff", borderRadius: 999, padding: "6px 16px", fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}>Book Now</button>
+        <button onClick={() => go("tour", { id: t.id })} style={{ marginTop: "auto", alignSelf: "flex-start", background: "transparent", border: "1px solid rgba(255,255,255,.65)", color: "#fff", borderRadius: 999, padding: "6px 16px", fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}>Book Now</button>
       </div>
     </div>
   );
