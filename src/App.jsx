@@ -2210,7 +2210,7 @@ function Home({ go, notify, setBooking, filters, setFilters, setChat, addBooking
       {/* PLAN YOUR TRIP */}
       <PlanTripSection go={go} />
 
-      {/* SERVICE CATEGORIES */}
+      {/* SERVICE CATEGORIES — hidden on Home (kept for later reuse)
       <section style={{ background: "#fff" }}>
         <Wrap>
           <div style={{ textAlign: "center", marginBottom: 40 }}>
@@ -2220,6 +2220,7 @@ function Home({ go, notify, setBooking, filters, setFilters, setChat, addBooking
           <ServicesFan go={go} />
         </Wrap>
       </section>
+      */}
 
       {/* QUICK TRANSFER BOOKING (ATS Logistics) */}
       <section style={{ background: "#fff" }}>
