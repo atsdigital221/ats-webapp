@@ -47,6 +47,10 @@ const setActiveCurrency = (c) => { ACTIVE_CUR = c || "XOF"; };
 // Corporate preferential discount (%) for the signed-in corporate member — set by the app.
 let CORP_DISCOUNT = 0;
 const setCorpDiscount = (n) => { CORP_DISCOUNT = Number(n) || 0; };
+// True when the signed-in member is an ACTIVE corporate account → checkout uses
+// "Book now, pay later" (invoiced) instead of upfront payment.
+let IS_CORPORATE = false;
+const setIsCorporate = (v) => { IS_CORPORATE = !!v; };
 const nf = (loc) => new Intl.NumberFormat(loc);
 // All prices are stored in XOF; fmtXOF renders them in the active currency.
 const fmtXOF = (n) => {
@@ -568,8 +572,9 @@ export default function ATSPlatformPreview() {
   // ---- Account role (client | agent | corporate | admin) + corporate rate ----
   const [role, setRole] = useState(null);
   const [corpDiscount, setCorpDiscountState] = useState(0);
+  const [corpActive, setCorpActive] = useState(false); // active corporate account → pay-later
   useEffect(() => {
-    if (!user?.id) { setRole(null); setCorpDiscountState(0); return; }
+    if (!user?.id) { setRole(null); setCorpDiscountState(0); setCorpActive(false); return; }
     let alive = true;
     supabase.from("profiles").select("role, org_id").eq("id", user.id).single()
       .then(async ({ data }) => {
@@ -577,12 +582,14 @@ export default function ATSPlatformPreview() {
         setRole(data?.role || "client");
         if (data?.role === "corporate" && data?.org_id) {
           const { data: org } = await supabase.from("organizations").select("discount_percent, active").eq("id", data.org_id).single();
-          if (alive) setCorpDiscountState(org && org.active ? (Number(org.discount_percent) || 0) : 0);
-        } else if (alive) setCorpDiscountState(0);
+          if (alive) { setCorpActive(!!(org && org.active)); setCorpDiscountState(org && org.active ? (Number(org.discount_percent) || 0) : 0); }
+        } else if (alive) { setCorpActive(false); setCorpDiscountState(0); }
       });
     return () => { alive = false; };
   }, [user?.id]);
   setCorpDiscount(role === "corporate" ? corpDiscount : 0);
+  const isCorporate = role === "corporate" && corpActive;
+  setIsCorporate(isCorporate);
 
   // ---- Load this user's bookings from the database (and save any made before sign-in) ----
   const [pending, setPending] = useState([]);
@@ -763,8 +770,30 @@ export default function ATSPlatformPreview() {
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
   }, []);
+  // Corporate "Book now, pay later": record the booking as an invoice (owed), no payment now.
+  const bookCorporate = async (b) => {
+    const { data, error } = await supabase.functions.invoke("corporate-booking", { body: { data: { ...b, status: "invoiced" } } });
+    if (error || !data?.id) {
+      let msg = "Could not record your corporate booking.";
+      try { msg = (await error?.context?.json())?.error || msg; } catch { /* ignore */ }
+      notify(msg);
+      return;
+    }
+    setBookings((x) => [{ ...data.booking, _id: data.id, _status: "invoiced" }, ...x]);
+    if (b.contact?.email) {
+      supabase.functions.invoke("send-confirmation", { body: { to: b.contact.email, name: b.contact.name || "", kind: "booking", summary: [["Item", b.tour?.name || "Booking"], ["Amount due", fmtXOF(data.owed)], ["Billing", `${data.orgName} · pay later`]] } }).catch(() => {});
+    }
+    notify(`Booked on your corporate account — ${fmtXOF(data.owed)} added to your ATS invoice.`);
+    go("account");
+  };
+
   const confirmBooking = (b) => {
     setBooking(null);
+    // Corporate members book without paying now (invoiced) — for any paid item
+    if (isCorporate && b.plan !== "quote" && b.plan !== "itinerary") {
+      bookCorporate(b);
+      return;
+    }
     // Ma Tontine Voyage — a free account is mandatory (instalments must be traced)
     if (b.plan === "deposit" && !user) {
       setPendingPay(b); setSignin(true);
@@ -836,7 +865,7 @@ export default function ATSPlatformPreview() {
     }
   }, []);
 
-  const ctx = { go, notify, setBooking, user, setUser, role, isAdmin: role === "admin" || role === "super_admin", isSuper: role === "super_admin", bookings, favorites, toggleFavorite, filters, setFilters, setSignin, setChat, signOut, saveRecord, patchBooking, cancelBooking, manageBooking, payInstallment, currency, setCurrency };
+  const ctx = { go, notify, setBooking, user, setUser, role, isCorporate, corpDiscount: isCorporate ? corpDiscount : 0, isAdmin: role === "admin" || role === "super_admin", isSuper: role === "super_admin", bookings, favorites, toggleFavorite, filters, setFilters, setSignin, setChat, signOut, saveRecord, patchBooking, cancelBooking, manageBooking, payInstallment, currency, setCurrency };
 
   return (
     <div style={{ background: T.paper, color: T.ink, fontFamily: "'Century Gothic','Poppins',system-ui,sans-serif", minHeight: "100vh" }}>
@@ -4123,7 +4152,12 @@ function AdminConsole({ user, isAdmin, isSuper, setSignin }) {
   const setCommStatus = async (id, status) => { const { error } = await supabase.from("commissions").update({ status }).eq("id", id); if (error) return flash("Error: " + error.message); flash("Commission " + status); reload(); };
 
   // ---- Booking status management (admin) ----
-  const BOOKING_STATUSES = ["pending", "confirmed", "paid", "settled", "completed", "cancelled"];
+  const BOOKING_STATUSES = ["pending", "invoiced", "confirmed", "paid", "settled", "completed", "cancelled"];
+  // Corporate "pay later" outstanding: bookings still invoiced, grouped by organization
+  const invoicedBookings = bookings.filter((b) => b.status === "invoiced" && b.data?.corp);
+  const owedByOrg = invoicedBookings.reduce((m, b) => { const k = b.data.corp.orgId || b.data.corp.orgName; m[k] = (m[k] || 0) + (Number(b.data.corp.owed) || 0); return m; }, {});
+  const totalOutstanding = invoicedBookings.reduce((s, b) => s + (Number(b.data.corp.owed) || 0), 0);
+  const markInvoicePaid = (b) => setBookingStatus(b, "paid");
   const prevStatusBefore = (b, marker) => { const h = (b.data?.statusHistory || []).slice().reverse().find((x) => x.to === marker); return h?.from || "confirmed"; };
   const patchBookingRow = async (b, patch, action) => {
     const { error } = await supabase.from("bookings").update(patch).eq("id", b.id);
@@ -4228,17 +4262,44 @@ function AdminConsole({ user, isAdmin, isSuper, setSignin }) {
                 <div><label style={{ ...label, marginTop: 0 }}>Discount %</label><input style={{ ...input, width: 100 }} type="number" value={newOrg.discount} onChange={(e) => setNewOrg({ ...newOrg, discount: e.target.value })} /></div>
                 <button style={{ ...btnGold, padding: "11px 18px" }} onClick={createOrg}>Add</button>
               </div>
-              <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 480 }}>
-                <thead><tr><th style={th}>Organization</th><th style={th}>Discount %</th><th style={th}>Status</th></tr></thead>
+              <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 560 }}>
+                <thead><tr><th style={th}>Organization</th><th style={th}>Discount %</th><th style={th}>Outstanding (pay later)</th><th style={th}>Status</th></tr></thead>
                 <tbody>
-                  {orgs.map((o) => (
+                  {orgs.map((o) => {
+                    const owed = owedByOrg[o.id] || 0;
+                    return (
                     <tr key={o.id}>
                       <td style={td}>{o.name}</td>
                       <td style={td}><input style={{ ...sel, width: 80 }} type="number" defaultValue={o.discount_percent} onBlur={(e) => setOrgDiscount(o.id, e.target.value)} /></td>
+                      <td style={{ ...td, fontWeight: 700, color: owed > 0 ? T.indigo : "#8A968E" }}>{owed > 0 ? fmtXOF(owed) : "—"}</td>
                       <td style={td}><button onClick={() => toggleOrg(o.id, !o.active)} style={{ border: "none", cursor: "pointer", borderRadius: 999, padding: "4px 12px", fontSize: 12, fontWeight: 700, background: o.active ? "#E9F7EE" : "#F2F2F2", color: o.active ? T.green : "#8A968E" }}>{o.active ? "Active" : "Inactive"}</button></td>
                     </tr>
+                    );
+                  })}
+                  {orgs.length === 0 && <tr><td style={td} colSpan={4}>No organization yet.</td></tr>}
+                </tbody>
+              </table>
+
+              {/* Book-now-pay-later: invoices awaiting settlement */}
+              <div style={{ marginTop: 24, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                <h3 className="disp" style={{ fontWeight: 800, fontSize: 16, margin: 0 }}>Corporate invoices — pay later</h3>
+                <span style={{ background: "#F3F1FB", color: T.indigo, borderRadius: 999, padding: "3px 12px", fontSize: 12.5, fontWeight: 700 }}>Total outstanding: {fmtXOF(totalOutstanding)}</span>
+              </div>
+              <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 640, marginTop: 10 }}>
+                <thead><tr><th style={th}>Item</th><th style={th}>Organization</th><th style={th}>Gross</th><th style={th}>Rate</th><th style={th}>Owed</th><th style={th}>Booked</th><th style={th}>Settle</th></tr></thead>
+                <tbody>
+                  {invoicedBookings.map((b) => (
+                    <tr key={b.id}>
+                      <td style={td}><div style={{ fontWeight: 600 }}>{b.data?.tour?.name || "—"}</div><div style={{ fontSize: 11.5, opacity: 0.6 }}>{custOf(b)}</div></td>
+                      <td style={td}>{b.data.corp.orgName}</td>
+                      <td style={td}>{fmtXOF(b.data.corp.grossTotal)}</td>
+                      <td style={td}>−{b.data.corp.discountPercent}%</td>
+                      <td style={{ ...td, fontWeight: 700 }}>{fmtXOF(b.data.corp.owed)}</td>
+                      <td style={td}>{new Date(b.created_at).toLocaleDateString()}</td>
+                      <td style={td}><button onClick={() => markInvoicePaid(b)} style={{ border: "none", background: T.green, color: "#fff", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Mark paid</button></td>
+                    </tr>
                   ))}
-                  {orgs.length === 0 && <tr><td style={td} colSpan={3}>No organization yet.</td></tr>}
+                  {invoicedBookings.length === 0 && <tr><td style={td} colSpan={7}>No outstanding corporate invoice.</td></tr>}
                 </tbody>
               </table>
             </div>
@@ -4883,8 +4944,8 @@ function PaymentResult({ status, go, user, setSignin }) {
 // ---------------- ACCOUNT ----------------
 const planLabel = (p) => p === "deposit" ? "Ma Tontine Voyage" : p === "quote" ? "Quote requested" : p === "itinerary" ? "Custom itinerary" : "Paid in full";
 const planColor = (p) => p === "deposit" ? T.laterite : p === "quote" ? T.indigo : p === "itinerary" ? T.indigo : T.green;
-const statusLabel = { pending: "In progress", confirmed: "Confirmed", paid: "Paid", cancelled: "Cancelled", settled: "Fully paid", completed: "Completed", modification_requested: "Change requested", cancellation_requested: "Cancellation requested" };
-const statusColor = (s) => s === "cancelled" ? "#B3261E" : s === "cancellation_requested" ? "#B3261E" : s === "modification_requested" ? T.gold : s === "settled" || s === "confirmed" || s === "paid" || s === "completed" ? T.green : T.laterite;
+const statusLabel = { pending: "In progress", confirmed: "Confirmed", paid: "Paid", cancelled: "Cancelled", settled: "Fully paid", completed: "Completed", invoiced: "Invoiced · due", modification_requested: "Change requested", cancellation_requested: "Cancellation requested" };
+const statusColor = (s) => s === "cancelled" ? "#B3261E" : s === "cancellation_requested" ? "#B3261E" : s === "modification_requested" ? T.gold : s === "invoiced" ? T.indigo : s === "settled" || s === "confirmed" || s === "paid" || s === "completed" ? T.green : T.laterite;
 
 // ---- ATS cancellation policy (mirror of the server; used for on-screen previews only) ----
 const retainedPctFor = (days) => days == null ? 10 : days < 3 ? 100 : days < 7 ? 50 : days < 10 ? 30 : 10;
@@ -5549,14 +5610,14 @@ function BookingModal({ tour, user, onClose, onConfirm }) {
   const daysUntil = date ? Math.ceil((new Date(date + "T00:00:00") - new Date(todayStr + "T00:00:00")) / 86400000) : null;
   const optAvailable = (o) => daysUntil != null && daysUntil >= o.days;
   const tontineAvailable = TONTINE_OPTIONS.some(optAvailable);
-  const tontineAllowed = tontineAvailable && !!user; // Ma Tontine requires a free account
+  const tontineAllowed = tontineAvailable && !!user && !IS_CORPORATE; // Ma Tontine requires a free account; corporate books on invoice
   const selectedOpt = TONTINE_OPTIONS.find((o) => o.key === sched) || TONTINE_OPTIONS[3];
   const baseN = selectedOpt.n;                 // instalments implied by the chosen period
   const maxTr = baseN + 2;                      // client may go up to +2 instalments
   const months = Math.min(Math.max(1, tranches), maxTr); // effective number of instalments
 
-  // a guest can never sit on the deposit plan (account required)
-  useEffect(() => { if (!user) setPlan((p) => (p === "deposit" ? "full" : p)); }, [user]);
+  // a guest can never sit on the deposit plan (account required); corporate books full on invoice
+  useEffect(() => { if (!user || IS_CORPORATE) setPlan((p) => (p === "deposit" ? "full" : p)); }, [user]);
 
   // keep schedule + plan valid when the date changes
   useEffect(() => {
@@ -5680,6 +5741,7 @@ function BookingModal({ tour, user, onClose, onConfirm }) {
             <BillingFields bill={bill} setBill={setBill} />
             {!dateFrom && <div style={{ fontSize: 12.5, color: T.laterite, marginTop: 8 }}>Choose your travel date in the order panel to enable payment.</div>}
 
+            {!IS_CORPORATE && (<>
             <div style={sect}>Payment</div>
             <div style={{ display: "flex", gap: 8 }}>
               <button onClick={() => setPlan("full")} style={{ flex: 1, border: `1.5px solid ${plan === "full" ? T.green : T.line}`, background: plan === "full" ? T.green : "#fff", borderRadius: 12, padding: "10px 8px", fontWeight: 600, fontSize: 13, cursor: "pointer", color: plan === "full" ? "#fff" : T.ink }}>Pay in full</button>
@@ -5729,6 +5791,7 @@ function BookingModal({ tour, user, onClose, onConfirm }) {
                 <div style={{ fontSize: 12, opacity: 0.6, marginTop: 6 }}>From 1 instalment (pay the balance at once) up to {maxTr}× for this period. You can always pay more than the minimum, or clear the balance early.</div>
               </div>
             )}
+            </>)}
 
             <div style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".1em", color: T.green, marginTop: 20, marginBottom: 12, borderTop: `1px solid ${T.line}`, paddingTop: 18 }}>Order summary</div>
             <Row l={`Tour · ${tierLabel[tier]} · ${adults} ad${children ? ` + ${children} ch` : ""}`} v={fmtXOF(calc.base)} />
@@ -5776,22 +5839,32 @@ function BookingModal({ tour, user, onClose, onConfirm }) {
             )}
 
             <div style={{ marginTop: 20 }}>
-              <div style={sect}>Payment method</div>
-              <div style={{ position: "relative", display: "inline-flex", alignItems: "center", gap: 12, background: "#fff", color: T.ink, border: `1.5px solid ${T.line}`, borderRadius: 12, padding: "10px 40px 10px 16px" }}>
-                <img src={PAY_LOGOS.stripe} alt="Stripe" style={{ height: 20, objectFit: "contain", flexShrink: 0 }} />
-                <div style={{ display: "flex", flexDirection: "column", lineHeight: 1.35 }}>
-                  <span style={{ fontWeight: 700, fontSize: 13 }}>Pay with credit card</span>
-                  <span style={{ fontWeight: 500, fontSize: 11.5, opacity: 0.7 }}>Visa / Mastercard — secure payment in USD</span>
+              <div style={sect}>{IS_CORPORATE ? "Billing" : "Payment method"}</div>
+              {IS_CORPORATE ? (
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 12, background: "#F3F1FB", color: T.ink, border: `1.5px solid #DAD3F2`, borderRadius: 12, padding: "12px 16px" }}>
+                  <Building2 size={20} color={T.indigo} style={{ flexShrink: 0, marginTop: 1 }} />
+                  <div style={{ lineHeight: 1.45 }}>
+                    <span style={{ fontWeight: 700, fontSize: 13.5 }}>Book now, pay later</span>
+                    <div style={{ fontWeight: 500, fontSize: 12, opacity: 0.8 }}>Charged to your corporate account{CORP_DISCOUNT > 0 ? ` at the −${CORP_DISCOUNT}% corporate rate` : ""} — no payment today. ATS invoices you for settlement.</div>
+                  </div>
                 </div>
-                <CircleCheck size={18} color="#fff" fill={T.green} style={{ position: "absolute", top: 8, right: 8 }} />
-              </div>
+              ) : (
+                <div style={{ position: "relative", display: "inline-flex", alignItems: "center", gap: 12, background: "#fff", color: T.ink, border: `1.5px solid ${T.line}`, borderRadius: 12, padding: "10px 40px 10px 16px" }}>
+                  <img src={PAY_LOGOS.stripe} alt="Stripe" style={{ height: 20, objectFit: "contain", flexShrink: 0 }} />
+                  <div style={{ display: "flex", flexDirection: "column", lineHeight: 1.35 }}>
+                    <span style={{ fontWeight: 700, fontSize: 13 }}>Pay with credit card</span>
+                    <span style={{ fontWeight: 500, fontSize: 11.5, opacity: 0.7 }}>Visa / Mastercard — secure payment in USD</span>
+                  </div>
+                  <CircleCheck size={18} color="#fff" fill={T.green} style={{ position: "absolute", top: 8, right: 8 }} />
+                </div>
+              )}
             </div>
 
             <TermsCheck checked={accepted} onChange={setAccepted} />
-            <button style={{ width: "100%", marginTop: 12, background: T.gold, color: T.ink, border: "none", borderRadius: 12, padding: 14, fontWeight: 800, fontSize: 16, cursor: (billValid(bill) && dateFrom && accepted) ? "pointer" : "not-allowed", opacity: (billValid(bill) && dateFrom && accepted) ? 1 : 0.55 }}
+            <button style={{ width: "100%", marginTop: 12, background: IS_CORPORATE ? T.indigo : T.gold, color: IS_CORPORATE ? "#fff" : T.ink, border: "none", borderRadius: 12, padding: 14, fontWeight: 800, fontSize: 16, cursor: (billValid(bill) && dateFrom && accepted) ? "pointer" : "not-allowed", opacity: (billValid(bill) && dateFrom && accepted) ? 1 : 0.55 }}
               disabled={!billValid(bill) || !dateFrom || !accepted}
-              onClick={() => onConfirm({ tour, date: dateFrom, dateFrom, dateTo: dateFrom, adults, children, infants, plan, months, schedule: plan === "deposit" ? selectedOpt.label : "", total: calc.total, deposit: calc.deposit, contact: { ...bill, name: `${bill.firstName} ${bill.lastName}`.trim() }, addons: chosenAddons, promoCode: promoValid ? promo.code : "", payMethod })}>
-              {plan === "deposit" ? `Reserve with ${fmtXOF(calc.deposit)} deposit` : `Pay in full — ${fmtXOF(payTotal)}`}
+              onClick={() => onConfirm({ tour, date: dateFrom, dateFrom, dateTo: dateFrom, adults, children, infants, plan: IS_CORPORATE ? "full" : plan, months, schedule: plan === "deposit" ? selectedOpt.label : "", total: calc.total, deposit: calc.deposit, contact: { ...bill, name: `${bill.firstName} ${bill.lastName}`.trim() }, addons: chosenAddons, promoCode: promoValid ? promo.code : "", payMethod })}>
+              {IS_CORPORATE ? `Book now — pay later (${fmtXOF(payTotal)})` : plan === "deposit" ? `Reserve with ${fmtXOF(calc.deposit)} deposit` : `Pay in full — ${fmtXOF(payTotal)}`}
             </button>
             {(() => {
               const missing = [];
@@ -6006,15 +6079,15 @@ function TransferCheckout({ detail, user, onClose, onConfirm }) {
           </strong>
         </div>
       </div>
-      <div style={{ fontSize: 12.5, color: "#6B7A72", marginTop: 8 }}>Confirmed with full payment — no instalment plan.</div>
+      <div style={{ fontSize: 12.5, color: "#6B7A72", marginTop: 8 }}>{IS_CORPORATE ? "Booked on your corporate account — invoiced by ATS, no payment today." : "Confirmed with full payment — no instalment plan."}</div>
 
       <div style={sect}>Reservation & billing details</div>
       <BillingFields bill={bill} setBill={setBill} />
-      {!promo.corporate && <PromoField p={promo} />}
+      {!promo.corporate && !IS_CORPORATE && <PromoField p={promo} />}
 
       <TermsCheck checked={accepted} onChange={setAccepted} />
-      <button disabled={!billValid(bill) || !accepted} style={{ ...btnGold, width: "100%", marginTop: 12, opacity: (billValid(bill) && accepted) ? 1 : 0.55, cursor: (billValid(bill) && accepted) ? "pointer" : "not-allowed" }} onClick={confirm}>
-        Pay in full — {fmtXOF(promo.payTotal)}
+      <button disabled={!billValid(bill) || !accepted} style={{ ...btnGold, width: "100%", marginTop: 12, background: IS_CORPORATE ? T.indigo : undefined, color: IS_CORPORATE ? "#fff" : undefined, opacity: (billValid(bill) && accepted) ? 1 : 0.55, cursor: (billValid(bill) && accepted) ? "pointer" : "not-allowed" }} onClick={confirm}>
+        {IS_CORPORATE ? `Book now — pay later (${fmtXOF(promo.payTotal)})` : `Pay in full — ${fmtXOF(promo.payTotal)}`}
       </button>
     </Overlay>
   );
@@ -6073,7 +6146,7 @@ function RentalCheckoutPage({ detail, user, onBack, onConfirm }) {
                 </strong>
               </div>
             </div>
-            <div style={{ fontSize: 12.5, color: "#6B7A72", marginTop: 10 }}>Confirmed with full payment — no instalment plan.</div>
+            <div style={{ fontSize: 12.5, color: "#6B7A72", marginTop: 10 }}>{IS_CORPORATE ? "Booked on your corporate account — invoiced by ATS, no payment today." : "Confirmed with full payment — no instalment plan."}</div>
           </div>
         </div>
 
@@ -6081,10 +6154,10 @@ function RentalCheckoutPage({ detail, user, onBack, onConfirm }) {
         <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 16, padding: 20 }}>
           <div style={{ ...sect, marginTop: 0 }}>Reservation & billing details</div>
           <BillingFields bill={bill} setBill={setBill} />
-          {!promo.corporate && <PromoField p={promo} />}
+          {!promo.corporate && !IS_CORPORATE && <PromoField p={promo} />}
           <TermsCheck checked={accepted} onChange={setAccepted} />
-          <button disabled={!billValid(bill) || !accepted} style={{ ...btnGold, width: "100%", marginTop: 12, opacity: (billValid(bill) && accepted) ? 1 : 0.55, cursor: (billValid(bill) && accepted) ? "pointer" : "not-allowed" }} onClick={confirm}>
-            Pay in full — {fmtXOF(promo.payTotal)}
+          <button disabled={!billValid(bill) || !accepted} style={{ ...btnGold, width: "100%", marginTop: 12, background: IS_CORPORATE ? T.indigo : undefined, color: IS_CORPORATE ? "#fff" : undefined, opacity: (billValid(bill) && accepted) ? 1 : 0.55, cursor: (billValid(bill) && accepted) ? "pointer" : "not-allowed" }} onClick={confirm}>
+            {IS_CORPORATE ? `Book now — pay later (${fmtXOF(promo.payTotal)})` : `Pay in full — ${fmtXOF(promo.payTotal)}`}
           </button>
         </div>
       </div>
@@ -6138,13 +6211,13 @@ function TransferCheckoutPage({ detail, user, go, onConfirm }) {
         <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 16, padding: 22 }}>
           <div style={{ ...sect, marginTop: 0 }}>Reservation & billing details</div>
           <BillingFields bill={bill} setBill={setBill} />
-          {!promo.corporate && <PromoField p={promo} />}
+          {!promo.corporate && !IS_CORPORATE && <PromoField p={promo} />}
           <TermsCheck checked={accepted} onChange={setAccepted} />
-          <button disabled={!ready} style={{ ...btnGold, width: "100%", marginTop: 14, padding: "14px 22px", opacity: ready ? 1 : 0.55, cursor: ready ? "pointer" : "not-allowed" }} onClick={confirm}>
-            Pay — {fmtXOF(promo.payTotal)}
+          <button disabled={!ready} style={{ ...btnGold, width: "100%", marginTop: 14, padding: "14px 22px", background: IS_CORPORATE ? T.indigo : undefined, color: IS_CORPORATE ? "#fff" : undefined, opacity: ready ? 1 : 0.55, cursor: ready ? "pointer" : "not-allowed" }} onClick={confirm}>
+            {IS_CORPORATE ? `Book now — pay later (${fmtXOF(promo.payTotal)})` : `Pay — ${fmtXOF(promo.payTotal)}`}
           </button>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7, fontSize: 12.5, color: "rgba(0,0,0,.8)", marginTop: 10 }}>
-            <Shield size={14} color={T.green} /> Secure payment — instant confirmation by email
+            <Shield size={14} color={T.green} /> {IS_CORPORATE ? "Booked on your corporate account — invoiced by ATS" : "Secure payment — instant confirmation by email"}
           </div>
         </div>
 
