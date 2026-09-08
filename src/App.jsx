@@ -100,17 +100,17 @@ const tierLabel = { p12: "Private 1–2 pax", p34: "Private 3–4 pax", grp: "Gr
 const fromPrice = (t) => t.grid.grp.a;
 
 const COUNTRIES = [
-  { id: "sn", name: "Senegal", live: true, ll: [-14.5, 14.5], count: "35+ experiences" },
-  { id: "rw", name: "Rwanda", live: true, ll: [29.9, -1.9], count: "Packages available" },
-  { id: "cv", name: "Cape Verde", live: false, ll: [-23.6, 16.0] },
-  { id: "gm", name: "Gambia", live: false, ll: [-15.3, 13.4] },
-  { id: "gn", name: "Guinea", live: false, ll: [-11.0, 9.9] },
-  { id: "ma", name: "Morocco", live: false, ll: [-7.0, 31.8] },
-  { id: "ci", name: "Ivory Coast", live: false, ll: [-5.5, 7.5] },
-  { id: "gh", name: "Ghana", live: false, ll: [-1.0, 7.9] },
-  { id: "et", name: "Ethiopia", live: false, ll: [40.5, 9.1] },
-  { id: "ke", name: "Kenya", live: false, ll: [37.9, 0.2] },
-  { id: "tz", name: "Tanzania & Zanzibar", live: false, ll: [34.9, -6.4] },
+  { id: "sn", name: "Senegal", live: true, ll: [-14.5, 14.5], x: 14.6, y: 29.9, count: "35+ experiences" },
+  { id: "rw", name: "Rwanda", live: true, ll: [29.9, -1.9], x: 71.2, y: 50.8, count: "Packages available" },
+  { id: "cv", name: "Cape Verde", live: false, ll: [-23.6, 16.0], x: 3.1, y: 28.6 },
+  { id: "gm", name: "Gambia", live: false, ll: [-15.3, 13.4], x: 13.4, y: 31.3 },
+  { id: "gn", name: "Guinea", live: false, ll: [-11.0, 9.9], x: 19.1, y: 35.0 },
+  { id: "ma", name: "Morocco", live: false, ll: [-7.0, 31.8], x: 24.5, y: 7.6 },
+  { id: "ci", name: "Ivory Coast", live: false, ll: [-5.5, 7.5], x: 26.1, y: 38.9 },
+  { id: "gh", name: "Ghana", live: false, ll: [-1.0, 7.9], x: 31.6, y: 38.3 },
+  { id: "et", name: "Ethiopia", live: false, ll: [40.5, 9.1], x: 83.4, y: 37.6 },
+  { id: "ke", name: "Kenya", live: false, ll: [37.9, 0.2], x: 80.9, y: 48.0 },
+  { id: "tz", name: "Tanzania & Zanzibar", live: false, ll: [34.9, -6.4], x: 81.5, y: 55.6 },
 ];
 // [name, role, photo-slug] — photos live in bucket site/team/<slug>.webp
 const TEAM = [
@@ -154,70 +154,80 @@ const MONTHS = ["January", "February", "March", "April", "May", "June", "July", 
 const WD = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
 const iso = (y, m, d) => `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 
-function RangeDate({ from, to, onChange, triggerStyle, minDate }) {
+function RangeDate({ from, to, onChange, triggerStyle, minDate, wide, align = "left", single }) {
   const [open, setOpen] = useState(false);
   const now = new Date();
   const todayStr = iso(now.getFullYear(), now.getMonth(), now.getDate());
   const minStr = minDate || todayStr; // earliest selectable day
   const start = from ? new Date(from + "T00:00:00") : new Date(minStr + "T00:00:00");
   const [view, setView] = useState({ y: start.getFullYear(), m: start.getMonth() });
-
-  const daysInMonth = new Date(view.y, view.m + 1, 0).getDate();
-  const firstDow = (new Date(view.y, view.m, 1).getDay() + 6) % 7; // Mon=0
   const minD = new Date(minStr + "T00:00:00");
   const canPrev = new Date(view.y, view.m, 1) > new Date(minD.getFullYear(), minD.getMonth(), 1);
 
   const pick = (ds) => {
+    if (single) { onChange(ds, ds); setOpen(false); return; } // one date, pick & close
     if (!from || (from && to)) { onChange(ds, ""); return; }
     if (ds < from) { onChange(ds, ""); return; }
     onChange(from, ds); // wait for "Done" — do not auto-close
   };
-  const label = from ? (to ? `${from} → ${to}` : `${from} → …`) : "jj/mm/aaaa";
+  const label = single ? (from || "dd/mm/yyyy") : from ? (to ? `${from} → ${to}` : `${from} → …`) : "dd/mm/yyyy";
 
-  const cells = [];
-  for (let i = 0; i < firstDow; i++) cells.push(null);
-  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+  const renderMonth = (y, m) => {
+    const daysInMonth = new Date(y, m + 1, 0).getDate();
+    const firstDow = (new Date(y, m, 1).getDay() + 6) % 7; // Mon=0
+    const cells = [];
+    for (let i = 0; i < firstDow; i++) cells.push(null);
+    for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+    return (
+      <div key={`${y}-${m}`} style={{ flex: 1, minWidth: wide ? 244 : 0 }}>
+        <div style={{ textAlign: "center", fontWeight: 700, fontSize: wide ? 15 : 14, marginBottom: 8, textTransform: "capitalize" }}>{MONTHS[m]} {y}</div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 2, fontSize: 11.5, opacity: 0.55, marginBottom: 6 }}>
+          {WD.map((w) => <div key={w} style={{ textAlign: "center" }}>{w}</div>)}
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: wide ? 3 : 2 }}>
+          {cells.map((d, i) => {
+            if (!d) return <div key={i} />;
+            const ds = iso(y, m, d);
+            const past = ds < minStr;
+            const isFrom = ds === from, isTo = ds === to;
+            const inRange = from && to && ds > from && ds < to;
+            const sel = isFrom || isTo;
+            return (
+              <button key={i} type="button" disabled={past} onClick={() => pick(ds)}
+                style={{ border: "none", borderRadius: 9, padding: wide ? "11px 0" : "7px 0", fontSize: wide ? 14 : 13, cursor: past ? "not-allowed" : "pointer",
+                  background: sel ? T.green : inRange ? "#E3F3E9" : "transparent", color: past ? "#C7CFCA" : sel ? "#fff" : T.ink, fontWeight: sel ? 700 : 500 }}>
+                {d}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div style={{ position: "relative" }}>
       <button type="button" onClick={() => setOpen((o) => !o)}
         style={{ ...(triggerStyle || {}), display: "flex", alignItems: "center", gap: 8, width: "100%", textAlign: "left", cursor: "pointer", color: T.ink }}>
-        <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: from ? T.ink : "#8A968F" }}>{label}</span>
+        <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: from ? T.ink : "rgba(0,0,0,.8)" }}>{label}</span>
         <Calendar size={15} style={{ opacity: 0.6, flexShrink: 0 }} />
       </button>
       {open && (
         <>
           <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 90 }} />
-          <div style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 91, background: "#fff", color: T.ink, border: `1px solid ${T.line}`, borderRadius: 14, boxShadow: "0 18px 40px rgba(0,0,0,.22)", padding: 14, width: "min(290px, calc(100vw - 32px))", maxWidth: "90vw" }}>
-            <div style={{ display: "flex", alignItems: "center", marginBottom: 10 }}>
+          <div style={{ position: "absolute", top: "calc(100% + 6px)", left: align === "right" ? "auto" : 0, right: align === "right" ? 0 : "auto", zIndex: 91, background: "#fff", color: T.ink, border: `1px solid ${T.line}`, borderRadius: 16, boxShadow: "0 18px 40px rgba(0,0,0,.22)", padding: wide ? 20 : 14, width: wide ? "min(346px, calc(100vw - 28px))" : "min(290px, calc(100vw - 32px))", maxWidth: "94vw" }}>
+            <div style={{ display: "flex", alignItems: "center", marginBottom: 12 }}>
               <button type="button" disabled={!canPrev} onClick={() => setView((v) => ({ y: v.m === 0 ? v.y - 1 : v.y, m: v.m === 0 ? 11 : v.m - 1 }))}
                 style={{ ...btnCircle, opacity: canPrev ? 1 : 0.3, cursor: canPrev ? "pointer" : "not-allowed" }}>‹</button>
-              <strong style={{ flex: 1, textAlign: "center", fontSize: 14 }}>{MONTHS[view.m]} {view.y}</strong>
+              <span style={{ flex: 1 }} />
               <button type="button" onClick={() => setView((v) => ({ y: v.m === 11 ? v.y + 1 : v.y, m: v.m === 11 ? 0 : v.m + 1 }))} style={btnCircle}>›</button>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 2, fontSize: 11, opacity: 0.55, marginBottom: 4 }}>
-              {WD.map((w) => <div key={w} style={{ textAlign: "center" }}>{w}</div>)}
+            <div style={{ display: "flex", gap: 26, flexWrap: "wrap" }}>
+              {renderMonth(view.y, view.m)}
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 2 }}>
-              {cells.map((d, i) => {
-                if (!d) return <div key={i} />;
-                const ds = iso(view.y, view.m, d);
-                const past = ds < minStr;
-                const isFrom = ds === from, isTo = ds === to;
-                const inRange = from && to && ds > from && ds < to;
-                const sel = isFrom || isTo;
-                return (
-                  <button key={i} type="button" disabled={past} onClick={() => pick(ds)}
-                    style={{ border: "none", borderRadius: 8, padding: "7px 0", fontSize: 13, cursor: past ? "not-allowed" : "pointer",
-                      background: sel ? T.green : inRange ? "#E3F3E9" : "transparent", color: past ? "#C7CFCA" : sel ? "#fff" : T.ink, fontWeight: sel ? 700 : 500 }}>
-                    {d}
-                  </button>
-                );
-              })}
-            </div>
-            <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-              <button type="button" onClick={() => { onChange("", ""); }} style={{ flex: 1, background: "none", border: `1px solid ${T.line}`, borderRadius: 8, padding: "7px", cursor: "pointer", fontSize: 12.5, fontWeight: 600 }}>Clear</button>
-              <button type="button" onClick={() => setOpen(false)} style={{ flex: 1, background: T.green, color: "#fff", border: "none", borderRadius: 8, padding: "7px", cursor: "pointer", fontSize: 12.5, fontWeight: 700 }}>Done</button>
+            <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+              <button type="button" onClick={() => { onChange("", ""); }} style={{ flex: 1, background: "none", border: `1px solid ${T.line}`, borderRadius: 10, padding: "9px", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Clear</button>
+              <button type="button" onClick={() => setOpen(false)} style={{ flex: 1, background: T.green, color: "#fff", border: "none", borderRadius: 10, padding: "9px", cursor: "pointer", fontSize: 13, fontWeight: 700 }}>Done</button>
             </div>
           </div>
         </>
@@ -227,7 +237,7 @@ function RangeDate({ from, to, onChange, triggerStyle, minDate }) {
 }
 
 // ---------------- LIVE ADDRESS AUTOCOMPLETE (OpenStreetMap / Nominatim, Senegal) ----------------
-function AddressInput({ value, onChange, placeholder }) {
+function AddressInput({ value, onChange, placeholder, bare }) {
   const [q, setQ] = useState(value || "");
   const [results, setResults] = useState([]);
   const [open, setOpen] = useState(false);
@@ -249,13 +259,13 @@ function AddressInput({ value, onChange, placeholder }) {
   const choose = (r) => { const p = preciseOf(r); onChange(p); setQ(p); setOpen(false); setResults([]); };
   return (
     <div style={{ position: "relative" }}>
-      <input style={input} value={q} placeholder={placeholder} autoComplete="off"
+      <input style={bare ? { border: "none", outline: "none", background: "transparent", fontSize: 14.5, fontFamily: "inherit", color: T.ink, width: "100%", padding: 0 } : input} value={q} placeholder={placeholder} autoComplete="off"
         onChange={(e) => { setQ(e.target.value); onChange(e.target.value); }}
         onFocus={() => results.length && setOpen(true)} />
       {open && results.length > 0 && (
         <>
           <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 40 }} />
-          <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, zIndex: 41, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 12, boxShadow: "0 14px 34px rgba(0,0,0,.18)", overflow: "hidden", maxHeight: 260, overflowY: "auto" }}>
+          <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, zIndex: 41, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 12, boxShadow: "0 14px 34px rgba(0,0,0,.18)", overflow: "hidden", maxHeight: 260, overflowY: "auto", minWidth: bare ? 340 : 0 }}>
             {results.map((r, i) => (
               <button key={i} onClick={() => choose(r)} style={{ display: "flex", gap: 8, width: "100%", textAlign: "left", background: "none", border: "none", borderBottom: `1px solid ${T.line}`, padding: "10px 12px", cursor: "pointer", lineHeight: 1.35, color: T.ink, alignItems: "flex-start" }}>
                 <MapPin size={15} style={{ flexShrink: 0, marginTop: 2, color: T.green }} />
@@ -273,7 +283,7 @@ function AddressInput({ value, onChange, placeholder }) {
 }
 
 // ---------------- LIVE AIRPORT AUTOCOMPLETE (worldwide, keyless — TravelPayouts) ----------------
-function AirportInput({ value, onChange, placeholder }) {
+function AirportInput({ value, onChange, placeholder, wide, Icon }) {
   const [q, setQ] = useState(value || "");
   const [results, setResults] = useState([]);
   const [open, setOpen] = useState(false);
@@ -282,10 +292,9 @@ function AirportInput({ value, onChange, placeholder }) {
     if (!q || q.trim().length < 2) { setResults([]); return; }
     const id = setTimeout(async () => {
       try {
-        const res = await fetch(`https://autocomplete.travelpayouts.com/places2?locale=en&types[]=airport&types[]=city&term=${encodeURIComponent(q)}`, { headers: { Accept: "application/json" } });
+        const res = await fetch(`https://autocomplete.travelpayouts.com/places2?locale=fr&types[]=airport&types[]=city&term=${encodeURIComponent(q)}`, { headers: { Accept: "application/json" } });
         const data = await res.json();
-        setResults(Array.isArray(data) ? data.slice(0, 7) : []);
-        setOpen(true);
+        setResults(Array.isArray(data) ? data.slice(0, 8) : []);
       } catch { setResults([]); }
     }, 300);
     return () => clearTimeout(id);
@@ -293,24 +302,41 @@ function AirportInput({ value, onChange, placeholder }) {
   const labelOf = (r) => `${r.city_name || r.name} (${r.code})`;
   const contextOf = (r) => [r.name && r.name !== r.city_name ? r.name : null, r.country_name].filter(Boolean).join(" · ");
   const choose = (r) => { const p = labelOf(r); onChange(p); setQ(p); setOpen(false); setResults([]); };
+  const short = !q || q.trim().length < 2;
+  const inputEl = (
+    <input value={q} placeholder={placeholder} autoComplete="off"
+      style={Icon ? { border: "none", outline: "none", background: "transparent", width: "100%", fontSize: 14.5, fontFamily: "inherit", color: T.ink, padding: "11px 0" } : input}
+      onChange={(e) => { setQ(e.target.value); onChange(e.target.value); setOpen(true); }}
+      onFocus={() => setOpen(true)} />
+  );
   return (
     <div style={{ position: "relative" }}>
-      <input style={input} value={q} placeholder={placeholder} autoComplete="off"
-        onChange={(e) => { setQ(e.target.value); onChange(e.target.value); }}
-        onFocus={() => results.length && setOpen(true)} />
-      {open && results.length > 0 && (
+      {Icon ? (
+        <div style={{ ...input, display: "flex", alignItems: "center", gap: 9, padding: "0 13px" }}>
+          <Icon size={18} color={T.green} strokeWidth={2} style={{ flexShrink: 0 }} />
+          {inputEl}
+        </div>
+      ) : inputEl}
+      {open && (
         <>
           <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 40 }} />
-          <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, zIndex: 41, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 12, boxShadow: "0 14px 34px rgba(0,0,0,.18)", overflow: "hidden", maxHeight: 280, overflowY: "auto" }}>
-            {results.map((r, i) => (
-              <button key={i} onClick={() => choose(r)} style={{ display: "flex", gap: 8, width: "100%", textAlign: "left", background: "none", border: "none", borderBottom: `1px solid ${T.line}`, padding: "10px 12px", cursor: "pointer", lineHeight: 1.35, color: T.ink, alignItems: "flex-start" }}>
-                <Plane size={15} style={{ flexShrink: 0, marginTop: 2, color: T.green }} />
+          <div style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 41, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 14, boxShadow: "0 18px 44px rgba(0,0,0,.22)", overflow: "hidden", width: wide ? "min(430px, calc(100vw - 28px))" : "100%", minWidth: wide ? 360 : 0, maxHeight: 340, overflowY: "auto" }}>
+            {short ? (
+              <div style={{ padding: "34px 20px", textAlign: "center", color: "rgba(0,0,0,.8)" }}>
+                <Search size={30} style={{ opacity: 0.55, marginBottom: 10 }} />
+                <div style={{ fontSize: 14.5 }}>Search by city or airport</div>
+              </div>
+            ) : results.length > 0 ? results.map((r, i) => (
+              <button key={i} onClick={() => choose(r)} style={{ display: "flex", gap: 12, width: "100%", textAlign: "left", background: "none", border: "none", borderBottom: `1px solid ${T.line}`, padding: "13px 16px", cursor: "pointer", lineHeight: 1.4, color: T.ink, alignItems: "flex-start" }}>
+                <Plane size={18} style={{ flexShrink: 0, marginTop: 2, color: T.ink }} />
                 <span style={{ minWidth: 0, flex: 1 }}>
-                  <div style={{ fontSize: 13.5, fontWeight: 600 }}>{r.city_name || r.name} <span style={{ fontWeight: 700, color: T.indigo }}>({r.code})</span></div>
-                  <div style={{ fontSize: 11.5, opacity: 0.6, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{contextOf(r)}</div>
+                  <div style={{ fontSize: 15, fontWeight: 700 }}>{r.city_name || r.name} <span style={{ color: T.ink }}>({r.code})</span></div>
+                  <div style={{ fontSize: 13, opacity: 0.65, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{contextOf(r)}</div>
                 </span>
               </button>
-            ))}
+            )) : (
+              <div style={{ padding: "22px 20px", textAlign: "center", color: "rgba(0,0,0,.8)", fontSize: 13.5 }}>No results</div>
+            )}
           </div>
         </>
       )}
@@ -359,13 +385,13 @@ function TermsContent() {
       {TERMS_SECTIONS.map((s) => (
         <div key={s.h} style={{ marginTop: 18 }}>
           <h4 style={{ fontSize: 14, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".05em", color: T.green, margin: "0 0 8px" }}>{s.h}</h4>
-          {s.note && <p style={{ fontSize: 13.5, color: "#3B4A42", margin: "0 0 8px" }}>{s.note}</p>}
+          {s.note && <p style={{ fontSize: 13.5, color: "rgba(0,0,0,.8)", margin: "0 0 8px" }}>{s.note}</p>}
           <ul style={{ margin: 0, paddingLeft: 18, display: "flex", flexDirection: "column", gap: 7 }}>
-            {s.items.map((it, i) => <li key={i} style={{ fontSize: 13.5, lineHeight: 1.6, color: "#3B4A42" }}>{it}</li>)}
+            {s.items.map((it, i) => <li key={i} style={{ fontSize: 13.5, lineHeight: 1.6, color: "rgba(0,0,0,.8)" }}>{it}</li>)}
           </ul>
         </div>
       ))}
-      <div style={{ marginTop: 20, background: "#f8f8f8", border: "1px solid #ECECEC", borderRadius: 12, padding: "12px 14px", fontSize: 13, lineHeight: 1.6, color: "#3B4A42" }}>
+      <div style={{ marginTop: 20, background: "#f8f8f8", border: "1px solid #ECECEC", borderRadius: 12, padding: "12px 14px", fontSize: 13, lineHeight: 1.6, color: "rgba(0,0,0,.8)" }}>
         By making a reservation with Africa Tourism Solutions, the client acknowledges having read, understood and accepted these payment and cancellation terms.
       </div>
       <div style={{ marginTop: 12, fontSize: 12, color: "#8A968E" }}>Africa Tourism Solutions · Immeuble SICAP, Point E, Lot 8 Apt A, Dakar, Senegal · +221 33 825 12 79 · infos@africatourismsolutions.com</div>
@@ -412,7 +438,7 @@ function TermsPage() {
 
 // Mandatory acceptance checkbox — must be ticked before a paid booking can proceed.
 const TermsCheck = ({ checked, onChange }) => (
-  <label style={{ display: "flex", alignItems: "flex-start", gap: 9, fontSize: 12.5, color: "#3B4A42", marginTop: 12, lineHeight: 1.5, cursor: "pointer" }}>
+  <label style={{ display: "flex", alignItems: "flex-start", gap: 9, fontSize: 12.5, color: "rgba(0,0,0,.8)", marginTop: 12, lineHeight: 1.5, cursor: "pointer" }}>
     <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} style={{ width: 17, height: 17, accentColor: T.green, flexShrink: 0, marginTop: 1, cursor: "pointer" }} />
     <span>I have read and accept the <TermsLink /> (payment & cancellation conditions).</span>
   </label>
@@ -481,7 +507,7 @@ function PrefPrice({ base, prefix = "from ", pp = true }) {
       {prefix}
       {disc && <span style={{ textDecoration: "line-through", opacity: 0.45, fontWeight: 500, marginRight: 5 }}>{fmtXOF(base)}</span>}
       <span style={{ color: disc ? T.green : "inherit" }}>{fmtXOF(disc ? corpPrice(base) : base)}</span>
-      {pp && <span style={{ fontWeight: 500, fontSize: 11.5, color: "#888" }}> pp</span>}
+      {pp && <span style={{ fontWeight: 500, fontSize: 11.5, color: "rgba(0,0,0,.8)" }}> pp</span>}
     </span>
   );
 }
@@ -670,6 +696,7 @@ export default function ATSPlatformPreview() {
   const [pendingPay, setPendingPay] = useState(null);
   const go = (name, params = {}) => {
     const p = { name, ...params };
+    setBooking(null); // close the checkout modal if it's open, so the new page is visible
     try { window.history.pushState({ atsPage: p }, ""); } catch { /* ignore */ }
     setPage(p);
     window.scrollTo({ top: 0 });
@@ -681,6 +708,7 @@ export default function ATSPlatformPreview() {
     try { window.history.replaceState({ atsPage: page }, ""); } catch { /* ignore */ }
     const onPop = (e) => {
       const p = (e.state && e.state.atsPage) || { name: "home" };
+      setBooking(null); // never leave the checkout modal stuck over a changed page
       setPage(p);
       window.scrollTo({ top: 0 });
     };
@@ -759,18 +787,19 @@ export default function ATSPlatformPreview() {
         button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid ${T.gold};outline-offset:2px}
       `}</style>
 
-      <Nav {...ctx} page={page} overHero={false} />
-      <div style={{ height: 64 }} />
+      <Nav {...ctx} page={page} overHero={page.name === "home"} />
+      {page.name !== "home" && <div style={{ height: 60 }} />}
       {booking ? (
         <BookingModal tour={booking} user={user} onClose={() => setBooking(null)} onConfirm={confirmBooking} />
       ) : (
         <>
           {page.name === "home" && <Home {...ctx} addBookingHome={confirmBooking} />}
           {page.name === "tours" && <ToursPage {...ctx} />}
-          {page.name === "tour" && <TourDetail {...ctx} tourId={page.id} />}
+          {page.name === "tour" && <TourDetail {...ctx} tourId={page.id} initialDate={page.date} initialPax={page.pax} />}
           {page.name === "builder" && <TripBuilder {...ctx} />}
-          {page.name === "flights" && <FlightsPage {...ctx} />}
-          {page.name === "transport" && <TransportPage addBooking={confirmBooking} notify={notify} user={user} />}
+          {page.name === "flights" && <FlightsPage {...ctx} initial={page.fp} initialLegs={page.flegs} />}
+          {page.name === "transport" && <TransportPage addBooking={confirmBooking} notify={notify} user={user} go={go} initialRental={page.rental} />}
+          {page.name === "transferCheckout" && <TransferCheckoutPage detail={page.detail} user={user} go={go} onConfirm={confirmBooking} />}
           {page.name === "events" && <EventsPage {...ctx} />}
           {page.name === "micework" && <MiceWorkPage {...ctx} service={page.service} />}
           {page.name === "corporate" && <CorporatePage {...ctx} />}
@@ -846,8 +875,9 @@ const NineDots = ({ color = "#111", size = 22 }) => (
   </svg>
 );
 
-function Nav({ go, page, user, setSignin, bookings, currency, setCurrency, overHero }) {
+function Nav({ go, page, user, setSignin, bookings, currency, setCurrency, setChat, overHero }) {
   const [open, setOpen] = useState(false);
+  const [prefOpen, setPrefOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [logoOk, setLogoOk] = useState(true);
   const logoDark = supabase.storage.from(PHOTO_BUCKET).getPublicUrl("site/logo.png").data.publicUrl;
@@ -894,13 +924,14 @@ function Nav({ go, page, user, setSignin, bookings, currency, setCurrency, overH
   };
 
   return (
-    <nav style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 50, background: transparent ? "linear-gradient(to bottom, rgba(0,0,0,.55) 0%, rgba(0,0,0,.10) 70%, rgba(0,0,0,0) 100%)" : "#fff", borderBottom: "none", transition: "background .25s ease" }}>
+    <nav style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 50, background: transparent ? "linear-gradient(to bottom, rgba(0,0,0,.42) 0%, rgba(0,0,0,.12) 65%, rgba(0,0,0,0) 100%)" : "#fff", borderBottom: transparent ? "none" : `1px solid ${T.line}`, boxShadow: transparent ? "none" : "0 4px 18px rgba(11,46,27,.06)", transition: "background .25s ease" }}>
       <style>{`
         .nav-desktop{display:flex}
         .nav-top-link{transition:background .15s ease}
         .nav-top-link:hover{background:rgba(11,46,27,.07) !important}
         .nav-top-link--hero:hover{background:rgba(255,255,255,.20) !important}
         @media(max-width:980px){ .nav-desktop{display:none !important} }
+        @media(max-width:760px){ .nav-hide-sm{display:none !important} }
         .nav-menu-link{position:relative;transition:background .18s ease,transform .18s ease}
         .nav-menu-link:hover{background:rgba(0,146,69,.10) !important;transform:translateX(4px)}
         .nav-menu-link::before{content:"";position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:0;background:${T.green};border-radius:3px;transition:height .2s ease}
@@ -915,26 +946,61 @@ function Nav({ go, page, user, setSignin, bookings, currency, setCurrency, overH
         .ats-row:hover .ats-ico{background:${T.green};color:#fff}
         @media(prefers-reduced-motion:reduce){.ats-drawer,.ats-overlay{animation:none}}
       `}</style>
-      <div style={{ padding: "12px 20px" }}>
-      <div style={{ maxWidth: 1200, margin: "0 auto", display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center", gap: 12 }}>
+      <div style={{ padding: "10px 20px" }}>
+      <div style={{ maxWidth: 1280, margin: "0 auto", display: "flex", alignItems: "center", gap: 12 }}>
         {/* Left: logo */}
-        <button onClick={() => nav("home")} aria-label="Africa Tourism Solutions — home" style={{ gridColumn: 1, justifySelf: "start", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", padding: 0 }}>
+        <button onClick={() => nav("home")} aria-label="Africa Tourism Solutions — home" style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", padding: 0 }}>
           {logoOk
             ? <img src={transparent ? logoWhite : logoDark} alt="Africa Tourism Solutions" onError={() => setLogoOk(false)} style={{ height: 40, display: "block" }} />
-            : <span className="disp" style={{ fontWeight: 800, fontSize: 18, color: ink }}>ATS</span>}
+            : <span className="disp" style={{ fontWeight: 800, fontSize: 20, color: ink }}>ATS</span>}
         </button>
 
-        {/* Centered nav titles */}
-        <div className="nav-desktop" style={{ gridColumn: 2, justifySelf: "center", alignItems: "center", gap: 26 }}>
-          {topNav.map(([k, l, Ico]) => <TopLink key={k} k={k} l={l} Ico={Ico} />)}
-        </div>
+        {/* Right cluster (Skyscanner-style) */}
+        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 16 }}>
+          <button className="nav-hide-sm" onClick={() => setChat(true)} style={{ background: "none", border: "none", cursor: "pointer", color: ink, fontWeight: 600, fontSize: 14, fontFamily: "inherit" }}>Help</button>
 
-        {/* Right: language/currency + 9-dots menu */}
-        <div style={{ gridColumn: 3, justifySelf: "end", display: "flex", alignItems: "center", gap: 14 }}>
-          <button className="nav-desktop" onClick={() => { if (user) nav("account"); else { setSignin(true); setOpen(false); } }}
-            style={{ alignItems: "center", gap: 6, background: user ? T.green : "transparent", border: user ? "none" : `1.5px solid ${transparent ? "rgba(255,255,255,.55)" : T.line}`, color: user ? "#fff" : ink, borderRadius: 999, padding: "7px 14px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>
+          {/* Language + currency pill */}
+          <div className="nav-hide-sm" style={{ position: "relative" }}>
+            <button onClick={() => setPrefOpen((o) => !o)} style={{ display: "inline-flex", alignItems: "center", gap: 9, background: transparent ? "rgba(255,255,255,.13)" : "#F2F5F3", border: `1px solid ${transparent ? "rgba(255,255,255,.26)" : T.line}`, borderRadius: 8, padding: "8px 13px", cursor: "pointer", color: ink, fontFamily: "inherit", fontSize: 13.5, fontWeight: 600, whiteSpace: "nowrap" }}>
+              <Flag lang={lang} size={20} />
+              <span>{lang === "FR" ? "Français (FR)" : "English (EN)"}</span>
+              <span style={{ opacity: 0.5 }}>·</span>
+              <span>{cur === "XOF" ? "F XOF" : cur === "USD" ? "$ USD" : "€ EUR"}</span>
+              <ChevronDown size={15} style={{ opacity: 0.85 }} />
+            </button>
+            {prefOpen && (
+              <>
+                <div onClick={() => setPrefOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 41 }} />
+                <div style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, zIndex: 42, background: "#fff", color: T.ink, border: `1px solid ${T.line}`, borderRadius: 14, boxShadow: "0 16px 40px rgba(0,0,0,.2)", padding: 16, width: 250 }}>
+                  <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: ".12em", textTransform: "uppercase", color: "rgba(0,0,0,.8)", margin: "0 0 8px" }}>Language</div>
+                  <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+                    {["FR", "EN"].map((o) => (
+                      <button key={o} onClick={() => setLang(o)} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 7, padding: "9px 8px", borderRadius: 10, border: `1px solid ${lang === o ? T.green : T.line}`, background: lang === o ? "rgba(0,146,69,.08)" : "#fff", color: lang === o ? T.green : T.ink, fontWeight: lang === o ? 700 : 600, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}><Flag lang={o} size={18} /> {o}</button>
+                    ))}
+                  </div>
+                  <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: ".12em", textTransform: "uppercase", color: "rgba(0,0,0,.8)", margin: "0 0 8px" }}>Currency</div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    {["XOF", "USD", "EUR"].map((o) => (
+                      <button key={o} onClick={() => setCurrency(o)} style={{ flex: 1, padding: "9px 8px", borderRadius: 10, border: `1px solid ${cur === o ? T.green : T.line}`, background: cur === o ? "rgba(0,146,69,.08)" : "#fff", color: cur === o ? T.green : T.ink, fontWeight: cur === o ? 700 : 600, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>{o}</button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Favorites heart */}
+          <button onClick={() => { if (user) nav("account"); else setSignin(true); }} aria-label="Favorites" style={{ background: "none", border: "none", cursor: "pointer", color: ink, display: "flex", alignItems: "center", padding: 4 }}>
+            <Heart size={21} strokeWidth={2} />
+          </button>
+
+          {/* Sign in */}
+          <button onClick={() => { if (user) nav("account"); else { setSignin(true); setOpen(false); } }}
+            style={{ background: transparent ? "#fff" : T.green, color: transparent ? T.ink : "#fff", border: "none", borderRadius: 8, padding: "9px 16px", fontWeight: 700, fontSize: 13.5, cursor: "pointer", fontFamily: "inherit", display: "inline-flex", alignItems: "center", gap: 7, whiteSpace: "nowrap" }}>
             <UserRound size={16} strokeWidth={2.1} /> {user ? user.name.split(" ")[0] : "Sign in"}{user && bookings.length > 0 ? ` · ${bookings.length}` : ""}
           </button>
+
+          {/* Full menu */}
           <button aria-label={open ? "Close menu" : "Open menu"} aria-expanded={open} onClick={() => setOpen((o) => !o)}
             style={{ background: "none", border: "none", cursor: "pointer", color: ink, display: "flex", alignItems: "center", justifyContent: "center", padding: 6 }}>
             {open ? <X size={24} /> : <NineDots color={ink} size={22} />}
@@ -953,7 +1019,7 @@ function Nav({ go, page, user, setSignin, bookings, currency, setCurrency, overH
         const resources = [
           ["about", "About Us", Info], ["blog", "Blog", Newspaper], ["terms", "Terms & Cancellation", Shield],
         ];
-        const secLabel = { fontSize: 10.5, fontWeight: 700, letterSpacing: ".14em", textTransform: "uppercase", color: "#93A29A", margin: "0 4px 8px" };
+        const secLabel = { fontSize: 10.5, fontWeight: 700, letterSpacing: ".14em", textTransform: "uppercase", color: "rgba(0,0,0,.8)", margin: "0 4px 8px" };
         const Row = ({ k, l, Ico, active, badge, onClick, chevron = true }) => (
           <button onClick={onClick} className="ats-row" style={{ display: "flex", alignItems: "center", gap: 14, width: "100%", background: active ? "rgba(0,146,69,.09)" : "transparent", border: active ? "1px solid rgba(0,146,69,.25)" : "1px solid transparent", cursor: "pointer", padding: "9px 10px", borderRadius: 14, textAlign: "left", fontFamily: "inherit" }}>
             <span className="ats-ico" style={{ width: 36, height: 36, flexShrink: 0, borderRadius: 11, display: "flex", alignItems: "center", justifyContent: "center", background: active ? T.green : "#F1F3F2", color: active ? "#fff" : T.ink, transition: "background .16s ease, color .16s ease" }}><Ico size={17} strokeWidth={2} /></span>
@@ -1016,7 +1082,7 @@ function Nav({ go, page, user, setSignin, bookings, currency, setCurrency, overH
                 ))}
               </div>
 
-              <div style={{ marginTop: 20, textAlign: "center", fontSize: 12, color: "#93A29A" }}>Africa Tourism Solutions · Dakar, Senegal</div>
+              <div style={{ marginTop: 20, textAlign: "center", fontSize: 12, color: "rgba(0,0,0,.8)" }}>Africa Tourism Solutions · Dakar, Senegal</div>
             </div>
           </aside>
         </div>
@@ -1223,7 +1289,7 @@ function AfricaGlobe({ country, setCountry }) {
         })}
       </svg>
       <div style={{ textAlign: "center", marginTop: 8 }}>
-        <span style={{ fontSize: 12.5, color: "#5A6B61" }}>Drag to rotate · tap a marker · Cape Verde, Zanzibar, Comoros &amp; Madagascar included</span>
+        <span style={{ fontSize: 12.5, color: "rgba(0,0,0,.8)" }}>Drag to rotate · tap a marker · Cape Verde, Zanzibar, Comoros &amp; Madagascar included</span>
       </div>
     </div>
   );
@@ -1243,7 +1309,7 @@ function CategoryCard({ id, label, dest, desc, go, offset, mobile }) {
         {img && <img src={img} alt={label} loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />}
       </div>
       <div className="disp" style={{ fontWeight: 800, fontSize: 18, color: T.ink, textAlign: "center", marginTop: 14 }}>{label}</div>
-      <p style={{ fontSize: 13, lineHeight: 1.5, color: "#5A6B61", textAlign: "center", margin: "5px 4px 0" }}>{desc}</p>
+      <p style={{ fontSize: 13, lineHeight: 1.5, color: "rgba(0,0,0,.8)", textAlign: "center", margin: "5px 4px 0" }}>{desc}</p>
     </button>
   );
 }
@@ -1315,7 +1381,7 @@ function PlanTripSection({ go }) {
           <div>
             <div className="about-script" style={{ fontSize: 26, fontWeight: 600, color: T.green, lineHeight: 1 }}>Let's go together</div>
             <h2 className="disp" style={{ fontSize: "clamp(30px,4vw,44px)", fontWeight: 800, letterSpacing: "-0.02em", color: T.ink, lineHeight: 1.08, margin: "4px 0 16px" }}>Plan your trip with us</h2>
-            <p style={{ color: "#5A6B61", lineHeight: 1.7, fontSize: 15.5, maxWidth: 460, margin: "0 0 26px" }}>
+            <p style={{ color: "rgba(0,0,0,.8)", lineHeight: 1.7, fontSize: 15.5, maxWidth: 460, margin: "0 0 26px" }}>
               Build a fully custom trip — destination, hotel, transport and experiences — then confirm it with just a 20% deposit and pay the balance in instalments before departure.
             </p>
             <div style={{ display: "flex", flexDirection: "column", gap: 20, marginBottom: 30 }}>
@@ -1324,7 +1390,7 @@ function PlanTripSection({ go }) {
                   <span style={{ width: 52, height: 52, flexShrink: 0, borderRadius: "50%", background: "rgba(0,146,69,.10)", color: T.green, display: "flex", alignItems: "center", justifyContent: "center" }}><Ico size={22} strokeWidth={2} /></span>
                   <div>
                     <div className="disp" style={{ fontWeight: 700, fontSize: 18, color: T.ink }}>{title}</div>
-                    <div style={{ fontSize: 14, lineHeight: 1.55, color: "#7A867E", marginTop: 3, maxWidth: 340 }}>{desc}</div>
+                    <div style={{ fontSize: 14, lineHeight: 1.55, color: "rgba(0,0,0,.8)", marginTop: 3, maxWidth: 340 }}>{desc}</div>
                   </div>
                 </div>
               ))}
@@ -1340,6 +1406,566 @@ function PlanTripSection({ go }) {
 }
 
 // ---------------- HOME ----------------
+// Custom hero-tab icons (from site/icons) — fill inherits the tab color
+const IconBeach = ({ size = 24 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M23,22c-.415,0-.92-.207-1.455-.426-.658-.269-1.404-.574-2.212-.574s-1.554,.305-2.212,.574c-.535,.219-1.041,.426-1.455,.426s-.92-.207-1.455-.426c-.658-.269-1.404-.574-2.212-.574s-1.554,.305-2.212,.574c-.388,.159-.76,.311-1.093,.383l3.752-8.471,7.186,3.276c.391,.179,.807,.268,1.223,.268,.464,0,.927-.111,1.355-.331,.815-.419,1.384-1.179,1.56-2.083,1.108-5.695-1.6-11.261-6.587-13.535C12.049-1.26,5.913,.356,2.592,4.926c-.549,.756-.728,1.71-.489,2.618,.233,.886,.837,1.608,1.658,1.982l6.865,3.13-3.919,8.849c-.615-.249-1.302-.505-2.041-.505-.808,0-1.554,.305-2.212,.574-.535,.219-1.04,.426-1.455,.426-.552,0-1,.448-1,1s.448,1,1,1c.808,0,1.554-.305,2.212-.574,.535-.219,1.04-.426,1.455-.426s.92,.207,1.455,.426c.658,.269,1.404,.574,2.212,.574s1.554-.305,2.212-.574c.535-.219,1.04-.426,1.455-.426s.92,.207,1.455,.426c.658,.269,1.404,.574,2.212,.574s1.554-.305,2.212-.574c.535-.219,1.041-.426,1.455-.426s.92,.207,1.455,.426c.658,.269,1.404,.574,2.212,.574,.552,0,1-.448,1-1s-.448-1-1-1Z"/></svg>
+);
+const IconCarP = ({ size = 24 }) => (
+  <svg width={size} height={size} viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M240,112H211.31L168,68.69A15.86,15.86,0,0,0,156.69,64H44.28A16,16,0,0,0,31,71.12L1.34,115.56A8.07,8.07,0,0,0,0,120v48a16,16,0,0,0,16,16H33a32,32,0,0,0,62,0h66a32,32,0,0,0,62,0h17a16,16,0,0,0,16-16V128A16,16,0,0,0,240,112ZM44.28,80H156.69l32,32H23ZM64,192a16,16,0,1,1,16-16A16,16,0,0,1,64,192Zm128,0a16,16,0,1,1,16-16A16,16,0,0,1,192,192Zm48-24H223a32,32,0,0,0-62,0H95a32,32,0,0,0-62,0H16V128H240Z"/></svg>
+);
+const IconPlane2 = ({ size = 24 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M24 13.5a2.5 2.5 0 0 1-2.5 2.5h-4.036l-4.226 6.487A2.97 2.97 0 0 1 10.633 24a2.63 2.63 0 0 1-2.462-3.553L10.019 16H6a4 4 0 0 1-3.473-2.015L.2 10.16a1.443 1.443 0 0 1 .525-2 1.41 1.41 0 0 1 1.652.25l1.417 1.418A4 4 0 0 0 6.622 11H21.5a2.5 2.5 0 0 1 2.5 2.5M17.731 9l-4.5-7.487A2.97 2.97 0 0 0 10.629 0a2.63 2.63 0 0 0-2.462 3.553L10.285 9Z"/></svg>
+);
+
+// ---------------- HERO SEARCH (Expedia-style tabbed search card) ----------------
+// Stable, module-level pieces (defining components inside HeroSearch would remount
+// the inputs on every keystroke and make them lose focus).
+const heroBox = { display: "flex", alignItems: "center", gap: 11, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 12, padding: "9px 14px", flex: 1, minWidth: 0 };
+const heroLab = { fontSize: 11, color: "rgba(0,0,0,.8)", fontWeight: 600, marginBottom: 1 };
+const heroInp = { border: "none", outline: "none", background: "transparent", fontSize: 14.5, fontFamily: "inherit", color: T.ink, width: "100%", padding: 0 };
+const heroSwapBtn = { flexShrink: 0, width: 34, height: 34, borderRadius: "50%", border: `1px solid ${T.line}`, background: "#fff", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", color: T.green };
+const SwapIcon = ({ size = 15 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M8 3 4 7l4 4" /><path d="M4 7h16" /><path d="m16 21 4-4-4-4" /><path d="M20 17H4" /></svg>
+);
+function HField({ Ico, label, children }) {
+  return (
+    <div style={heroBox}>
+      <Ico size={19} color={T.green} strokeWidth={2} style={{ flexShrink: 0 }} />
+      <div style={{ minWidth: 0, flex: 1 }}>
+        <div style={heroLab}>{label}</div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+const FLIGHT_CLS = ["Économique", "Premium", "Affaires", "Première"];
+const FLIGHT_CLS_MAP = { "Économique": "Economy", "Premium": "Premium", "Affaires": "Business", "Première": "First" };
+
+// Times every 15 min, "10 h 30" style
+const TIME_OPTS = Array.from({ length: 96 }, (_, i) => `${String(Math.floor(i / 4)).padStart(2, "0")} h ${String((i % 4) * 15).padStart(2, "0")}`);
+const CAR_AGENCIES = ["Avis", "Hertz", "Europcar", "Sixt", "Budget", "Enterprise", "Alamo", "National"];
+const DISC_TYPES = ["Code entreprise", "Code promotionnel", "Programme de fidélité", "Tarif contractuel"];
+
+const heroSearchBtnStyle = { background: T.green, color: "#fff", border: "none", borderRadius: 12, padding: "0 28px", fontWeight: 700, fontSize: 15, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, flexShrink: 0, minHeight: 54 };
+
+// Custom white-popover select (replaces native selects so every field shares the same UI)
+function HSelect({ Ico, label, value, options, onChange, flex = 1, minWidth = 0, popWidth = 300 }) {
+  const [open, setOpen] = useState(false);
+  const sel = options.find((o) => o.v === value);
+  return (
+    <div style={{ ...heroBox, position: "relative", cursor: "pointer", flex, minWidth }} onClick={() => setOpen((o) => !o)} role="button" aria-haspopup="listbox" aria-expanded={open}>
+      <Ico size={19} color={T.green} strokeWidth={2} style={{ flexShrink: 0 }} />
+      <div style={{ minWidth: 0, flex: 1 }}>
+        <div style={heroLab}>{label}</div>
+        <div style={{ fontSize: 14.5, color: T.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{sel ? sel.label : "—"}</div>
+      </div>
+      <ChevronDown size={15} style={{ opacity: 0.5, flexShrink: 0 }} />
+      {open && (
+        <>
+          <div onClick={(e) => { e.stopPropagation(); setOpen(false); }} style={{ position: "fixed", inset: 0, zIndex: 90 }} />
+          <div onClick={(e) => e.stopPropagation()} role="listbox" style={{ position: "absolute", top: "calc(100% + 8px)", left: 0, zIndex: 91, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 16, boxShadow: "0 18px 44px rgba(0,0,0,.22)", overflow: "hidden auto", maxHeight: 330, width: `min(${popWidth}px, calc(100vw - 28px))`, padding: "6px 0", cursor: "default" }}>
+            {options.map((o) => (
+              <button key={o.v} onClick={() => { onChange(o.v); setOpen(false); }} role="option" aria-selected={o.v === value} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", textAlign: "left", background: o.v === value ? "rgba(0,146,69,.06)" : "none", border: "none", padding: "11px 18px", cursor: "pointer", color: T.ink, fontFamily: "inherit" }}>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14.5, fontWeight: o.v === value ? 700 : 500 }}>{o.label}</div>
+                  {o.sub && <div style={{ fontSize: 12.5, color: "rgba(0,0,0,.8)" }}>{o.sub}</div>}
+                </span>
+                {o.v === value && <Check size={17} color={T.green} style={{ flexShrink: 0 }} />}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function TimeField({ label, value, onChange }) {
+  return <HSelect Ico={Clock} label={label} value={value} onChange={onChange} options={TIME_OPTS.map((t) => ({ v: t, label: t }))} flex="0 0 auto" minWidth={148} popWidth={190} />;
+}
+
+// ---------------- CAR / TRANSFER SEARCH (Voitures module: location + transfert) ----------------
+function CarSearch({ go }) {
+  const [sub, setSub] = useState("rental"); // rental | transfer
+  const todayStr = new Date().toISOString().slice(0, 10);
+  // rental
+  const [pickup, setPickup] = useState("");
+  const [dropoff, setDropoff] = useState("");
+  const [rFrom, setRFrom] = useState("");
+  const [rTo, setRTo] = useState("");
+  const [pickTime, setPickTime] = useState("10 h 30");
+  const [retTime, setRetTime] = useState("10 h 30");
+  // transfer — fixed directional routes
+  const [routeI, setRouteI] = useState(0);
+  const [vehI, setVehI] = useState(0);
+  const [vehPicker, setVehPicker] = useState(false);
+  const [tDate, setTDate] = useState("");
+  const [tTime, setTTime] = useState("10 h 30");
+  const [pax, setPax] = useState(2);
+  const [paxOpen, setPaxOpen] = useState(false);
+  const vmap = useVehiclePhotoMap();
+
+  const dirRoute = TRANSFER_DIRECTIONS[routeI];
+  const prices = TRANSFER_ROUTES.find((r) => r.id === dirRoute.pricesId).prices;
+  const price = prices[vehI];
+  const veh = VEHICLES[vehI];
+  const capOk = veh.cap >= pax;
+  const transferReady = !!tDate && capOk && pax > 0;
+
+  const bookTransfer = () => {
+    if (!transferReady) return;
+    const routeLabel = `${dirRoute.from} → ${dirRoute.to}`;
+    go("transferCheckout", {
+      detail: {
+        title: "Confirm your transfer",
+        total: price,
+        routeLabel,
+        vehicleName: veh.name,
+        vehicleSlug: veh.slug,
+        vehicleMeta: `${veh.type} · ${veh.cap} passengers · ${veh.bags} bags`,
+        rows: [["Route", routeLabel], ["Vehicle", veh.name], ["Date", tDate], ["Pick-up", tTime], ["Passengers", pax]],
+        record: {
+          tour: { emoji: "🚙", name: `${veh.name} — ${routeLabel}`, pole: "Transfer", dur: `${tDate} · ${tTime}`, thumb: vmap[veh.slug] || null },
+          route: routeLabel, vehicle: veh.name, unit: "transfer", date: tDate, time: tTime, pax,
+          adults: pax, children: 0, infants: 0, transfer: { time: tTime, unit: "transfer" },
+        },
+      },
+    });
+  };
+
+  return (
+    <div style={{ marginTop: 14 }}>
+      {/* sub-tabs */}
+      <div style={{ display: "flex", gap: 24, borderBottom: `1px solid ${T.line}`, marginBottom: 16 }}>
+        {[["rental", "Car rental"], ["transfer", "Airport transfer"]].map(([k, l]) => {
+          const on = sub === k;
+          return <button key={k} onClick={() => setSub(k)} style={{ background: "none", border: "none", borderBottom: `2px solid ${on ? T.green : "transparent"}`, marginBottom: -1, padding: "4px 2px 9px", cursor: "pointer", color: on ? T.green : "rgba(0,0,0,.8)", fontWeight: on ? 700 : 600, fontSize: 14, fontFamily: "inherit" }}>{l}</button>;
+        })}
+      </div>
+
+      {sub === "rental" ? (
+        /* -------- Location de voiture — real Dakar addresses (Nominatim, Senegal) -------- */
+        <div className="hero-fields" style={{ display: "flex", gap: 10, alignItems: "stretch" }}>
+          <HField Ico={MapPin} label="Pick-up">
+            <AddressInput bare value={pickup} onChange={setPickup} placeholder="Address in Dakar…" />
+          </HField>
+          <HField Ico={MapPin} label="Drop-off">
+            <AddressInput bare value={dropoff} onChange={setDropoff} placeholder="Same drop-off" />
+          </HField>
+          <HField Ico={Calendar} label="Dates">
+            <RangeDate from={rFrom} to={rTo} onChange={(f, t) => { setRFrom(f); setRTo(t); }} triggerStyle={{ background: "transparent", border: "none", padding: 0 }} wide />
+          </HField>
+          <TimeField label="Pick-up time" value={pickTime} onChange={setPickTime} />
+          <TimeField label="Drop-off time" value={retTime} onChange={setRetTime} />
+          <button onClick={() => go("transport", { rental: { pickup, dropoff, dateFrom: rFrom, dateTo: rTo, puTime: pickTime.replace(" h ", ":"), doTime: retTime.replace(" h ", ":") } })} className="hero-search-btn" style={heroSearchBtnStyle}><Search size={18} /> Search</button>
+        </div>
+      ) : (
+        /* -------- Transfert — 6 routes fixes · véhicule · date · heure · passagers -------- */
+        <>
+          <div className="hero-fields" style={{ display: "flex", gap: 10, alignItems: "stretch" }}>
+            <HSelect Ico={Route} label="Route" value={routeI} onChange={setRouteI} popWidth={240}
+              options={TRANSFER_DIRECTIONS.map((d, i) => ({ v: i, label: `${d.from} → ${d.to}` }))} />
+            {/* Vehicle — opens the photo picker popup */}
+            <div style={{ ...heroBox, position: "relative", cursor: "pointer", flex: 1.2, minWidth: 0 }} onClick={() => setVehPicker(true)} role="button" aria-haspopup="dialog" aria-expanded={vehPicker}>
+              {vmap[veh.slug]
+                ? <img src={vmap[veh.slug]} alt="" style={{ width: 48, height: 32, objectFit: "contain", flexShrink: 0 }} />
+                : <Car size={19} color={T.green} strokeWidth={2} style={{ flexShrink: 0 }} />}
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={heroLab}>Vehicle</div>
+                <div style={{ fontSize: 14.5, color: T.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{veh.name}</div>
+              </div>
+              <ChevronDown size={15} style={{ opacity: 0.5, flexShrink: 0 }} />
+            </div>
+            {vehPicker && <VehiclePickerModal prices={prices} vmap={vmap} pax={pax} onSelect={(i) => { setVehI(i); setVehPicker(false); }} onClose={() => setVehPicker(false)} />}
+            <HField Ico={Calendar} label="Transfer date">
+              <RangeDate from={tDate} to={tDate} onChange={(f) => setTDate(f)} triggerStyle={{ background: "transparent", border: "none", padding: 0 }} wide single minDate={todayStr} />
+            </HField>
+            <TimeField label="Pick-up time" value={tTime} onChange={setTTime} />
+            {/* Passagers */}
+            <div style={{ ...heroBox, position: "relative", cursor: "pointer", flex: "0 0 auto", minWidth: 148 }} onClick={() => setPaxOpen((o) => !o)} role="button" aria-haspopup="dialog" aria-expanded={paxOpen}>
+              <Users size={19} color={T.green} strokeWidth={2} style={{ flexShrink: 0 }} />
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={heroLab}>Passengers</div>
+                <div style={{ fontSize: 14.5, color: T.ink }}>{pax} passenger{pax > 1 ? "s" : ""}</div>
+              </div>
+              <ChevronDown size={15} style={{ opacity: 0.5, flexShrink: 0 }} />
+              {paxOpen && (
+                <>
+                  <div onClick={(e) => { e.stopPropagation(); setPaxOpen(false); }} style={{ position: "fixed", inset: 0, zIndex: 90 }} />
+                  <div onClick={(e) => e.stopPropagation()} role="dialog" style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, zIndex: 91, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 16, boxShadow: "0 18px 44px rgba(0,0,0,.22)", padding: 20, width: "min(300px, calc(100vw - 28px))", cursor: "default" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 15, color: T.ink }}>Passengers</div>
+                        <div style={{ fontSize: 12.5, color: "rgba(0,0,0,.8)" }}>Up to {veh.cap} for this vehicle</div>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                        <button onClick={() => setPax((p) => Math.max(1, p - 1))} disabled={pax <= 1} aria-label="Moins" style={{ ...btnCircle, width: 44, height: 44, fontSize: 20, opacity: pax <= 1 ? 0.4 : 1, cursor: pax <= 1 ? "not-allowed" : "pointer" }}>−</button>
+                        <span style={{ fontWeight: 600, minWidth: 20, textAlign: "center", fontSize: 15 }}>{pax}</span>
+                        <button onClick={() => setPax((p) => Math.min(50, p + 1))} aria-label="Plus" style={{ ...btnCircle, width: 44, height: 44, fontSize: 20 }}>+</button>
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 16 }}>
+                      <button onClick={() => setPaxOpen(false)} style={{ background: T.green, color: "#fff", border: "none", borderRadius: 999, padding: "11px 28px", fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}>Done</button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+            <button onClick={bookTransfer} className="hero-search-btn" style={{ ...heroSearchBtnStyle, opacity: transferReady ? 1 : 0.55, cursor: transferReady ? "pointer" : "not-allowed" }}><Search size={18} /> Book</button>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 14, marginTop: 12, flexWrap: "wrap" }}>
+            <span className="disp" style={{ fontWeight: 800, fontSize: 17, color: T.ink }}>{fmtXOF(price)} <span style={{ fontWeight: 500, fontSize: 12, color: "rgba(0,0,0,.8)" }}>/ vehicle · fixed rate</span></span>
+            {!capOk && <span style={{ fontSize: 12.5, color: "#B3261E", fontWeight: 600 }}>This vehicle seats up to {veh.cap} passengers — pick a larger category.</span>}
+            {capOk && !tDate && <span style={{ fontSize: 12.5, color: "rgba(0,0,0,.8)" }}>Choose a date to book.</span>}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ---------------- TOUR SEARCH (Destination · Expérience autosuggest · Dates · Voyageurs) ----------------
+const heroPop = { position: "absolute", top: "calc(100% + 8px)", left: 0, zIndex: 91, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 16, boxShadow: "0 18px 44px rgba(0,0,0,.22)", overflow: "hidden", cursor: "default", animation: "flashIn .18s ease" };
+const heroRow = { display: "flex", alignItems: "flex-start", gap: 14, width: "100%", textAlign: "left", background: "none", border: "none", padding: "13px 18px", cursor: "pointer", color: T.ink, fontFamily: "inherit" };
+
+function TourSearch({ go }) {
+  const [dest, setDest] = useState("Senegal");
+  const [destOpen, setDestOpen] = useState(false);
+  const [expQ, setExpQ] = useState("");
+  const [expSel, setExpSel] = useState(null); // selected tour id
+  const [expOpen, setExpOpen] = useState(false);
+  const [date, setDate] = useState("");
+  const minDate = new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10); // same rule as the tour detail page
+  const [trav, setTrav] = useState({ adults: 2, children: 0 });
+  const [travOpen, setTravOpen] = useState(false);
+  const total = trav.adults + trav.children;
+  const setT = (k, d) => setTrav((t) => ({ ...t, [k]: Math.max(k === "adults" ? 1 : 0, t[k] + d) }));
+
+  // Recent experience searches (kept in this browser)
+  const [recents, setRecents] = useState(() => { try { return JSON.parse(localStorage.getItem("ats_recent_tours") || "[]"); } catch { return []; } });
+  const persistRecents = (next) => { try { localStorage.setItem("ats_recent_tours", JSON.stringify(next)); } catch { /* ignore */ } return next; };
+  const addRecent = (id) => setRecents((r) => persistRecents([id, ...r.filter((x) => x !== id)].slice(0, 5)));
+  const removeRecent = (id) => setRecents((r) => persistRecents(r.filter((x) => x !== id)));
+  const recentTours = recents.map((id) => TOURS.find((t) => t.id === id)).filter(Boolean);
+  const popularTours = ["goree", "bandia", "lacrose", "toubacouta", "stlouis", "lompoul"].map((id) => TOURS.find((t) => t.id === id)).filter(Boolean);
+
+  const q = expQ.trim().toLowerCase();
+  const matches = q
+    ? TOURS.filter((t) => [t.name, t.pole, t.tag, t.desc].filter(Boolean).some((s) => s.toLowerCase().includes(q))).slice(0, 7)
+    : [];
+  const pickTour = (t) => { setExpQ(t.name); setExpSel(t.id); setExpOpen(false); addRecent(t.id); };
+  const doSearch = () => { if (expSel) go("tour", { id: expSel, date, pax: total }); else go("tours"); };
+
+  return (
+    <div className="hero-fields" style={{ display: "flex", gap: 10, marginTop: 16, alignItems: "stretch" }}>
+      {/* Destination */}
+      <div style={{ ...heroBox, position: "relative", cursor: "pointer", flex: 1 }} onClick={() => setDestOpen((o) => !o)} role="button" aria-haspopup="listbox" aria-expanded={destOpen}>
+        <MapPin size={19} color={T.green} strokeWidth={2} style={{ flexShrink: 0 }} />
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div style={heroLab}>Destination</div>
+          <div style={{ fontSize: 14.5, color: T.ink }}>{dest}</div>
+        </div>
+        <ChevronDown size={15} style={{ opacity: 0.5, flexShrink: 0 }} />
+        {destOpen && (
+          <>
+            <div onClick={(e) => { e.stopPropagation(); setDestOpen(false); }} style={{ position: "fixed", inset: 0, zIndex: 90 }} />
+            <div onClick={(e) => e.stopPropagation()} role="listbox" style={{ ...heroPop, width: "min(340px, calc(100vw - 28px))", padding: "8px 0" }}>
+              <button onClick={() => { setDest("Senegal"); setDestOpen(false); }} style={heroRow} role="option" aria-selected={dest === "Senegal"}>
+                <MapPin size={20} color={T.green} strokeWidth={2} style={{ flexShrink: 0, marginTop: 2 }} />
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 15, fontWeight: 700 }}>Senegal</div>
+                  <div style={{ fontSize: 13, color: "rgba(0,0,0,.8)" }}>Available · 35+ experiences</div>
+                </span>
+                {dest === "Senegal" && <Check size={18} color={T.green} style={{ flexShrink: 0, marginTop: 4 }} />}
+              </button>
+              <div style={{ ...heroRow, cursor: "not-allowed", opacity: 0.45 }} role="option" aria-disabled="true" aria-selected="false">
+                <MapPin size={20} color={T.ink} strokeWidth={2} style={{ flexShrink: 0, marginTop: 2 }} />
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 15, fontWeight: 700 }}>Rwanda</div>
+                  <div style={{ fontSize: 13, color: "rgba(0,0,0,.8)" }}>Coming soon</div>
+                </span>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Expérience — autosuggest over the tours catalogue */}
+      <div style={{ ...heroBox, position: "relative", flex: 1.3 }}>
+        <Search size={19} color={T.green} strokeWidth={2} style={{ flexShrink: 0 }} />
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div style={heroLab}>Experience</div>
+          <input style={heroInp} value={expQ} placeholder="Search an experience" autoComplete="off" aria-label="Experience"
+            onChange={(e) => { setExpQ(e.target.value); setExpSel(null); setExpOpen(true); }}
+            onFocus={() => setExpOpen(true)} />
+        </div>
+        {expQ && (
+          <button onClick={() => { setExpQ(""); setExpSel(null); }} aria-label="Clear" style={{ background: T.ink, color: "#fff", border: "none", borderRadius: "50%", width: 20, height: 20, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0, flexShrink: 0 }}><X size={12} strokeWidth={3} /></button>
+        )}
+        {expOpen && (
+          <>
+            <div onClick={() => setExpOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 90 }} />
+            <div role="listbox" style={{ ...heroPop, width: "min(460px, calc(100vw - 28px))", maxHeight: 400, overflowY: "auto" }}>
+              {q ? (
+                matches.length ? matches.map((t) => (
+                  <button key={t.id} onClick={() => pickTour(t)} style={heroRow} role="option" aria-selected={expSel === t.id}>
+                    <Compass size={20} color={T.ink} strokeWidth={2} style={{ flexShrink: 0, marginTop: 2 }} />
+                    <span style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 15, fontWeight: 700 }}>{t.name}</div>
+                      <div style={{ fontSize: 13, color: "rgba(0,0,0,.8)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{[t.pole, t.tag, t.dur].filter(Boolean).join(" · ")}</div>
+                    </span>
+                  </button>
+                )) : (
+                  <div style={{ padding: "24px 18px", color: "rgba(0,0,0,.8)", fontSize: 13.5 }}>No experience found for “{expQ}”</div>
+                )
+              ) : recentTours.length ? (
+                <>
+                  <div style={{ fontSize: 15, fontWeight: 700, padding: "16px 18px 4px", color: T.ink }}>Recent searches</div>
+                  {recentTours.map((t) => (
+                    <button key={t.id} onClick={() => pickTour(t)} style={heroRow} role="option" aria-selected={expSel === t.id}>
+                      <Clock size={20} color={T.ink} strokeWidth={2} style={{ flexShrink: 0, marginTop: 2 }} />
+                      <span style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 15, fontWeight: 700 }}>{t.name}</div>
+                        <div style={{ fontSize: 13, color: "rgba(0,0,0,.8)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{[t.pole, t.tag, t.dur].filter(Boolean).join(" · ")}</div>
+                      </span>
+                      <span role="button" tabIndex={0} aria-label={`Remove ${t.name}`} onClick={(e) => { e.stopPropagation(); removeRecent(t.id); }} style={{ flexShrink: 0, marginTop: 4, color: T.ink, display: "flex", cursor: "pointer" }}><X size={17} /></span>
+                    </button>
+                  ))}
+                </>
+              ) : (
+                <>
+                  <div style={{ fontSize: 15, fontWeight: 700, padding: "16px 18px 4px", color: T.ink }}>Popular destinations</div>
+                  {popularTours.map((t) => (
+                    <button key={t.id} onClick={() => pickTour(t)} style={heroRow} role="option" aria-selected={expSel === t.id}>
+                      <MapPin size={20} color={T.ink} strokeWidth={2} style={{ flexShrink: 0, marginTop: 2 }} />
+                      <span style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 15, fontWeight: 700 }}>{t.name}</div>
+                        <div style={{ fontSize: 13, color: "rgba(0,0,0,.8)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{[t.pole, t.tag, t.dur].filter(Boolean).join(" · ")}</div>
+                      </span>
+                    </button>
+                  ))}
+                </>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Date — single date, dual-month calendar popover */}
+      <HField Ico={Calendar} label="Date">
+        <RangeDate from={date} to={date} onChange={(f) => setDate(f)} triggerStyle={{ background: "transparent", border: "none", padding: 0 }} wide single minDate={minDate} />
+      </HField>
+
+      {/* Voyageurs — occupancy stepper */}
+      <div style={{ ...heroBox, position: "relative", cursor: "pointer", flex: "0 0 auto", minWidth: 186 }} onClick={() => setTravOpen((o) => !o)} role="button" aria-haspopup="dialog" aria-expanded={travOpen}>
+        <Users size={19} color={T.green} strokeWidth={2} style={{ flexShrink: 0 }} />
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div style={heroLab}>Travelers</div>
+          <div style={{ fontSize: 14.5, color: T.ink }}>{total} traveler{total > 1 ? "s" : ""}</div>
+        </div>
+        <ChevronDown size={15} style={{ opacity: 0.5, flexShrink: 0 }} />
+        {travOpen && (
+          <>
+            <div onClick={(e) => { e.stopPropagation(); setTravOpen(false); }} style={{ position: "fixed", inset: 0, zIndex: 90 }} />
+            <div onClick={(e) => e.stopPropagation()} role="dialog" style={{ ...heroPop, left: "auto", right: 0, width: "min(340px, calc(100vw - 28px))", padding: 20 }}>
+              {[["adults", "Adults", ""], ["children", "Children", "Ages 0 to 17"]].map(([k, l, sub], i) => {
+                const min = k === "adults" ? 1 : 0;
+                return (
+                  <div key={k} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 0", borderTop: i === 0 ? "none" : `1px solid ${T.line}` }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 15, color: T.ink }}>{l}</div>
+                      {sub && <div style={{ fontSize: 12.5, color: "rgba(0,0,0,.8)" }}>{sub}</div>}
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                      <button onClick={() => setT(k, -1)} disabled={trav[k] <= min} aria-label={`Fewer ${l}`} style={{ ...btnCircle, width: 44, height: 44, fontSize: 20, opacity: trav[k] <= min ? 0.4 : 1, cursor: trav[k] <= min ? "not-allowed" : "pointer" }}>−</button>
+                      <span style={{ fontWeight: 600, minWidth: 20, textAlign: "center", fontSize: 15 }}>{trav[k]}</span>
+                      <button onClick={() => setT(k, 1)} aria-label={`More ${l}`} style={{ ...btnCircle, width: 44, height: 44, fontSize: 20 }}>+</button>
+                    </div>
+                  </div>
+                );
+              })}
+              <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 18 }}>
+                <button onClick={() => setTravOpen(false)} style={{ background: T.green, color: "#fff", border: "none", borderRadius: 999, padding: "12px 30px", fontWeight: 700, fontSize: 14.5, cursor: "pointer", fontFamily: "inherit" }}>Done</button>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+
+      <button onClick={doSearch} className="hero-search-btn" style={{ ...heroSearchBtnStyle, background: T.gold, color: T.ink }}><Search size={18} /> Search</button>
+    </div>
+  );
+}
+
+function HeroSearch({ go }) {
+  const [tab, setTab] = useState("tours");
+  const tabs = [["tours", "Tours", IconBeach], ["cars", "Vehicles", IconCarP]]; // Flights: on request only, removed from the wizard
+  const todayStr = new Date().toISOString().slice(0, 10);
+
+  // Flights state
+  const [ftype, setFtype] = useState("round"); // round | one | multi
+  const [ffrom, setFfrom] = useState("");
+  const [fto, setFto] = useState("");
+  const [fdep, setFdep] = useState("");
+  const [fret, setFret] = useState("");
+  const [ftrav, setFtrav] = useState({ adults: 1, children: 0, infants: 0, young: 0 });
+  const ftotal = ftrav.adults + ftrav.children + ftrav.infants + ftrav.young;
+  const setTrav = (k, d) => setFtrav((t) => ({ ...t, [k]: Math.max(k === "adults" ? 1 : 0, t[k] + d) }));
+  const [fcls, setFcls] = useState("Économique");
+  const [vcOpen, setVcOpen] = useState(false);
+  const [flegs, setFlegs] = useState([{ from: "", to: "", dep: "" }, { from: "", to: "", dep: "" }]);
+  const swapMain = () => { setFfrom(fto); setFto(ffrom); };
+  const setLeg = (i, k, v) => setFlegs((ls) => ls.map((l, j) => (j === i ? { ...l, [k]: v } : l)));
+  const swapLeg = (i) => setFlegs((ls) => ls.map((l, j) => (j === i ? { from: l.to, to: l.from, dep: l.dep } : l)));
+
+  const doSearch = () => {
+    if (tab === "cars") { go("transport"); return; }
+    if (tab === "tours") { go("tours"); return; }
+    if (ftype === "multi") go("flights", { fp: { type: "Multi-city", pax: ftotal, cls: FLIGHT_CLS_MAP[fcls] }, flegs });
+    else go("flights", { fp: { type: ftype === "round" ? "Round trip" : "One way", from: ffrom, to: fto, dep: fdep, ret: ftype === "round" ? fret : "", pax: ftotal, cls: FLIGHT_CLS_MAP[fcls] } });
+  };
+
+  // Voyageurs + classe pill (flights) — full Skyscanner-style breakdown
+  const travRows = [
+    ["adults", "Adultes", ""],
+    ["children", "Enfants", "De 2 à 17 ans"],
+    ["infants", "Bébés sur les genoux", "Moins de 2 ans"],
+    ["young", "Jeunes enfants sur siège", "Moins de 2 ans"],
+  ];
+  const vcPill = (
+    <div style={{ ...heroBox, position: "relative", cursor: "pointer", flex: "0 0 auto", minWidth: 214 }} onClick={() => setVcOpen((o) => !o)}>
+      <Users size={19} color={T.green} strokeWidth={2} style={{ flexShrink: 0 }} />
+      <div style={{ minWidth: 0, flex: 1 }}>
+        <div style={heroLab}>Voyageurs et classe</div>
+        <div style={{ fontSize: 14.5, color: T.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{ftotal} personne{ftotal > 1 ? "s" : ""}, {fcls}</div>
+      </div>
+      <ChevronDown size={15} style={{ opacity: 0.5, flexShrink: 0 }} />
+      {vcOpen && (
+        <>
+          <div onClick={(e) => { e.stopPropagation(); setVcOpen(false); }} style={{ position: "fixed", inset: 0, zIndex: 90 }} />
+          <div onClick={(e) => e.stopPropagation()} style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, zIndex: 91, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 16, boxShadow: "0 18px 44px rgba(0,0,0,.22)", padding: 20, width: "min(360px, calc(100vw - 28px))", cursor: "default" }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: T.ink, marginBottom: 14 }}>Voyageurs et classe</div>
+            {travRows.map(([k, l, sub]) => (
+              <div key={k} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderTop: k === "adults" ? "none" : `1px solid ${T.line}` }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 15, color: T.ink }}>{l}</div>
+                  {sub && <div style={{ fontSize: 12.5, color: "rgba(0,0,0,.8)" }}>{sub}</div>}
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <button onClick={() => setTrav(k, -1)} disabled={ftrav[k] <= (k === "adults" ? 1 : 0)} style={{ ...btnCircle, width: 36, height: 36, fontSize: 18, opacity: ftrav[k] <= (k === "adults" ? 1 : 0) ? 0.4 : 1, cursor: ftrav[k] <= (k === "adults" ? 1 : 0) ? "not-allowed" : "pointer" }} aria-label="Moins">−</button>
+                  <span style={{ fontWeight: 600, minWidth: 18, textAlign: "center", fontSize: 15 }}>{ftrav[k]}</span>
+                  <button onClick={() => setTrav(k, 1)} style={{ ...btnCircle, width: 36, height: 36, fontSize: 18 }} aria-label="Plus">+</button>
+                </div>
+              </div>
+            ))}
+            <div style={{ marginTop: 14 }}>
+              <div style={{ ...heroBox, cursor: "default", padding: "8px 14px" }}>
+                <div style={{ flex: 1 }}>
+                  <div style={heroLab}>Classe</div>
+                  <select value={fcls} onChange={(e) => setFcls(e.target.value)} style={{ ...heroInp, cursor: "pointer" }}>
+                    {FLIGHT_CLS.map((c) => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+                <ChevronDown size={15} style={{ opacity: 0.5 }} />
+              </div>
+            </div>
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 16 }}>
+              <button onClick={() => setVcOpen(false)} style={{ background: T.green, color: "#fff", border: "none", borderRadius: 999, padding: "10px 26px", fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}>Done</button>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+
+  const searchBtn = (
+    <button onClick={doSearch} className="hero-search-btn" style={{ background: T.green, color: "#fff", border: "none", borderRadius: 12, padding: "0 28px", fontWeight: 700, fontSize: 15, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, flexShrink: 0, minHeight: 54 }}>
+      <Search size={18} /> Rechercher
+    </button>
+  );
+
+  return (
+    <div style={{ background: "#fff", borderRadius: 20, boxShadow: "0 24px 60px rgba(9,20,15,.24)", padding: "8px 16px 18px", maxWidth: 1120, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
+      {/* main tabs — pills, centered */}
+      <div style={{ display: "flex", justifyContent: "center", gap: 12, padding: "4px 0 6px" }}>
+        {tabs.map(([k, l, Ico]) => {
+          const on = tab === k;
+          return (
+            <button key={k} onClick={() => setTab(k)} style={{ display: "inline-flex", alignItems: "center", gap: 8, background: on ? T.green : "transparent", border: `1px solid ${on ? T.green : T.ink}`, borderRadius: 999, cursor: "pointer", color: on ? "#fff" : T.ink, fontWeight: on ? 700 : 600, fontSize: 14, padding: "9px 22px", fontFamily: "inherit", transition: "background .15s ease, color .15s ease, border-color .15s ease" }}>
+              <Ico size={19} strokeWidth={1.9} />
+              <span>{l}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {tab === "flights" ? (
+        <div style={{ marginTop: 14 }}>
+          {/* flight sub-tabs */}
+          <div style={{ display: "flex", gap: 22, borderBottom: `1px solid ${T.line}`, marginBottom: 16 }}>
+            {[["round", "Aller-retour"], ["one", "Aller simple"], ["multi", "Multidestination"]].map(([k, l]) => {
+              const on = ftype === k;
+              return <button key={k} onClick={() => setFtype(k)} style={{ background: "none", border: "none", borderBottom: `2px solid ${on ? T.green : "transparent"}`, marginBottom: -1, padding: "4px 2px 9px", cursor: "pointer", color: on ? T.green : "rgba(0,0,0,.8)", fontWeight: on ? 700 : 600, fontSize: 14, fontFamily: "inherit" }}>{l}</button>;
+            })}
+          </div>
+
+          {ftype === "multi" ? (
+            <div>
+              <div style={{ maxWidth: 280, marginBottom: 16 }}>{vcPill}</div>
+              {flegs.map((l, i) => (
+                <div key={i} style={{ marginBottom: 14 }}>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: T.ink, marginBottom: 6 }}>Vol {i + 1}</div>
+                  <div className="hero-fields" style={{ display: "flex", gap: 10, alignItems: "stretch" }}>
+                    <div style={{ flex: 2, display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                      <div style={{ flex: 1, minWidth: 0 }}><AirportInput value={l.from} onChange={(v) => setLeg(i, "from", v)} placeholder="Lieu de départ" wide Icon={MapPin} /></div>
+                      <button onClick={() => swapLeg(i)} style={heroSwapBtn} aria-label="Inverser"><SwapIcon /></button>
+                      <div style={{ flex: 1, minWidth: 0 }}><AirportInput value={l.to} onChange={(v) => setLeg(i, "to", v)} placeholder="Destination" wide Icon={MapPin} /></div>
+                    </div>
+                    <HField Ico={Calendar} label="Date">
+                      <input type="date" min={todayStr} style={heroInp} value={l.dep} onChange={(e) => setLeg(i, "dep", e.target.value)} />
+                    </HField>
+                    {flegs.length > 2 ? <button onClick={() => setFlegs((ls) => ls.filter((_, j) => j !== i))} style={{ ...btnCircle, alignSelf: "center", flexShrink: 0 }} aria-label="Retirer ce vol"><X size={14} /></button> : null}
+                  </div>
+                </div>
+              ))}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, marginTop: 4 }}>
+                {flegs.length < 6
+                  ? <button onClick={() => setFlegs((ls) => [...ls, { from: ls[ls.length - 1].to || "", to: "", dep: "" }])} style={{ background: "none", border: "none", color: T.green, fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "inherit", display: "inline-flex", alignItems: "center", gap: 6 }}><Plane size={16} /> Ajouter un autre vol</button>
+                  : <span />}
+                {searchBtn}
+              </div>
+            </div>
+          ) : (
+            <div className="hero-fields" style={{ display: "flex", gap: 10, alignItems: "stretch" }}>
+              <div style={{ flex: 2, display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                <div style={{ flex: 1, minWidth: 0 }}><AirportInput value={ffrom} onChange={setFfrom} placeholder="Lieu de départ" wide Icon={MapPin} /></div>
+                <button onClick={swapMain} style={heroSwapBtn} aria-label="Inverser"><SwapIcon /></button>
+                <div style={{ flex: 1, minWidth: 0 }}><AirportInput value={fto} onChange={setFto} placeholder="Destination" wide Icon={MapPin} /></div>
+              </div>
+              {ftype === "round" ? (
+                <HField Ico={Calendar} label="Dates">
+                  <RangeDate from={fdep} to={fret} onChange={(f, t) => { setFdep(f); setFret(t); }} triggerStyle={{ background: "transparent", border: "none", padding: 0 }} wide align="right" />
+                </HField>
+              ) : (
+                <HField Ico={Calendar} label="Date">
+                  <input type="date" min={todayStr} style={heroInp} value={fdep} onChange={(e) => setFdep(e.target.value)} />
+                </HField>
+              )}
+              {vcPill}
+              {searchBtn}
+            </div>
+          )}
+        </div>
+      ) : tab === "cars" ? (
+        <CarSearch go={go} />
+      ) : (
+        <TourSearch go={go} />
+      )}
+    </div>
+  );
+}
+
 function Home({ go, notify, setBooking, filters, setFilters, setChat, addBookingHome, user, favorites, toggleFavorite }) {
   const [country, setCountry] = useState(COUNTRIES[0]);
   const [search, setSearch] = useState({ dest: "Senegal", exp: "All", dateFrom: "", dateTo: "", pax: 2 });
@@ -1349,57 +1975,29 @@ function Home({ go, notify, setBooking, filters, setFilters, setChat, addBooking
 
   return (
     <>
-      <header style={{ background: T.paper, padding: "8px 20px 24px" }}>
+      <header style={{ background: T.ink }}>
         <style>{`
-          @media(max-width:900px){
-            .hero-scroll{display:none !important}
-            .hero-card{min-height:auto !important;padding:36px 20px 26px !important;display:flex !important;flex-direction:column !important}
-            .hero-copy{max-width:100% !important}
-            .hero-copy .hero-btn{width:100% !important;justify-content:center !important}
-            .hero-pop{position:static !important;right:auto !important;bottom:auto !important;margin-top:30px !important;width:100% !important}
-          }
-          @media(max-width:520px){
-            .hero-card{padding:30px 16px 22px !important}
+          @media(max-width:760px){
+            .hero-fields{flex-direction:column !important}
+            .hero-search-btn{padding:13px !important}
           }
         `}</style>
-        <div className="hero-card" style={{
-          maxWidth: 1200, margin: "0 auto", position: "relative", borderRadius: 26, overflow: "hidden", minHeight: "55vh", color: "#fff",
-          padding: "clamp(48px,7vw,86px) clamp(28px,5vw,68px)",
-          background: `linear-gradient(rgba(0,0,0,.34), rgba(0,0,0,.34)), linear-gradient(90deg, rgba(6,20,15,.7) 0%, rgba(6,20,15,.4) 45%, rgba(6,20,15,.16) 78%), url("${heroUrl}") center/cover no-repeat, linear-gradient(160deg, #006B33 0%, ${T.green} 65%, #00A84F 100%)`,
+        <div style={{
+          width: "100%", position: "relative", zIndex: 6,
+          height: "clamp(420px,50vw,620px)",
+          background: `linear-gradient(rgba(0,0,0,.62), rgba(0,0,0,.62)), url("${heroUrl}") center/cover no-repeat, linear-gradient(160deg, #006B33 0%, ${T.green} 65%, #00A84F 100%)`,
         }}>
-          <div className="hero-copy" style={{ maxWidth: 620 }}>
-            <h1 className="disp" style={{ fontSize: "clamp(42px,7vw,86px)", lineHeight: 0.98, fontWeight: 800, margin: 0, letterSpacing: "-0.02em" }}>Discover</h1>
-            <div className="disp" style={{ fontSize: "clamp(19px,3vw,30px)", fontWeight: 600, marginTop: 8 }}>the beauty of Senegal</div>
-            <p style={{ maxWidth: 460, fontSize: "clamp(14.5px,2.6vw,16.5px)", lineHeight: 1.6, opacity: 0.9, marginTop: 20 }}>
-              Tours, flights, transport, events and full destination management — crafted on the ground by ATS, your local partner in Senegal.
-            </p>
-            <button className="hero-btn" onClick={() => go("tours")} style={{ marginTop: 26, display: "inline-flex", alignItems: "center", gap: 12, background: "#fff", color: T.ink, border: "none", borderRadius: 999, padding: "14px 30px", fontWeight: 700, fontSize: 15, cursor: "pointer" }}>
-              Explore Tours <ArrowRight size={18} />
-            </button>
-          </div>
-
-          {/* Popular trips slider (bottom-right on desktop, stacked on mobile) */}
-          <div className="hero-pop" style={{ position: "absolute", right: "calc(-1 * clamp(28px,5vw,68px))", bottom: 30 }}>
-            <HeroSlider go={go} setBooking={setBooking} />
+          {/* Overlay pinned to the hero top — grows downward and may overflow the hero without stretching it */}
+          <div style={{ position: "absolute", top: "clamp(80px,15vw,185px)", left: 0, right: 0, padding: "0 clamp(20px,4vw,54px)", display: "flex", flexDirection: "column", alignItems: "center" }}>
+            <div style={{ textAlign: "center", color: "#fff", marginBottom: "clamp(14px,2vw,20px)" }}>
+              <h1 className="about-script" style={{ fontSize: "clamp(28px,4vw,46px)", lineHeight: 1.02, fontWeight: 700, margin: 0, textShadow: "0 2px 22px rgba(0,0,0,.4)" }}>Discover the beauty of Africa</h1>
+            </div>
+            <HeroSearch go={go} />
           </div>
         </div>
       </header>
 
-      {/* PLAN YOUR TRIP */}
-      <PlanTripSection go={go} />
-
-      {/* SERVICE CATEGORIES */}
-      <section style={{ background: "#fff" }}>
-        <Wrap>
-          <div style={{ textAlign: "center", marginBottom: 40 }}>
-            <div className="about-script" style={{ fontSize: 24, fontWeight: 600, color: T.green, lineHeight: 1 }}>Wonderful services for you</div>
-            <h2 className="disp" style={{ fontWeight: 800, fontSize: "clamp(26px,3.6vw,38px)", letterSpacing: "-0.02em", color: T.ink, margin: "2px 0 0" }}>Our Services</h2>
-          </div>
-          <ServicesFan go={go} />
-        </Wrap>
-      </section>
-
-      {/* MAP */}
+      {/* CHOOSE YOUR AFRICA — moved to 2nd position, right after the hero */}
       <section style={{ background: "#fff" }}>
         <style>{`
           @media(max-width:760px){
@@ -1419,17 +2017,17 @@ function Home({ go, notify, setBooking, filters, setFilters, setChat, addBooking
                 {[["35+", "Experiences"], ["6", "Regions"], ["4", "Islands"]].map(([n, l]) => (
                   <div key={l}>
                     <div className="disp" style={{ fontWeight: 800, fontSize: 28, color: T.green, lineHeight: 1 }}>{n}</div>
-                    <div style={{ fontSize: 12.5, color: "#7A867E", marginTop: 5 }}>{l}</div>
+                    <div style={{ fontSize: 12.5, color: "rgba(0,0,0,.8)", marginTop: 5 }}>{l}</div>
                   </div>
                 ))}
               </div>
-              <div style={{ fontSize: 11.5, fontWeight: 700, letterSpacing: ".14em", textTransform: "uppercase", color: "#93A29A", marginBottom: 10 }}>Available now</div>
+              <div style={{ fontSize: 11.5, fontWeight: 700, letterSpacing: ".14em", textTransform: "uppercase", color: "rgba(0,0,0,.8)", marginBottom: 10 }}>Available now</div>
               <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 18 }}>
                 {COUNTRIES.filter((c) => c.live).map((c) => {
                   const on = country.id === c.id;
                   return (
-                    <button key={c.id} onClick={() => setCountry(c)} style={{ display: "flex", alignItems: "center", gap: 11, background: "#fff", border: `1.5px solid ${on ? T.green : T.line}`, boxShadow: on ? "0 10px 24px rgba(0,146,69,.14)" : "none", borderRadius: 14, padding: "12px 16px", cursor: "pointer", fontFamily: "inherit", textAlign: "left", transition: "border-color .2s ease, box-shadow .2s ease" }}>
-                      <span style={{ width: 11, height: 11, borderRadius: "50%", background: T.green, boxShadow: "0 0 0 4px rgba(0,146,69,.16)", flexShrink: 0 }} />
+                    <button key={c.id} onClick={() => setCountry(c)} style={{ display: "flex", alignItems: "center", gap: 11, background: "#fff", border: `1.5px solid ${on ? T.green : T.line}`, borderRadius: 14, padding: "12px 16px", cursor: "pointer", fontFamily: "inherit", textAlign: "left", transition: "border-color .2s ease" }}>
+                      <span style={{ width: 11, height: 11, borderRadius: "50%", background: T.green, flexShrink: 0 }} />
                       <span>
                         <span className="disp" style={{ display: "block", fontWeight: 800, fontSize: 16, color: T.ink }}>{c.name}</span>
                         <span style={{ fontSize: 12.5, color: T.green, fontWeight: 600 }}>Live now · {c.count}</span>
@@ -1438,11 +2036,11 @@ function Home({ go, notify, setBooking, filters, setFilters, setChat, addBooking
                   );
                 })}
               </div>
-              <div style={{ fontSize: 11.5, fontWeight: 700, letterSpacing: ".14em", textTransform: "uppercase", color: "#93A29A", margin: "6px 0 10px" }}>Coming soon</div>
+              <div style={{ fontSize: 11.5, fontWeight: 700, letterSpacing: ".14em", textTransform: "uppercase", color: "rgba(0,0,0,.8)", margin: "6px 0 10px" }}>Coming soon</div>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 24 }}>
                 {COUNTRIES.filter((c) => !c.live).map((c) => {
                   const on = country.id === c.id;
-                  return <button key={c.id} onClick={() => setCountry(c)} style={{ background: on ? "rgba(0,107,51,.10)" : "#fff", border: `1px solid ${on ? T.indigo : T.line}`, color: on ? T.indigo : "#5A6B61", borderRadius: 999, padding: "6px 13px", fontSize: 12.5, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>{c.name}</button>;
+                  return <button key={c.id} onClick={() => setCountry(c)} style={{ background: on ? "rgba(0,107,51,.10)" : "#fff", border: `1px solid ${on ? T.indigo : T.line}`, color: on ? T.indigo : "rgba(0,0,0,.8)", borderRadius: 999, padding: "6px 13px", fontSize: 12.5, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>{c.name}</button>;
                 })}
               </div>
               {country.live && (
@@ -1450,9 +2048,33 @@ function Home({ go, notify, setBooking, filters, setFilters, setChat, addBooking
               )}
             </div>
             <div className="africa-globe-wrap" style={{ maxWidth: 500, margin: "0 0 0 auto", width: "100%" }}>
-              <AfricaGlobe country={country} setCountry={setCountry} />
+              <svg viewBox="0 0 100 100" role="img" aria-label="Dotted map of Africa with ATS destinations, islands included" style={{ width: "100%", maxWidth: 470, margin: "0 auto", display: "block" }}>
+                {DOTS.map(([x, y], i) => <circle key={i} cx={x} cy={y} r="0.62" fill={T.green} opacity="0.55" />)}
+                {COUNTRIES.map((c) => (
+                  <g key={c.id} style={{ cursor: "pointer" }} onClick={() => setCountry(c)}>
+                    <circle cx={c.x} cy={c.y} r={c.live ? 2.6 : 1.8} fill={c.live ? T.gold : T.indigo} stroke="#fff" strokeWidth="0.5" className={c.live ? "pulse" : ""} />
+                    <circle cx={c.x} cy={c.y} r="5.5" fill="transparent" />
+                    {country.id === c.id && <circle cx={c.x} cy={c.y} r="4.4" fill="none" stroke={T.gold} strokeWidth="0.9" />}
+                  </g>
+                ))}
+                <text x="50" y="98" textAnchor="middle" fontSize="2.8" fill={T.ink} opacity="0.55">Tap a marker — Cape Verde, Zanzibar, Comoros &amp; Madagascar included</text>
+              </svg>
             </div>
           </div>
+        </Wrap>
+      </section>
+
+      {/* PLAN YOUR TRIP */}
+      <PlanTripSection go={go} />
+
+      {/* SERVICE CATEGORIES */}
+      <section style={{ background: "#fff" }}>
+        <Wrap>
+          <div style={{ textAlign: "center", marginBottom: 40 }}>
+            <div className="about-script" style={{ fontSize: 24, fontWeight: 600, color: T.green, lineHeight: 1 }}>Wonderful services for you</div>
+            <h2 className="disp" style={{ fontWeight: 800, fontSize: "clamp(26px,3.6vw,38px)", letterSpacing: "-0.02em", color: T.ink, margin: "2px 0 0" }}>Our Services</h2>
+          </div>
+          <ServicesFan go={go} />
         </Wrap>
       </section>
 
@@ -1464,7 +2086,7 @@ function Home({ go, notify, setBooking, filters, setFilters, setChat, addBooking
             <button onClick={() => go("transport")} style={{ marginLeft: "auto", background: "none", border: "none", color: T.indigo, fontWeight: 700, cursor: "pointer", fontSize: 14, display: "inline-flex", alignItems: "center", gap: 4 }}>All transport services <ArrowRight size={15} /></button>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 20, alignItems: "stretch" }}>
-            <TransferWidget addBooking={addBookingHome} compact user={user} />
+            <TransferWidget addBooking={addBookingHome} compact user={user} go={go} />
             <div style={{ borderRadius: 16, overflow: "hidden", minHeight: 320, background: `linear-gradient(160deg, rgba(0,0,0,.35), rgba(0,0,0,.20)), url("${supabase.storage.from(PHOTO_BUCKET).getPublicUrl("site/transfer.jpg").data.publicUrl}") center/cover no-repeat, linear-gradient(140deg, ${T.green}, ${T.indigo})` }} />
           </div>
         </Wrap>
@@ -1632,15 +2254,15 @@ function TourGrid({ tours, go, setBooking, slider, favorites = [], toggleFavorit
               {!t.quote && <span style={pill()}>Group discounts</span>}
             </div>
             <h3 className="disp" style={{ fontSize: 14.5, fontWeight: 700, lineHeight: 1.2, margin: 0, color: "#1A1A1A" }}>{t.name}</h3>
-            <div style={{ fontSize: 11.5, color: "#777", margin: "6px 0 0" }}>{t.dur}</div>
+            <div style={{ fontSize: 11.5, color: "rgba(0,0,0,.8)", margin: "6px 0 0" }}>{t.dur}</div>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: "auto", paddingTop: 12 }}>
               <div style={{ minWidth: 0 }}>
                 {t.quote ? (
                   <div style={{ fontWeight: 700, fontSize: 14, color: "#1A1A1A" }}>Price on request</div>
                 ) : (
                   <>
-                    <div style={{ fontWeight: 700, fontSize: 14, color: "#1A1A1A" }}><PrefPrice base={fromPrice(t)} pp={false} /> <span style={{ fontWeight: 500, fontSize: 11.5, color: "#888" }}>for 5+ pax</span></div>
-                    <div style={{ fontSize: 11, color: "#888" }}>1–2 pax: {fmtXOF(t.grid.p12.a)}</div>
+                    <div style={{ fontWeight: 700, fontSize: 14, color: "#1A1A1A" }}><PrefPrice base={fromPrice(t)} pp={false} /> <span style={{ fontWeight: 500, fontSize: 11.5, color: "rgba(0,0,0,.8)" }}>for 5+ pax</span></div>
+                    <div style={{ fontSize: 11, color: "rgba(0,0,0,.8)" }}>1–2 pax: {fmtXOF(t.grid.p12.a)}</div>
                   </>
                 )}
               </div>
@@ -1748,11 +2370,11 @@ const ZONE_COORDS = {
 };
 const tourCoords = (t) => ZONE_COORDS[t.zone] || [14.4974, -14.4524];
 
-function TourDetail({ tourId, go, setBooking, favorites = [], toggleFavorite }) {
+function TourDetail({ tourId, go, setBooking, favorites = [], toggleFavorite, initialDate, initialPax }) {
   const t = TOURS.find((x) => x.id === tourId) || TOURS[0];
   const [mlat, mlon] = tourCoords(t);
   const fav = favorites.includes(t.id);
-  const [pax, setPax] = useState(2);
+  const [pax, setPax] = useState(initialPax || 2);
   const [extras, setExtras] = useState([]);
   const [vehicle, setVehicle] = useState(-1);      // -1 = no transport
   const [preview, setPreview] = useState(null);   // gallery lightbox index
@@ -1761,9 +2383,11 @@ function TourDetail({ tourId, go, setBooking, favorites = [], toggleFavorite }) 
   const showFlash = (m) => { setFlash(m); clearTimeout(flashTimer.current); flashTimer.current = setTimeout(() => setFlash(""), 2600); };
   const todayStr = new Date().toISOString().slice(0, 10);
   const minDate = new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10); // earliest = day after tomorrow
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
+  const [dateFrom, setDateFrom] = useState(initialDate || "");
+  const [dateTo, setDateTo] = useState(initialDate || "");
   const setTripDate = (v) => { setDateFrom(v); setDateTo(v); }; // single date for trips
+  // If the user arrives from the hero search, keep the date/travellers they already chose
+  useEffect(() => { if (initialDate) { setDateFrom(initialDate); setDateTo(initialDate); } if (initialPax) setPax(initialPax); }, [tourId, initialDate, initialPax]);
   const daysUntil = dateFrom ? Math.ceil((new Date(dateFrom + "T00:00:00") - new Date(todayStr + "T00:00:00")) / 86400000) : null;
   const dateOk = daysUntil != null && daysUntil >= 0 && !!dateTo && dateTo >= dateFrom;
   const tontinePossible = dateOk && daysUntil >= 15;
@@ -1867,7 +2491,7 @@ function TourDetail({ tourId, go, setBooking, favorites = [], toggleFavorite }) 
           )}
 
           <Section title="Description">
-            <p style={{ fontSize: 15, lineHeight: 1.75, margin: 0, color: "#3B4A42", maxWidth: 640 }}>{t.desc}</p>
+            <p style={{ fontSize: 15, lineHeight: 1.75, margin: 0, color: "rgba(0,0,0,.8)", maxWidth: 640 }}>{t.desc}</p>
             {t.sub && <p style={{ fontSize: 13, lineHeight: 1.65, color: "#6B7A72", marginTop: 10, maxWidth: 640 }}>{t.sub}</p>}
           </Section>
 
@@ -1977,7 +2601,7 @@ function TourDetail({ tourId, go, setBooking, favorites = [], toggleFavorite }) 
                   <label style={label}>Travel date</label>
                   <input type="date" min={minDate} value={dateFrom} onChange={(e) => setTripDate(e.target.value)} style={input} />
                   {dateOk && (
-                    <div style={{ fontSize: 12, marginTop: 5, color: "#5A6B61", fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}>
+                    <div style={{ fontSize: 12, marginTop: 5, color: "rgba(0,0,0,.8)", fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}>
                       <Check size={14} color={T.green} /> {tontinePossible ? "Ma Tontine eligible" : "Available · full payment only (under 15 days)"}
                     </div>
                   )}
@@ -2003,7 +2627,7 @@ function TourDetail({ tourId, go, setBooking, favorites = [], toggleFavorite }) 
                     <span style={{ color: CORP_DISCOUNT > 0 ? T.green : "inherit" }}>{fmtXOF(CORP_DISCOUNT > 0 ? corpPrice(estTotal) : estTotal)}</span>
                   </strong>
                 </div>
-                <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 10, padding: "10px 12px", fontSize: 12.5, lineHeight: 1.6, marginTop: 10, color: "#3B4A42" }}>
+                <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 10, padding: "10px 12px", fontSize: 12.5, lineHeight: 1.6, marginTop: 10, color: "rgba(0,0,0,.8)" }}>
                   <strong style={{ color: "#1A1A1A" }}>Ma Tontine Voyage:</strong> reserve with {fmtXOF(estTotal * 0.2)} (20%), balance in instalments before departure{CORP_DISCOUNT > 0 ? " (corporate rate applies to full payment)" : ""}.
                 </div>
               </>
@@ -2090,7 +2714,7 @@ function TourDetail({ tourId, go, setBooking, favorites = [], toggleFavorite }) 
                     <span style={pill()}>{s.pole}</span><span style={pill()}>{s.tag}</span>
                   </div>
                   <h4 className="disp" style={{ fontSize: 14.5, fontWeight: 700, lineHeight: 1.2, margin: 0, color: "#1A1A1A" }}>{s.name}</h4>
-                  <div style={{ fontSize: 11.5, color: "#777", margin: "6px 0 8px" }}>{s.dur}</div>
+                  <div style={{ fontSize: 11.5, color: "rgba(0,0,0,.8)", margin: "6px 0 8px" }}>{s.dur}</div>
                   <div style={{ marginTop: "auto", display: "flex", alignItems: "center", gap: 10 }}>
                     <div style={{ fontWeight: 700, fontSize: 13.5, color: "#1A1A1A" }}>{s.quote ? "Price on request" : <PrefPrice base={fromPrice(s)} pp={false} />}</div>
                     <button onClick={(e) => { e.stopPropagation(); setBooking(s); }} style={{ marginLeft: "auto", background: s.quote ? "#1A1A1A" : T.gold, color: s.quote ? "#fff" : T.ink, border: "none", borderRadius: 10, padding: "7px 13px", fontWeight: 700, fontSize: 13, cursor: "pointer", flexShrink: 0 }}>{s.quote ? "Get quote" : "Book"}</button>
@@ -2235,7 +2859,7 @@ function TripBuilder({ notify, go, user, saveRecord }) {
         <div style={{ textAlign: "center", marginBottom: 26 }}>
           <div className="about-script" style={{ fontSize: 24, fontWeight: 600, color: T.green, lineHeight: 1 }}>How it works</div>
           <h2 className="disp" style={{ fontWeight: 800, fontSize: "clamp(26px,3.6vw,38px)", letterSpacing: "-0.02em", color: T.ink, margin: "2px 0 8px" }}>Plan your trip in 4 simple steps</h2>
-          <p style={{ maxWidth: 560, margin: "0 auto", color: "#5A6B61", fontSize: 15.5, lineHeight: 1.6 }}>From choosing an experience to travelling on the ground — everything ATS offers, in one simple flow.</p>
+          <p style={{ maxWidth: 560, margin: "0 auto", color: "rgba(0,0,0,.8)", fontSize: 15.5, lineHeight: 1.6 }}>From choosing an experience to travelling on the ground — everything ATS offers, in one simple flow.</p>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 18 }}>
           {[
@@ -2250,7 +2874,7 @@ function TripBuilder({ notify, go, user, saveRecord }) {
                 <span className="disp" style={{ fontSize: 34, fontWeight: 800, color: "rgba(11,46,27,.12)", lineHeight: 1 }}>{i + 1}</span>
               </div>
               <div className="disp" style={{ fontWeight: 800, fontSize: 17, color: T.ink, marginBottom: 6 }}>{title}</div>
-              <p style={{ margin: 0, fontSize: 14, lineHeight: 1.6, color: "#5A6B61" }}>{body}</p>
+              <p style={{ margin: 0, fontSize: 14, lineHeight: 1.6, color: "rgba(0,0,0,.8)" }}>{body}</p>
             </div>
           ))}
         </div>
@@ -2321,7 +2945,7 @@ function TripBuilder({ notify, go, user, saveRecord }) {
                           return (
                             <label key={a.name} style={{ display: "flex", gap: 9, alignItems: "flex-start", padding: "6px 0", fontSize: 13, cursor: "pointer", lineHeight: 1.4 }}>
                               <input type="checkbox" checked={on} onChange={() => toggleAddon(id, a.name)} style={{ width: 15, height: 15, accentColor: T.green, marginTop: 2, flexShrink: 0 }} />
-                              <span style={{ flex: 1, color: "#3B4A42" }}>{a.name}</span>
+                              <span style={{ flex: 1, color: "rgba(0,0,0,.8)" }}>{a.name}</span>
                               <strong style={{ whiteSpace: "nowrap", fontSize: 12.5 }}>{a.price ? fmtXOF(a.price) + (a.per === "person" ? " /pp" : "") : "on request"}</strong>
                             </label>
                           );
@@ -2351,7 +2975,7 @@ function TripBuilder({ notify, go, user, saveRecord }) {
               <p style={{ fontSize: 14.5, lineHeight: 1.6, opacity: 0.85 }}>
                 {trip.pax} traveler{trip.pax > 1 ? "s" : ""} · {trip.hotel} · {trip.transport} · {trip.tours.length} experience{trip.tours.length !== 1 ? "s" : ""}: {trip.tours.map((id) => TOURS.find((t) => t.id === id)?.name.split(" —")[0]).join(", ") || "none yet"}
               </p>
-              {addonNames.length > 0 && <p style={{ fontSize: 13.5, lineHeight: 1.55, color: "#5A6B61", marginTop: -4 }}><strong>Add-ons:</strong> {addonNames.join(" · ")}</p>}
+              {addonNames.length > 0 && <p style={{ fontSize: 13.5, lineHeight: 1.55, color: "rgba(0,0,0,.8)", marginTop: -4 }}><strong>Add-ons:</strong> {addonNames.join(" · ")}</p>}
               {sent ? (
                 <div style={{ background: T.paperDark, border: `1px solid ${T.line}`, borderRadius: 12, padding: 16, fontSize: 14.5, lineHeight: 1.6 }}>
                   <CircleCheck size={18} color={T.green} style={{ verticalAlign: "middle", marginRight: 4 }} /> <strong>Request received.</strong> An ATS advisor will email you at <strong>{contact.email}</strong> to confirm availability and your final quote.
@@ -2377,13 +3001,13 @@ function TripBuilder({ notify, go, user, saveRecord }) {
         <aside>
           <div style={{ background: "#fff", color: T.ink, border: `1px solid ${T.line}`, borderRadius: 16, padding: 22, position: "sticky", top: 80 }}>
             <div style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".1em", color: T.green }}>Live estimated budget</div>
-            <div className="disp" style={{ fontSize: 30, fontWeight: 800, margin: "6px 0 12px", color: "#1A1A1A" }}>{fmtXOF(total)} <span style={{ fontSize: 14, fontWeight: 500, color: "#888" }}>{fmtUSD(total)}</span></div>
+            <div className="disp" style={{ fontSize: 30, fontWeight: 800, margin: "6px 0 12px", color: "#1A1A1A" }}>{fmtXOF(total)} <span style={{ fontSize: 14, fontWeight: 500, color: "rgba(0,0,0,.8)" }}>{fmtUSD(total)}</span></div>
             {trip.hotel.startsWith("No hotel") ? <Row l="Accommodation" v="Self-arranged" /> : <Row l={`Accommodation · ${trip.days} nights`} v={fmtXOF(hotelCost)} />}
             <Row l={`Experiences × ${trip.pax} pax`} v={fmtXOF(toursCost)} />
             {addonsCost > 0 && <Row l="Add-ons" v={fmtXOF(addonsCost)} />}
             <Row l="Transport" v={fmtXOF(transCost)} />
             <div style={{ fontSize: 11.5, color: "#8A968E", marginTop: 6 }}>Experiences at group per-person rates; 'on request' items excluded from the estimate.</div>
-            <div style={{ borderTop: `1px solid ${T.line}`, marginTop: 10, paddingTop: 10, fontSize: 13.5, lineHeight: 1.6, color: "#3B4A42" }}>
+            <div style={{ borderTop: `1px solid ${T.line}`, marginTop: 10, paddingTop: 10, fontSize: 13.5, lineHeight: 1.6, color: "rgba(0,0,0,.8)" }}>
               <strong style={{ color: T.green }}>Ma Tontine Voyage:</strong> reserve today with {fmtXOF(total * 0.2)} (20%), balance in instalments before departure.
             </div>
           </div>
@@ -2468,7 +3092,7 @@ function TourPreviewSheet({ tour, pax = 1, selected, currentAddons, onApply, onR
               <span className="disp" style={{ fontWeight: 800, fontSize: 20, color: "#1A1A1A" }}>{price ? fmtXOF(price) : "On request"}</span>
               {price ? <span style={{ fontSize: 12.5, opacity: 0.6 }}>/ person (group rate)</span> : null}
             </div>
-            <p style={{ fontSize: 14, lineHeight: 1.6, color: "#3B4A42", marginTop: 10 }}>{tour.desc}</p>
+            <p style={{ fontSize: 14, lineHeight: 1.6, color: "rgba(0,0,0,.8)", marginTop: 10 }}>{tour.desc}</p>
             {tour.sub && <div style={{ fontSize: 12.5, opacity: 0.7, marginTop: 4, lineHeight: 1.5 }}>{tour.sub}</div>}
 
             {Array.isArray(tour.steps) && tour.steps.length > 0 && (
@@ -2476,7 +3100,7 @@ function TourPreviewSheet({ tour, pax = 1, selected, currentAddons, onApply, onR
                 <div style={sect}>Itinerary &amp; inclusions</div>
                 <ol style={{ margin: 0, padding: 0, listStyle: "none" }}>
                   {tour.steps.map((s, i) => (
-                    <li key={i} style={{ display: "flex", gap: 10, padding: "7px 0", borderBottom: `1px solid ${T.line}`, fontSize: 13.5, lineHeight: 1.5, color: "#3B4A42" }}>
+                    <li key={i} style={{ display: "flex", gap: 10, padding: "7px 0", borderBottom: `1px solid ${T.line}`, fontSize: 13.5, lineHeight: 1.5, color: "rgba(0,0,0,.8)" }}>
                       <span style={{ width: 22, height: 22, borderRadius: "50%", background: T.paperDark, color: T.green, fontWeight: 800, fontSize: 12, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{i + 1}</span>
                       <span>{s}</span>
                     </li>
@@ -2493,7 +3117,7 @@ function TourPreviewSheet({ tour, pax = 1, selected, currentAddons, onApply, onR
                   return (
                     <label key={a.name} style={{ display: "flex", gap: 9, alignItems: "flex-start", padding: "7px 0", fontSize: 13.5, cursor: "pointer", lineHeight: 1.4, borderBottom: `1px solid ${T.line}` }}>
                       <input type="checkbox" checked={on} onChange={() => toggle(a.name)} style={{ width: 16, height: 16, accentColor: T.green, marginTop: 2, flexShrink: 0 }} />
-                      <span style={{ flex: 1, color: "#3B4A42" }}>{a.name}</span>
+                      <span style={{ flex: 1, color: "rgba(0,0,0,.8)" }}>{a.name}</span>
                       <strong style={{ whiteSpace: "nowrap", fontSize: 12.5 }}>{a.price ? fmtXOF(a.per === "person" ? a.price * pax : a.price) + (a.per === "person" ? ` (×${pax})` : "") : "on request"}</strong>
                     </label>
                   );
@@ -2524,10 +3148,12 @@ function TourPreviewSheet({ tour, pax = 1, selected, currentAddons, onApply, onR
 }
 
 // ---------------- FLIGHTS ----------------
-function FlightsPage({ notify, user }) {
+function FlightsPage({ notify, user, initial, initialLegs }) {
   const todayStr = new Date().toISOString().slice(0, 10);
-  const [f, setF] = useState({ type: "Round trip", from: "", to: "", dep: "", ret: "", pax: 1, cls: "Economy" });
-  const [legs, setLegs] = useState([{ from: "", to: "", dep: "" }, { from: "", to: "", dep: "" }]);
+  const [f, setF] = useState(initial
+    ? { type: initial.type || "Round trip", from: initial.from || "", to: initial.to || "", dep: initial.dep || "", ret: initial.ret || "", pax: initial.pax || 1, cls: initial.cls || "Economy" }
+    : { type: "Round trip", from: "", to: "", dep: "", ret: "", pax: 1, cls: "Economy" });
+  const [legs, setLegs] = useState(initialLegs && initialLegs.length ? initialLegs : [{ from: "", to: "", dep: "" }, { from: "", to: "", dep: "" }]);
   const [contact, setContact] = useState({ name: user?.name || "", email: user?.email || "", phone: "", notes: "" });
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
@@ -2576,7 +3202,7 @@ function FlightsPage({ notify, user }) {
   return (
     <Wrap>
       <Eyebrow>ATS Travel · IATA-accredited</Eyebrow><H2>Flights & ticketing</H2>
-      <p style={{ maxWidth: 640, lineHeight: 1.6, color: "#3B4A42" }}>Domestic, international, multi-city and corporate ticketing. Submit a request and our ticketing team responds with the best available fares.</p>
+      <p style={{ maxWidth: 640, lineHeight: 1.6, color: "rgba(0,0,0,.8)" }}>Domestic, international, multi-city and corporate ticketing. Submit a request and our ticketing team responds with the best available fares.</p>
 
       <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 20, alignItems: "stretch" }} className="flights-grid">
         <style>{`@media(max-width:800px){.flights-grid{grid-template-columns:1fr !important}.flights-img{min-height:200px}}@media(max-width:600px){.leg-grid{grid-template-columns:1fr 1fr !important}}`}</style>
@@ -2587,7 +3213,7 @@ function FlightsPage({ notify, user }) {
             <div style={{ textAlign: "center", padding: "30px 10px" }}>
               <div style={{ width: 64, height: 64, borderRadius: "50%", margin: "0 auto 14px", display: "flex", alignItems: "center", justifyContent: "center", background: "#E9F7EE", color: T.green }}><Check size={32} /></div>
               <h3 className="disp" style={{ fontWeight: 700, fontSize: 20, margin: "0 0 8px" }}>Request received</h3>
-              <p style={{ fontSize: 14.5, lineHeight: 1.6, color: "#3B4A42", maxWidth: 420, margin: "0 auto" }}>
+              <p style={{ fontSize: 14.5, lineHeight: 1.6, color: "rgba(0,0,0,.8)", maxWidth: 420, margin: "0 auto" }}>
                 Our ticketing team is searching the best available fares and will reply to <strong>{contact.email}</strong> shortly.
               </p>
               <button style={{ ...btnGreen, marginTop: 18 }} onClick={() => { setSent(false); setF({ type: "Round trip", from: "", to: "", dep: "", ret: "", pax: 1, cls: "Economy" }); setLegs([{ from: "", to: "", dep: "" }, { from: "", to: "", dep: "" }]); }}>New request</button>
@@ -2825,7 +3451,7 @@ function PartnerMarquee() {
       <div style={{ display: "flex", gap: 44, width: "max-content", animation: "ats-marquee 30s linear infinite", alignItems: "center" }}>
         {doubled.map((n, i) => keys.length
           ? <img key={i} src={logos[n]} alt={n} style={{ height: 46, objectFit: "contain" }} />
-          : <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: 8, fontWeight: 700, fontSize: 15, color: "#3B4A42", whiteSpace: "nowrap" }}><Building2 size={18} color={T.green} strokeWidth={1.8} /> {n}</span>)}
+          : <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: 8, fontWeight: 700, fontSize: 15, color: "rgba(0,0,0,.8)", whiteSpace: "nowrap" }}><Building2 size={18} color={T.green} strokeWidth={1.8} /> {n}</span>)}
       </div>
     </div>
   );
@@ -2900,7 +3526,7 @@ function EventsPage({ notify, go, user, saveRecord }) {
               {s.soon && <span style={{ background: T.gold, color: T.ink, fontSize: 11, fontWeight: 800, borderRadius: 999, padding: "4px 10px", textTransform: "uppercase", letterSpacing: ".05em", whiteSpace: "nowrap" }}>Coming soon</span>}
             </div>
             <h3 className="disp" style={{ fontWeight: 700, fontSize: 18, margin: "12px 0 7px" }}>{s.name}</h3>
-            <p style={{ fontSize: 13.5, lineHeight: 1.55, color: "#5A6B61", margin: "0 0 18px", flex: 1 }}>{s.blurb}</p>
+            <p style={{ fontSize: 13.5, lineHeight: 1.55, color: "rgba(0,0,0,.8)", margin: "0 0 18px", flex: 1 }}>{s.blurb}</p>
             <button onClick={() => go("micework", { service: s.key })} style={{ background: "#fff", color: T.green, border: `1.5px solid ${T.green}`, borderRadius: 999, padding: "10px 18px", fontWeight: 700, fontSize: 14, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 8, alignSelf: "flex-start" }}>See our work <ArrowRight size={16} /></button>
           </div>
         ))}
@@ -2919,7 +3545,7 @@ function EventsPage({ notify, go, user, saveRecord }) {
               <h4 className="disp" style={{ fontWeight: 700, fontSize: 15, textTransform: "uppercase", letterSpacing: ".01em", margin: "0 0 12px", lineHeight: 1.3, color: T.ink }}>{s.name}</h4>
               <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 7, flex: 1 }}>
                 {s.items.map((it) => (
-                  <li key={it} style={{ fontSize: 13, lineHeight: 1.45, color: "#5A6B61", display: "flex", gap: 7 }}>
+                  <li key={it} style={{ fontSize: 13, lineHeight: 1.45, color: "rgba(0,0,0,.8)", display: "flex", gap: 7 }}>
                     <Check size={14} color={T.green} strokeWidth={2.5} style={{ flexShrink: 0, marginTop: 2 }} />{it}
                   </li>
                 ))}
@@ -2944,7 +3570,7 @@ function EventsPage({ notify, go, user, saveRecord }) {
           <div style={{ textAlign: "center", padding: "30px 10px" }}>
             <div style={{ width: 64, height: 64, borderRadius: "50%", margin: "0 auto 14px", display: "flex", alignItems: "center", justifyContent: "center", background: "#E9F7EE", color: T.green }}><Check size={32} /></div>
             <h3 className="disp" style={{ fontWeight: 700, fontSize: 20, margin: "0 0 8px" }}>Request received</h3>
-            <p style={{ fontSize: 14.5, lineHeight: 1.6, color: "#3B4A42", maxWidth: 440, margin: "0 auto" }}>
+            <p style={{ fontSize: 14.5, lineHeight: 1.6, color: "rgba(0,0,0,.8)", maxWidth: 440, margin: "0 auto" }}>
               Our events team is reviewing your brief and will reply to <strong>{contact.email}</strong> within 24 hours with a tailored proposal.
             </p>
             <button style={{ ...btnGreen, marginTop: 18 }} onClick={() => { setSent(false); setEv({ type: "Conference / Summit", pax: "20–50", date: "", location: "", budget: "To be discussed", msg: "" }); }}>New request</button>
@@ -2986,14 +3612,14 @@ function MiceWorkPage({ go }) {
     <Wrap>
       <button onClick={() => go("events")} style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "none", border: "none", cursor: "pointer", color: T.green, fontWeight: 700, fontSize: 14, padding: 0, marginBottom: 14 }}><ChevronLeft size={16} /> Back to MICE</button>
       <Eyebrow>Our track record · ATS Events</Eyebrow><H2>Selected work</H2>
-      <p style={{ maxWidth: 720, lineHeight: 1.65, color: "#5A6B61", marginTop: 0 }}>Summits, gala dinners, product launches and international conferences delivered end to end since 2018 — for governments, energy majors, global brands and NGOs across Senegal.</p>
+      <p style={{ maxWidth: 720, lineHeight: 1.65, color: "rgba(0,0,0,.8)", marginTop: 0 }}>Summits, gala dinners, product launches and international conferences delivered end to end since 2018 — for governments, energy majors, global brands and NGOs across Senegal.</p>
 
       {/* Aggregate figures — white cards with border, taller */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 16, margin: "30px 0 8px" }}>
         {MICE_STATS.map(([n, l]) => (
           <div key={l} style={{ background: "#F8F5EF", border: "1px solid #ECE7DD", borderRadius: 16, padding: "32px 20px", textAlign: "center", minHeight: 132, display: "flex", flexDirection: "column", justifyContent: "center" }}>
             <div className="disp" style={{ fontSize: "clamp(26px,3.2vw,36px)", fontWeight: 800, color: "#1A1A1A" }}>{n}</div>
-            <div style={{ fontSize: 13, fontWeight: 600, marginTop: 8, color: "#5A6B61", lineHeight: 1.4 }}>{l}</div>
+            <div style={{ fontSize: 13, fontWeight: 600, marginTop: 8, color: "rgba(0,0,0,.8)", lineHeight: 1.4 }}>{l}</div>
           </div>
         ))}
       </div>
@@ -3009,11 +3635,11 @@ function MiceWorkPage({ go }) {
               <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}><MapPin size={13} strokeWidth={2} color={T.green} />{r.venue}</span>
               <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}><Users size={13} strokeWidth={2} color={T.green} />{r.pax}</span>
             </div>
-            <p style={{ fontSize: 13.5, lineHeight: 1.55, color: "#3B4A42", margin: "0 0 14px" }}>{r.note}</p>
+            <p style={{ fontSize: 13.5, lineHeight: 1.55, color: "rgba(0,0,0,.8)", margin: "0 0 14px" }}>{r.note}</p>
             <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".07em", color: "#8A968E", marginBottom: 8 }}>What we handled</div>
             <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 6, flex: 1 }}>
               {r.scope.map((it) => (
-                <li key={it} style={{ fontSize: 12.5, lineHeight: 1.4, color: "#5A6B61", display: "flex", gap: 7 }}>
+                <li key={it} style={{ fontSize: 12.5, lineHeight: 1.4, color: "rgba(0,0,0,.8)", display: "flex", gap: 7 }}>
                   <Check size={13} color={T.green} strokeWidth={2.5} style={{ flexShrink: 0, marginTop: 2 }} />{it}
                 </li>
               ))}
@@ -3074,7 +3700,7 @@ function CorporatePage({ notify, go, user, role }) {
       <Eyebrow>Governments · Embassies · NGOs · Companies</Eyebrow><H2>Corporate travel & logistics</H2>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 24, alignItems: "start" }}>
         <div style={{ lineHeight: 1.7, fontSize: 15 }}>
-          <p style={{ marginTop: 0, color: "#3B4A42" }}>One account for your organization's travel in Africa — with a negotiated preferential rate applied automatically to every booking.</p>
+          <p style={{ marginTop: 0, color: "rgba(0,0,0,.8)" }}>One account for your organization's travel in Africa — with a negotiated preferential rate applied automatically to every booking.</p>
           <ul style={{ paddingLeft: 20, lineHeight: 2, marginTop: 0 }}>
             <li>Preferential B2B rate on the full catalogue</li>
             <li>Manage traveler groups and missions</li>
@@ -3086,7 +3712,7 @@ function CorporatePage({ notify, go, user, role }) {
             {[["Request an account", "Send us your organization details below."], ["We set your rate", "ATS reviews and activates your account with your negotiated discount."], ["Book at your rate", "Your preferential rate applies automatically at checkout — no code needed."]].map(([t, d], i) => (
               <div key={t} style={{ display: "flex", gap: 12, alignItems: "flex-start", padding: "7px 0" }}>
                 <span style={{ flexShrink: 0, width: 24, height: 24, borderRadius: "50%", background: T.green, color: "#fff", fontWeight: 800, fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center" }}>{i + 1}</span>
-                <div><strong style={{ color: "#1A1A1A" }}>{t}</strong><div style={{ fontSize: 13.5, color: "#5A6B61" }}>{d}</div></div>
+                <div><strong style={{ color: "#1A1A1A" }}>{t}</strong><div style={{ fontSize: 13.5, color: "rgba(0,0,0,.8)" }}>{d}</div></div>
               </div>
             ))}
           </div>
@@ -3096,14 +3722,14 @@ function CorporatePage({ notify, go, user, role }) {
           {isCorp ? (
             <>
               <h3 className="disp" style={{ fontWeight: 800, fontSize: 19, marginTop: 0 }}>Your corporate account is active</h3>
-              <p style={{ fontSize: 14.5, lineHeight: 1.6, color: "#3B4A42" }}>Your preferential rate is applied automatically at checkout. Browse the catalogue and book at your negotiated rate.</p>
+              <p style={{ fontSize: 14.5, lineHeight: 1.6, color: "rgba(0,0,0,.8)" }}>Your preferential rate is applied automatically at checkout. Browse the catalogue and book at your negotiated rate.</p>
               <button style={{ ...btnGold, marginTop: 6, width: "100%" }} onClick={() => go("tours")}>Browse tours →</button>
             </>
           ) : sent ? (
             <div style={{ textAlign: "center", padding: "20px 6px" }}>
               <div style={{ width: 56, height: 56, borderRadius: "50%", margin: "0 auto 12px", display: "flex", alignItems: "center", justifyContent: "center", background: "#E9F7EE", color: T.green }}><Check size={28} /></div>
               <h3 className="disp" style={{ fontWeight: 800, fontSize: 18, margin: "0 0 6px" }}>Request received</h3>
-              <p style={{ fontSize: 14, lineHeight: 1.6, color: "#3B4A42" }}>Our corporate team will review it and get back to you at <strong>{f.email}</strong>.</p>
+              <p style={{ fontSize: 14, lineHeight: 1.6, color: "rgba(0,0,0,.8)" }}>Our corporate team will review it and get back to you at <strong>{f.email}</strong>.</p>
             </div>
           ) : (
             <>
@@ -3175,7 +3801,7 @@ function AgentsPage({ notify, go, user, role }) {
       <Eyebrow>Travel agents · Tour operators · Resellers</Eyebrow><H2>Become an ATS ambassador</H2>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 24, alignItems: "start" }}>
         <div style={{ lineHeight: 1.7, fontSize: 15 }}>
-          <p style={{ marginTop: 0, color: "#3B4A42" }}>Earn a commission on every trip you bring to ATS. Share your code, book for your clients, and follow your earnings in real time.</p>
+          <p style={{ marginTop: 0, color: "rgba(0,0,0,.8)" }}>Earn a commission on every trip you bring to ATS. Share your code, book for your clients, and follow your earnings in real time.</p>
           <ul style={{ paddingLeft: 20, lineHeight: 2, marginTop: 0 }}>
             <li>Preferential rates on the full Senegal catalogue</li>
             <li>Commission tracking and statements</li>
@@ -3187,7 +3813,7 @@ function AgentsPage({ notify, go, user, role }) {
             {HOW.map(([t, d], i) => (
               <div key={t} style={{ display: "flex", gap: 12, alignItems: "flex-start", padding: "7px 0" }}>
                 <span style={{ flexShrink: 0, width: 24, height: 24, borderRadius: "50%", background: T.green, color: "#fff", fontWeight: 800, fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center" }}>{i + 1}</span>
-                <div><strong style={{ color: "#1A1A1A" }}>{t}</strong><div style={{ fontSize: 13.5, color: "#5A6B61" }}>{d}</div></div>
+                <div><strong style={{ color: "#1A1A1A" }}>{t}</strong><div style={{ fontSize: 13.5, color: "rgba(0,0,0,.8)" }}>{d}</div></div>
               </div>
             ))}
           </div>
@@ -3197,14 +3823,14 @@ function AgentsPage({ notify, go, user, role }) {
           {isAgent ? (
             <>
               <h3 className="disp" style={{ fontWeight: 800, fontSize: 19, marginTop: 0 }}>You're an ATS ambassador</h3>
-              <p style={{ fontSize: 14.5, lineHeight: 1.6, color: "#3B4A42" }}>Access your code, referral link, bookings and commissions in your portal.</p>
+              <p style={{ fontSize: 14.5, lineHeight: 1.6, color: "rgba(0,0,0,.8)" }}>Access your code, referral link, bookings and commissions in your portal.</p>
               <button style={{ ...btnGold, marginTop: 6, width: "100%" }} onClick={() => go("agent")}>Open agent portal →</button>
             </>
           ) : sent ? (
             <div style={{ textAlign: "center", padding: "20px 6px" }}>
               <div style={{ width: 56, height: 56, borderRadius: "50%", margin: "0 auto 12px", display: "flex", alignItems: "center", justifyContent: "center", background: "#E9F7EE", color: T.green }}><Check size={28} /></div>
               <h3 className="disp" style={{ fontWeight: 800, fontSize: 18, margin: "0 0 6px" }}>Application received</h3>
-              <p style={{ fontSize: 14, lineHeight: 1.6, color: "#3B4A42" }}>The ATS team will review your application and get back to you at <strong>{f.email}</strong>.</p>
+              <p style={{ fontSize: 14, lineHeight: 1.6, color: "rgba(0,0,0,.8)" }}>The ATS team will review your application and get back to you at <strong>{f.email}</strong>.</p>
             </div>
           ) : (
             <>
@@ -3320,7 +3946,7 @@ function AgentPortal({ user, role, setSignin, notify, go, setBooking }) {
             <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
               <span className="disp" style={{ fontSize: 22, fontWeight: 800, letterSpacing: ".04em" }}>{c.code}</span>
               <span style={{ ...pill(), background: c.active ? "#E9F7EE" : "#F2F2F2", color: c.active ? T.green : "#8A968E", fontSize: 12 }}>{c.active ? "Active" : "Inactive"}</span>
-              <span style={{ fontSize: 13, color: "#5A6B61" }}>−{num(c.discount_percent)}% client · {num(c.commission_percent)}% commission</span>
+              <span style={{ fontSize: 13, color: "rgba(0,0,0,.8)" }}>−{num(c.discount_percent)}% client · {num(c.commission_percent)}% commission</span>
               <button style={{ marginLeft: "auto", ...btnGreen, fontSize: 13, padding: "8px 14px", background: "#fff", color: T.green, border: `1.5px solid ${T.green}` }} onClick={() => copy(c.code)}>Copy code</button>
             </div>
             <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 12, flexWrap: "wrap" }}>
@@ -3648,7 +4274,7 @@ function AdminConsole({ user, isAdmin, isSuper, setSignin }) {
                 <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 24 }}>
                   {byChannel.map((x) => (
                     <div key={x.ch} style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                      <span style={{ width: 84, fontSize: 13, textTransform: "capitalize", color: "#3B4A42" }}>{x.ch}</span>
+                      <span style={{ width: 84, fontSize: 13, textTransform: "capitalize", color: "rgba(0,0,0,.8)" }}>{x.ch}</span>
                       <div style={{ flex: 1, background: "#F2F2F2", borderRadius: 999, height: 22, overflow: "hidden" }}><div style={{ width: `${Math.round((x.rev / maxRev) * 100)}%`, height: "100%", background: chColor[x.ch], borderRadius: 999, minWidth: x.rev > 0 ? 4 : 0 }} /></div>
                       <span style={{ width: 120, textAlign: "right", fontSize: 13, fontWeight: 700 }}>{fmtXOF(x.rev)}</span>
                       <span style={{ width: 60, textAlign: "right", fontSize: 12, opacity: 0.6 }}>{x.count} bkg</span>
@@ -3770,7 +4396,7 @@ function AboutIntro() {
             <div>
               <div className="about-script" style={{ fontSize: 32, fontWeight: 600, color: T.green, marginBottom: 2, lineHeight: 1 }}>Welcome to ATS</div>
               <h1 className="disp" style={{ fontSize: "clamp(28px,4vw,42px)", fontWeight: 800, lineHeight: 1.1, letterSpacing: "-0.02em", color: T.ink, margin: "0 0 20px" }}>About Africa Tourism Solutions</h1>
-              <p style={{ fontSize: 16, lineHeight: 1.7, color: "#3B4A42", margin: "0 0 30px" }}>
+              <p style={{ fontSize: 16, lineHeight: 1.7, color: "rgba(0,0,0,.8)", margin: "0 0 30px" }}>
                 Founded by two young Senegalese entrepreneurs, ATS is the expression of an Africa revalued — historically, touristically and culturally. We exist to break the stereotype of a continent defined by poverty and danger, with a rich, authentic offer that shows its true, majestic beauty.
               </p>
               <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
@@ -3779,7 +4405,7 @@ function AboutIntro() {
                     <span style={{ width: 50, height: 50, flexShrink: 0, borderRadius: "50%", background: "rgba(0,146,69,.10)", color: T.green, display: "flex", alignItems: "center", justifyContent: "center" }}><Ico size={21} strokeWidth={2} /></span>
                     <div>
                       <div className="disp" style={{ fontWeight: 700, fontSize: 17, color: T.ink }}>{title}</div>
-                      <div style={{ fontSize: 14, lineHeight: 1.55, color: "#7A867E", marginTop: 3 }}>{desc}</div>
+                      <div style={{ fontSize: 14, lineHeight: 1.55, color: "rgba(0,0,0,.8)", marginTop: 3 }}>{desc}</div>
                     </div>
                   </div>
                 ))}
@@ -3831,7 +4457,7 @@ function CeoWord() {
             <div style={{ position: "relative" }}>
               <span className="disp" aria-hidden="true" style={{ position: "absolute", top: -26, left: -8, fontSize: 88, lineHeight: 1, color: "rgba(0,146,69,.12)", fontWeight: 800 }}>&ldquo;</span>
               {paras.map((p, idx) => (
-                <p key={idx} style={{ fontSize: 15.5, lineHeight: 1.75, color: "#3B4A42", margin: idx === 0 ? "0 0 14px" : "0 0 14px" }}>{p}</p>
+                <p key={idx} style={{ fontSize: 15.5, lineHeight: 1.75, color: "rgba(0,0,0,.8)", margin: idx === 0 ? "0 0 14px" : "0 0 14px" }}>{p}</p>
               ))}
             </div>
           </div>
@@ -3967,14 +4593,14 @@ function ReviewsSlider({ reviews, usingGoogle }) {
                   : <div style={{ width: 52, height: 52, borderRadius: "50%", flexShrink: 0, background: T.paperDark, color: T.green, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 19 }}>{(r.author || "?").trim().charAt(0).toUpperCase()}</div>}
                 <div style={{ minWidth: 0, flex: 1 }}>
                   <div className="disp" style={{ fontWeight: 800, fontSize: 18, color: T.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.author}</div>
-                  <div style={{ fontSize: 13, color: "#7A867E" }}>{r.when || r.role || "Voyageur"}</div>
+                  <div style={{ fontSize: 13, color: "rgba(0,0,0,.8)" }}>{r.when || r.role || "Voyageur"}</div>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
                   <Stars size={16} n={Math.round(r.rating || 5)} />
                   {usingGoogle && <GMark size={16} />}
                 </div>
               </div>
-              <p className="rev-text" style={{ margin: "16px 0 0", fontSize: 15.5, lineHeight: 1.7, color: "#3B4A42" }}>&ldquo;{r.text}&rdquo;</p>
+              <p className="rev-text" style={{ margin: "16px 0 0", fontSize: 15.5, lineHeight: 1.7, color: "rgba(0,0,0,.8)" }}>&ldquo;{r.text}&rdquo;</p>
               {on && (
                 <div aria-hidden="true" style={{ position: "absolute", left: "50%", bottom: -22, transform: "translateX(-50%)", width: 46, height: 46, borderRadius: "50%", background: T.green, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 8px 20px rgba(0,146,69,.4)" }}>
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M9.5 5C6.5 5 4 7.5 4 10.5V19h7v-8H7.2c0-1.8 1-3 2.3-3V5zm9 0c-3 0-5.5 2.5-5.5 5.5V19h7v-8h-3.8c0-1.8 1-3 2.3-3V5z"/></svg>
@@ -4014,7 +4640,7 @@ function Partners() {
   const any = Object.values(oks).some(Boolean);
   return (
     <div style={{ marginTop: 46, display: any ? "block" : "none" }}>
-      <div style={{ textAlign: "center", fontSize: 11.5, fontWeight: 700, letterSpacing: ".16em", textTransform: "uppercase", color: "#93A29A", marginBottom: 18 }}>Ils nous font confiance</div>
+      <div style={{ textAlign: "center", fontSize: 11.5, fontWeight: 700, letterSpacing: ".16em", textTransform: "uppercase", color: "rgba(0,0,0,.8)", marginBottom: 18 }}>Ils nous font confiance</div>
       <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", alignItems: "center", gap: "24px 40px" }}>
         {KEYS.map((k) => <PartnerLogo key={k} k={k} onState={onState} />)}
       </div>
@@ -4041,7 +4667,7 @@ function GoogleReviews() {
       <div className="about-script" style={{ textAlign: "center", fontSize: 30, fontWeight: 600, color: T.green, lineHeight: 1 }}>Testimonial</div>
       <h2 className="disp" style={{ textAlign: "center", fontWeight: 800, fontSize: "clamp(26px,3.6vw,38px)", letterSpacing: "-0.02em", color: T.ink, margin: "2px 0 6px" }}>What Clients Say About Us</h2>
       {usingGoogle && (
-        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 8, fontSize: 14, color: "#3B4A42" }}>
+        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 8, fontSize: 14, color: "rgba(0,0,0,.8)" }}>
           <GMark size={16} /><span style={{ fontWeight: 800, color: T.ink }}>{data.rating}</span>
           <Stars size={15} n={Math.round(data.rating)} /><span style={{ opacity: 0.7 }}>· {data.count} avis Google</span>
         </div>
@@ -4068,14 +4694,14 @@ function AboutPage({ notify }) {
             {[["ATS Travel", "Flights & ticketing"], ["ATS Events", "MICE & celebrations"], ["ATS Business", "Corporate & team building"], ["ATS Logistics", "Fleet & group movement"], ["ATS Evasion", "Leisure escapes"], ["ATS School", "Educational travel"]].map(([n, d]) => (
               <div key={n} style={{ background: "#fff", border: "1px solid #EEE", borderRadius: 14, padding: "14px 16px" }}>
                 <div style={{ fontWeight: 700, fontSize: 14, color: "#1A1A1A" }}>{n}</div>
-                <div style={{ fontSize: 12, color: "#7A867E", marginTop: 2 }}>{d}</div>
+                <div style={{ fontSize: 12, color: "rgba(0,0,0,.8)", marginTop: 2 }}>{d}</div>
               </div>
             ))}
           </div>
         </div>
 
         <h3 className="disp" style={{ fontWeight: 800, fontSize: 22, margin: "40px 0 6px", textAlign: "center" }}>Our team</h3>
-        <p style={{ textAlign: "center", color: "#7A867E", fontSize: 14, margin: "0 0 4px" }}>The people who craft your journey on the ground.</p>
+        <p style={{ textAlign: "center", color: "rgba(0,0,0,.8)", fontSize: 14, margin: "0 0 4px" }}>The people who craft your journey on the ground.</p>
         <TeamStrip />
 
         <GoogleReviews />
@@ -4096,7 +4722,7 @@ function PaymentResult({ status, go, user, setSignin }) {
         <h1 className="disp" style={{ fontSize: 24, fontWeight: 700, margin: "0 0 8px" }}>
           {success ? "Payment received" : "Payment not completed"}
         </h1>
-        <p style={{ fontSize: 15, lineHeight: 1.6, color: "#3B4A42", margin: "0 0 22px" }}>
+        <p style={{ fontSize: 15, lineHeight: 1.6, color: "rgba(0,0,0,.8)", margin: "0 0 22px" }}>
           {success
             ? "Thank you! Your payment was received and your booking is being confirmed. You'll find it in your account with its receipt shortly."
             : "Your payment was cancelled or did not go through. No charge was made — your booking is still pending, you can try paying again from your account."}
@@ -4690,7 +5316,7 @@ function BookingModal({ tour, user, onClose, onConfirm }) {
           {/* LEFT — booking + billing + payment */}
           <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 20, padding: "26px 30px", color: T.ink }}>
             {tour.agentBooking && (
-              <div style={{ marginBottom: 4, background: "#F8F5EF", border: "1px solid #ECE7DD", borderRadius: 10, padding: "10px 13px", fontSize: 13, lineHeight: 1.5, color: "#3B4A42", display: "flex", gap: 8, alignItems: "flex-start" }}>
+              <div style={{ marginBottom: 4, background: "#F8F5EF", border: "1px solid #ECE7DD", borderRadius: 10, padding: "10px 13px", fontSize: 13, lineHeight: 1.5, color: "rgba(0,0,0,.8)", display: "flex", gap: 8, alignItems: "flex-start" }}>
                 <UserRound size={16} color={T.green} style={{ flexShrink: 0, marginTop: 1 }} />
                 <span>You're booking on behalf of a client{tour.initialPromo ? <> — your code <strong>{tour.initialPromo}</strong> is applied</> : ""}. Enter the client's billing details below.</span>
               </div>
@@ -4709,7 +5335,7 @@ function BookingModal({ tour, user, onClose, onConfirm }) {
               </button>
             </div>
             {!tontineAvailable && (
-              <div style={{ marginTop: 10, background: "#f8f8f8", border: "1px solid #ECECEC", borderRadius: 10, padding: "10px 12px", fontSize: 13, lineHeight: 1.5, color: "#5A6B61" }}>
+              <div style={{ marginTop: 10, background: "#f8f8f8", border: "1px solid #ECECEC", borderRadius: 10, padding: "10px 12px", fontSize: 13, lineHeight: 1.5, color: "rgba(0,0,0,.8)" }}>
                 {!date
                   ? "Select a travel date in the order panel to unlock Ma Tontine Voyage instalment plans."
                   : `⏳ Your travel date is in ${daysUntil} day${daysUntil > 1 ? "s" : ""} — too soon for instalments (minimum 15 days). Please pay in full, or pick a later date.`}
@@ -4763,7 +5389,7 @@ function BookingModal({ tour, user, onClose, onConfirm }) {
               </div>
             )}
             {plan === "deposit" && tontineAvailable && (
-              <div style={{ marginTop: 10, background: "#f8f8f8", border: "1px solid #ECECEC", borderRadius: 10, padding: "10px 12px", fontSize: 13.5, lineHeight: 1.6, color: "#3B4A42" }}>
+              <div style={{ marginTop: 10, background: "#f8f8f8", border: "1px solid #ECECEC", borderRadius: 10, padding: "10px 12px", fontSize: 13.5, lineHeight: 1.6, color: "rgba(0,0,0,.8)" }}>
                 <strong style={{ color: "#1A1A1A" }}>Due today: {fmtXOF(calc.deposit)}</strong> (20% deposit)<br />
                 Then the balance of {fmtXOF(calc.total - calc.deposit)} split into <strong>{months} instalment{months > 1 ? "s" : ""}</strong>, so a minimum of <strong>{fmtXOF(calc.installment)}</strong> per payment.<br />
                 <span style={{ display: "flex", gap: 7, marginTop: 6, alignItems: "flex-start" }}><Info size={15} color={T.green} style={{ flexShrink: 0, marginTop: 2 }} /><span>That amount is only a <strong>minimum</strong>: at each payment you're free to pay <strong>more</strong> — even the whole remaining balance at once — to finish sooner. You never pay less than the minimum.</span></span>
@@ -4771,7 +5397,7 @@ function BookingModal({ tour, user, onClose, onConfirm }) {
               </div>
             )}
             {plan === "full" && corporate && (
-              <div style={{ marginTop: 14, background: "#f8f8f8", border: "1px solid #ECECEC", borderRadius: 10, padding: "10px 13px", fontSize: 13, color: "#3B4A42", display: "flex", gap: 8, alignItems: "center" }}>
+              <div style={{ marginTop: 14, background: "#f8f8f8", border: "1px solid #ECECEC", borderRadius: 10, padding: "10px 13px", fontSize: 13, color: "rgba(0,0,0,.8)", display: "flex", gap: 8, alignItems: "center" }}>
                 <Building2 size={16} color={T.green} style={{ flexShrink: 0 }} /> Your corporate rate (−{CORP_DISCOUNT}%) is applied automatically.
               </div>
             )}
@@ -4837,7 +5463,7 @@ function BookingModal({ tour, user, onClose, onConfirm }) {
               <Counter label="Adults" sub={`${fmtXOF(tg.a)} each at current basis`} value={adults} set={setAdults} min={1} />
               <Counter label="Children (3–12)" sub={tg.c ? `${fmtXOF(tg.c)} each` : "child rate confirmed at booking"} value={children} set={setChildren} />
               <Counter label="Infants (under 3)" sub="Free" value={infants} set={setInfants} />
-              <div style={{ marginTop: 10, background: "#f8f8f8", border: "1px solid #ECECEC", borderRadius: 10, padding: "10px 13px", fontSize: 13.5, color: "#3B4A42" }}>
+              <div style={{ marginTop: 10, background: "#f8f8f8", border: "1px solid #ECECEC", borderRadius: 10, padding: "10px 13px", fontSize: 13.5, color: "rgba(0,0,0,.8)" }}>
                 Basis applied: <strong style={{ color: "#1A1A1A" }}>{tierLabel[tier]}</strong> — {tier !== "grp" ? "add travelers to unlock lower per-person rates." : "best per-person rate unlocked."}
               </div>
 
@@ -4951,6 +5577,15 @@ const TRANSFER_ROUTES = [
   { id: "aibd-dakar", name: "AIBD ⇄ Dakar", prices: RATES.airport },
   { id: "aibd-saly", name: "AIBD ⇄ Saly", prices: [40000, 60000, 120000, 65000, 90000, 240000, 130000, 120000, 180000, 80000, 110000, 220000] },
   { id: "dakar-saly", name: "Dakar ⇄ Saly", prices: [45000, 65000, 130000, 70000, 100000, 260000, 140000, 130000, 190000, 90000, 120000, 240000] },
+];
+// Directional route list for the hero transfer search (same prices both ways)
+const TRANSFER_DIRECTIONS = [
+  { id: "dakar-aibd", from: "Dakar", to: "AIBD", pricesId: "aibd-dakar" },
+  { id: "aibd-dakar", from: "AIBD", to: "Dakar", pricesId: "aibd-dakar" },
+  { id: "aibd-saly", from: "AIBD", to: "Saly", pricesId: "aibd-saly" },
+  { id: "saly-aibd", from: "Saly", to: "AIBD", pricesId: "aibd-saly" },
+  { id: "dakar-saly", from: "Dakar", to: "Saly", pricesId: "dakar-saly" },
+  { id: "saly-dakar", from: "Saly", to: "Dakar", pricesId: "dakar-saly" },
 ];
 
 // ---- Car rental fleet (self-drive). daily = "Full Day Hire (Dakar)". Photos: bucket "rentals/{slug}.*" ----
@@ -5098,6 +5733,92 @@ function RentalCheckoutPage({ detail, user, onBack, onConfirm }) {
   );
 }
 
+// Full-page transfer checkout (replaces the old popup): billing details, recap, secure payment.
+function TransferCheckoutPage({ detail, user, go, onConfirm }) {
+  const [bill, setBill] = useState(() => { const [fn, ...rn] = (user?.name || "").split(" "); return { firstName: fn || "", lastName: rn.join(" ") || "", email: user?.email || "", phone: "", address: "", city: "", country: "" }; });
+  const [accepted, setAccepted] = useState(false);
+  const vmap = useVehiclePhotoMap();
+  useEffect(() => { window.scrollTo({ top: 0 }); }, []);
+  const total = detail?.total || 0;
+  const promo = usePromo(total);
+  useEffect(() => { if (!detail) go("transport"); }, [detail]);
+  if (!detail) return null;
+
+  const rows = detail.rows || [];
+  const photo = detail.vehicleSlug ? vmap[detail.vehicleSlug] : null;
+  const ready = billValid(bill) && accepted;
+
+  const confirm = () => {
+    if (!ready) return;
+    const name = `${bill.firstName} ${bill.lastName}`.trim();
+    sendAgencyEmail({
+      access_key: WEB3FORMS_KEY_LOGISTICS,
+      subject: `Transfer request — ${detail.routeLabel || "transport"}`,
+      from_name: "ATS Transfers",
+      name, email: bill.email, phone: bill.phone,
+      Billing_address: [bill.address, bill.city, bill.country].filter(Boolean).join(", "),
+      ...rowsToFields(rows),
+      Total_XOF: total,
+    });
+    const base = detail.record || {};
+    if (base.tour && !base.tour.thumb && photo) base.tour.thumb = photo;
+    onConfirm({ ...base, plan: "full", months: 0, schedule: "", total, deposit: 0, contact: { ...bill, name }, promoCode: promo.valid ? promo.promo.code : "" });
+  };
+
+  return (
+    <Wrap>
+      <button onClick={() => (window.history.length > 1 ? window.history.back() : go("transport"))} style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "none", border: "none", cursor: "pointer", color: T.ink, fontWeight: 700, fontSize: 14, padding: 0, marginBottom: 14, fontFamily: "inherit" }}>
+        <ChevronLeft size={18} /> Back
+      </button>
+      <Eyebrow>ATS Logistics · Transfer booking</Eyebrow>
+      <h2 className="disp" style={{ fontWeight: 800, fontSize: "clamp(22px,3vw,28px)", margin: "6px 0 20px", color: T.ink }}>{detail.title || "Confirm your transfer"}</h2>
+
+      <div className="transfer-cols" style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(300px, 400px)", gap: 24, alignItems: "start" }}>
+        {/* LEFT — billing */}
+        <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 16, padding: 22 }}>
+          <div style={{ ...sect, marginTop: 0 }}>Reservation & billing details</div>
+          <BillingFields bill={bill} setBill={setBill} />
+          {!promo.corporate && <PromoField p={promo} />}
+          <TermsCheck checked={accepted} onChange={setAccepted} />
+          <button disabled={!ready} style={{ ...btnGold, width: "100%", marginTop: 14, padding: "14px 22px", opacity: ready ? 1 : 0.55, cursor: ready ? "pointer" : "not-allowed" }} onClick={confirm}>
+            Pay — {fmtXOF(promo.payTotal)}
+          </button>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7, fontSize: 12.5, color: "rgba(0,0,0,.8)", marginTop: 10 }}>
+            <Shield size={14} color={T.green} /> Secure payment — instant confirmation by email
+          </div>
+        </div>
+
+        {/* RIGHT — recap */}
+        <aside style={{ background: "#F8F8F8", border: "1px solid #ECECEC", borderRadius: 16, overflow: "hidden" }}>
+          <div style={{ background: "#fff", borderBottom: "1px solid #ECECEC", padding: 16, display: "flex", alignItems: "center", justifyContent: "center", minHeight: 150 }}>
+            {photo ? <img src={photo} alt={detail.vehicleName || "Vehicle"} style={{ width: "100%", maxHeight: 170, objectFit: "contain" }} /> : <Car size={56} color={T.green} strokeWidth={1.3} />}
+          </div>
+          <div style={{ padding: "18px 20px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 2 }}>
+              <Route size={17} color={T.green} strokeWidth={2.2} />
+              <span className="disp" style={{ fontWeight: 800, fontSize: 18, color: T.ink }}>{detail.routeLabel}</span>
+            </div>
+            <div style={{ fontSize: 13, color: "rgba(0,0,0,.8)", marginBottom: 12 }}>{detail.vehicleName}{detail.vehicleMeta ? ` · ${detail.vehicleMeta}` : ""}</div>
+            <div style={{ fontSize: 14, lineHeight: 1.75 }}>
+              {rows.map(([l, v]) => <Row key={l} l={l} v={v} />)}
+              {promo.active && <div style={{ display: "flex", padding: "4px 0", color: T.green, fontWeight: 600 }}><span>{promo.label} · −{promo.pct}%</span><span style={{ marginLeft: "auto" }}>−{fmtXOF(total - promo.payTotal)}</span></div>}
+              <div style={{ borderTop: "1px solid #E4E4E4", marginTop: 10, paddingTop: 10, display: "flex", fontSize: 17 }}>
+                <strong>Total</strong>
+                <strong style={{ marginLeft: "auto" }}>
+                  {promo.active && <span style={{ fontWeight: 500, fontSize: 12.5, opacity: 0.5, textDecoration: "line-through", marginRight: 6 }}>{fmtXOF(total)}</span>}
+                  {fmtXOF(promo.payTotal)} <span style={{ fontWeight: 500, fontSize: 12.5, opacity: 0.55 }}>{fmtUSD(promo.payTotal)}</span>
+                </strong>
+              </div>
+            </div>
+            <div style={{ fontSize: 12.5, color: "rgba(0,0,0,.8)", marginTop: 10 }}>Fixed rate per vehicle — paid in full, no instalment plan.</div>
+          </div>
+        </aside>
+      </div>
+      <style>{`@media (max-width: 860px){ .transfer-cols{ grid-template-columns: 1fr !important; } .transfer-cols aside{ order: -1; } }`}</style>
+    </Wrap>
+  );
+}
+
 function VehiclePickerModal({ prices, vmap, pax, onSelect, onClose }) {
   return (
     <div role="dialog" aria-modal="true" onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 70, background: "rgba(11,46,27,.55)", display: "flex", alignItems: "flex-start", justifyContent: "center", padding: 14, overflowY: "auto" }}>
@@ -5130,50 +5851,97 @@ function VehiclePickerModal({ prices, vmap, pax, onSelect, onClose }) {
   );
 }
 
-function TransferWidget({ addBooking, compact, user }) {
-  const [route, setRoute] = useState(0);
+function TransferWidget({ addBooking, compact, user, go }) {
+  const [dirI, setDirI] = useState(0);
   const [vehicle, setVehicle] = useState(0);
   const [pax, setPax] = useState(2);
+  const [paxOpen, setPaxOpen] = useState(false);
   const [date, setDate] = useState("");
-  const [time, setTime] = useState("10:00");
+  const [time, setTime] = useState("10 h 30");
   const [checkout, setCheckout] = useState(null);
   const [picker, setPicker] = useState(false);
   const vmap = useVehiclePhotoMap();
   const todayStr = new Date().toISOString().slice(0, 10);
-  const r = TRANSFER_ROUTES[route];
-  const price = r.prices[vehicle];
-  const capOk = VEHICLES[vehicle].cap >= pax;
+  const dir = TRANSFER_DIRECTIONS[dirI];
+  const prices = TRANSFER_ROUTES.find((x) => x.id === dir.pricesId).prices;
+  const routeLabel = `${dir.from} → ${dir.to}`;
+  const veh = VEHICLES[vehicle];
+  const price = prices[vehicle];
+  const capOk = veh.cap >= pax;
   const complete = capOk && !!date && !!time && pax > 0;
 
-  const openCheckout = () => setCheckout({
-    tour: { emoji: "🚙", name: `${VEHICLES[vehicle].name} — ${r.name}`, pole: "Transfer", dur: `${date} · ${time}`, thumb: vmap[VEHICLES[vehicle].slug] || null },
-    route: r.name, vehicle: VEHICLES[vehicle].name, unit: "transfer", date, time, pax, total: price,
-  });
+  const openCheckout = () => {
+    const detail = {
+      title: "Confirm your transfer",
+      total: price,
+      routeLabel,
+      vehicleName: veh.name,
+      vehicleSlug: veh.slug,
+      vehicleMeta: `${veh.type} · ${veh.cap} passengers · ${veh.bags} bags`,
+      rows: [["Route", routeLabel], ["Vehicle", veh.name], ["Date", date], ["Pick-up", time], ["Passengers", pax]],
+      record: {
+        tour: { emoji: "🚙", name: `${veh.name} — ${routeLabel}`, pole: "Transfer", dur: `${date} · ${time}`, thumb: vmap[veh.slug] || null },
+        route: routeLabel, vehicle: veh.name, unit: "transfer", date, time, pax,
+        adults: pax, children: 0, infants: 0, transfer: { time, unit: "transfer" },
+      },
+    };
+    if (go) { go("transferCheckout", { detail }); return; }
+    setCheckout({ tour: detail.record.tour, route: routeLabel, vehicle: veh.name, unit: "transfer", date, time, pax, total: price });
+  };
 
   return (
     <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 16, padding: compact ? 16 : 22 }}>
       {!compact && <h3 className="disp" style={{ fontWeight: 700, fontSize: 18, marginTop: 0 }}>Book an airport / city transfer</h3>}
-      <label style={label}>Route</label>
-      <select style={{ ...input, fontWeight: 600 }} value={route} onChange={(e) => setRoute(+e.target.value)}>
-        {TRANSFER_ROUTES.map((x, i) => <option key={x.id} value={i}>{x.name}</option>)}
-      </select>
-      <label style={{ ...label, marginTop: 10 }}>Vehicle</label>
-      <button onClick={() => setPicker(true)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 12, padding: 10, cursor: "pointer", textAlign: "left" }}>
-        <div style={{ width: 84, height: 56, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          {vmap[VEHICLES[vehicle].slug] ? <img src={vmap[VEHICLES[vehicle].slug]} alt="" style={{ width: "100%", height: "100%", objectFit: "contain" }} /> : <Car size={30} color={T.green} strokeWidth={1.5} />}
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <HSelect Ico={Route} label="Route" value={dirI} onChange={setDirI} popWidth={260}
+          options={TRANSFER_DIRECTIONS.map((d, i) => ({ v: i, label: `${d.from} → ${d.to}` }))} />
+        {/* Vehicle — opens the photo picker popup */}
+        <div style={{ ...heroBox, position: "relative", cursor: "pointer", flex: "0 0 auto" }} onClick={() => setPicker(true)} role="button" aria-haspopup="dialog" aria-expanded={picker}>
+          {vmap[veh.slug]
+            ? <img src={vmap[veh.slug]} alt="" style={{ width: 48, height: 32, objectFit: "contain", flexShrink: 0 }} />
+            : <Car size={19} color={T.green} strokeWidth={2} style={{ flexShrink: 0 }} />}
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div style={heroLab}>Vehicle</div>
+            <div style={{ fontSize: 14.5, color: T.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{veh.name} · {fmtXOF(price)}</div>
+          </div>
+          <ChevronDown size={15} style={{ opacity: 0.5, flexShrink: 0 }} />
         </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 700, fontSize: 14.5 }}>{VEHICLES[vehicle].name}</div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, opacity: 0.65 }}><span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}><Users size={12} /> {VEHICLES[vehicle].cap}</span><span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}><Luggage size={12} /> {VEHICLES[vehicle].bags}</span><span>{fmtXOF(price)}</span></div>
-        </div>
-        <span style={{ color: T.green, fontWeight: 700, fontSize: 13, flexShrink: 0 }}>Change ›</span>
-      </button>
-      {picker && <VehiclePickerModal prices={r.prices} vmap={vmap} pax={pax} onSelect={(i) => { setVehicle(i); setPicker(false); }} onClose={() => setPicker(false)} />}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 8, marginTop: 10 }}>
-        <div><label style={label}>Date</label><input type="date" min={todayStr} style={input} value={date} onChange={(e) => setDate(e.target.value)} /></div>
-        <div><label style={label}>Pick-up</label><input type="time" style={input} value={time} onChange={(e) => setTime(e.target.value)} /></div>
-        <div><label style={label}>Passengers</label>
-          <select style={input} value={pax} onChange={(e) => setPax(+e.target.value)}>{[1,2,3,4,5,6,7,10,14,22,33,50].map((n) => <option key={n} value={n}>{n}</option>)}</select>
+        {picker && <VehiclePickerModal prices={prices} vmap={vmap} pax={pax} onSelect={(i) => { setVehicle(i); setPicker(false); }} onClose={() => setPicker(false)} />}
+        <HField Ico={Calendar} label="Transfer date">
+          <RangeDate from={date} to={date} onChange={(f) => setDate(f)} triggerStyle={{ background: "transparent", border: "none", padding: 0 }} wide single minDate={todayStr} />
+        </HField>
+        <div style={{ display: "flex", gap: 10 }}>
+          <TimeField label="Pick-up time" value={time} onChange={setTime} />
+          {/* Passengers */}
+          <div style={{ ...heroBox, position: "relative", cursor: "pointer" }} onClick={() => setPaxOpen((o) => !o)} role="button" aria-haspopup="dialog" aria-expanded={paxOpen}>
+            <Users size={19} color={T.green} strokeWidth={2} style={{ flexShrink: 0 }} />
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div style={heroLab}>Passengers</div>
+              <div style={{ fontSize: 14.5, color: T.ink }}>{pax} passenger{pax > 1 ? "s" : ""}</div>
+            </div>
+            <ChevronDown size={15} style={{ opacity: 0.5, flexShrink: 0 }} />
+            {paxOpen && (
+              <>
+                <div onClick={(e) => { e.stopPropagation(); setPaxOpen(false); }} style={{ position: "fixed", inset: 0, zIndex: 90 }} />
+                <div onClick={(e) => e.stopPropagation()} role="dialog" style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, zIndex: 91, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 16, boxShadow: "0 18px 44px rgba(0,0,0,.22)", padding: 20, width: "min(300px, calc(100vw - 28px))", cursor: "default" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 15, color: T.ink }}>Passengers</div>
+                      <div style={{ fontSize: 12.5, color: "rgba(0,0,0,.8)" }}>Up to {veh.cap} for this vehicle</div>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                      <button onClick={() => setPax((p) => Math.max(1, p - 1))} disabled={pax <= 1} aria-label="Less" style={{ ...btnCircle, width: 44, height: 44, fontSize: 20, opacity: pax <= 1 ? 0.4 : 1, cursor: pax <= 1 ? "not-allowed" : "pointer" }}>−</button>
+                      <span style={{ fontWeight: 600, minWidth: 20, textAlign: "center", fontSize: 15 }}>{pax}</span>
+                      <button onClick={() => setPax((p) => Math.min(50, p + 1))} aria-label="More" style={{ ...btnCircle, width: 44, height: 44, fontSize: 20 }}>+</button>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 16 }}>
+                    <button onClick={(e) => { e.stopPropagation(); setPaxOpen(false); }} style={{ background: T.green, color: "#fff", border: "none", borderRadius: 999, padding: "11px 28px", fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}>Done</button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 14, flexWrap: "wrap" }}>
@@ -5181,8 +5949,8 @@ function TransferWidget({ addBooking, compact, user }) {
           <div className="disp" style={{ fontWeight: 800, fontSize: 22, color: T.green }}>{fmtXOF(price)}</div>
           <div style={{ fontSize: 12, opacity: 0.6 }}>per vehicle · fixed rate</div>
         </div>
-        <button disabled={!complete} style={{ ...btnGold, marginLeft: "auto", opacity: complete ? 1 : 0.5, cursor: complete ? "pointer" : "not-allowed" }} onClick={() => complete && openCheckout()}>
-          Continue →
+        <button disabled={!complete} style={{ ...heroSearchBtnStyle, marginLeft: "auto", opacity: complete ? 1 : 0.55, cursor: complete ? "pointer" : "not-allowed" }} onClick={() => complete && openCheckout()}>
+          <Search size={18} /> Book
         </button>
       </div>
       {!capOk && <div style={{ fontSize: 12.5, color: T.laterite, marginTop: 6 }}>This vehicle is too small for {pax} passengers — pick a larger category.</div>}
@@ -5198,14 +5966,28 @@ function TransferWidget({ addBooking, compact, user }) {
 // placeholder estimate (to be replaced with the transport team's real prices).
 const FUEL_PER_DAY = 15000;
 
-function CarRentalWidget({ addBooking, user }) {
+const toHOpt = (t) => (t || "").includes(":") ? t.replace(":", " h ") : (t || ""); // "10:30" (hero payload) → "10 h 30" (TIME_OPTS)
+
+function CarRentalWidget({ addBooking, user, initial }) {
   const minDate = new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10); // earliest = day after tomorrow (J+2)
-  const [pickup, setPickup] = useState("");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
-  const [puTime, setPuTime] = useState("10:00");
-  const [doTime, setDoTime] = useState("10:00");
-  const [searched, setSearched] = useState(false);
+  const [pickup, setPickup] = useState(initial?.pickup || "");
+  const [dropoff, setDropoff] = useState(initial?.dropoff || "");
+  const [dateFrom, setDateFrom] = useState(initial?.dateFrom || "");
+  const [dateTo, setDateTo] = useState(initial?.dateTo || "");
+  const [puTime, setPuTime] = useState(toHOpt(initial?.puTime) || "10 h 30");
+  const [doTime, setDoTime] = useState(toHOpt(initial?.doTime) || "10 h 30");
+  const [searched, setSearched] = useState(!!(initial?.pickup && initial?.dateFrom));
+  // Keep the criteria the client entered in the hero search (and refresh them on a new search)
+  useEffect(() => {
+    if (!initial) return;
+    if (initial.pickup) setPickup(initial.pickup);
+    if (initial.dropoff) setDropoff(initial.dropoff);
+    if (initial.dateFrom) setDateFrom(initial.dateFrom);
+    if (initial.dateTo) setDateTo(initial.dateTo);
+    if (initial.puTime) setPuTime(toHOpt(initial.puTime));
+    if (initial.doTime) setDoTime(toHOpt(initial.doTime));
+    if (initial.pickup && initial.dateFrom) setSearched(true);
+  }, [initial]);
   const [checkout, setCheckout] = useState(null);
   const [fuelById, setFuelById] = useState({}); // car.id -> "with" | "without"
   const cmap = usePhotoMap("rentals");
@@ -5231,7 +6013,7 @@ function CarRentalWidget({ addBooking, user }) {
       rows: [
         ["Car", car.name],
         ["Pick-up", `${pickup} · ${dateFrom} ${puTime}`],
-        ["Return", `${dateFrom !== effTo ? effTo : dateFrom} ${doTime}`],
+        ["Return", `${dropoff || pickup} · ${dateFrom !== effTo ? effTo : dateFrom} ${doTime}`],
         ["Duration", `${days} day${days > 1 ? "s" : ""}`],
         ["Fuel", fuel === "with" ? "Included" : "Not included"],
         ["Daily rate", fmtXOF(daily)],
@@ -5240,7 +6022,7 @@ function CarRentalWidget({ addBooking, user }) {
         tour: { emoji: "🚗", name: `${car.name} — ${days}-day rental`, pole: "Car rental", dur: period, thumb: cmap[car.slug] || null },
         date: period,
         adults: car.seats, children: 0, infants: 0,
-        rental: { car: car.name, pickup, dateFrom, dateTo: effTo, puTime, doTime, days, daily, fuel: fuel === "with" ? "Included" : "Not included" },
+        rental: { car: car.name, pickup, dropoff: dropoff || pickup, dateFrom, dateTo: effTo, puTime, doTime, days, daily, fuel: fuel === "with" ? "Included" : "Not included" },
       },
     });
   };
@@ -5249,27 +6031,25 @@ function CarRentalWidget({ addBooking, user }) {
 
   return (
     <div>
-      {/* Search form */}
+      {/* Search form — same fields as the hero widget */}
       <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 16, padding: 20 }}>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
-          <div>
-            <label style={label}>Pick-up location</label>
-            <AddressInput value={pickup} onChange={setPickup} placeholder="Type an address in Senegal…" />
-          </div>
-          <div>
-            <label style={label}>Rental dates</label>
-            <RangeDate from={dateFrom} to={dateTo} minDate={minDate} onChange={(f, tt) => { setDateFrom(f); setDateTo(tt); }} triggerStyle={input} />
-            <div style={{ fontSize: 12, opacity: 0.6, marginTop: 6 }}>Pick a single day, or a start and end date for a longer hire.</div>
-          </div>
-          <div style={{ display: "flex", gap: 10 }}>
-            <div style={{ flex: 1 }}><label style={label}>Pick-up time</label><input type="time" style={input} value={puTime} onChange={(e) => setPuTime(e.target.value)} /></div>
-            <div style={{ flex: 1 }}><label style={label}>Drop-off time</label><input type="time" style={input} value={doTime} onChange={(e) => setDoTime(e.target.value)} /></div>
-          </div>
+        <div className="hero-fields" style={{ display: "flex", gap: 10, alignItems: "stretch" }}>
+          <HField Ico={MapPin} label="Pick-up">
+            <AddressInput bare value={pickup} onChange={setPickup} placeholder="Address in Dakar…" />
+          </HField>
+          <HField Ico={MapPin} label="Drop-off">
+            <AddressInput bare value={dropoff} onChange={setDropoff} placeholder="Same drop-off" />
+          </HField>
+          <HField Ico={Calendar} label="Dates">
+            <RangeDate from={dateFrom} to={dateTo} minDate={minDate} onChange={(f, tt) => { setDateFrom(f); setDateTo(tt); }} triggerStyle={{ background: "transparent", border: "none", padding: 0 }} wide />
+          </HField>
+          <TimeField label="Pick-up time" value={puTime} onChange={setPuTime} />
+          <TimeField label="Drop-off time" value={doTime} onChange={setDoTime} />
+          <button disabled={!canSearch} className="hero-search-btn" style={{ ...heroSearchBtnStyle, opacity: canSearch ? 1 : 0.55, cursor: canSearch ? "pointer" : "not-allowed" }} onClick={() => canSearch && setSearched(true)}>
+            <Search size={18} /> Search
+          </button>
         </div>
-        <button disabled={!canSearch} style={{ ...btnGold, marginTop: 14, opacity: canSearch ? 1 : 0.5, cursor: canSearch ? "pointer" : "not-allowed" }} onClick={() => setSearched(true)}>
-          Search available cars
-        </button>
-        {!canSearch && <div style={{ fontSize: 12.5, color: T.laterite, marginTop: 6 }}>Enter a pick-up location and rental dates to search.</div>}
+        {!canSearch && <div style={{ fontSize: 12.5, color: "rgba(0,0,0,.8)", marginTop: 8 }}>Enter a pick-up location and rental dates to search.</div>}
       </div>
 
       {/* Results */}
@@ -5327,10 +6107,17 @@ function CarRentalWidget({ addBooking, user }) {
   );
 }
 
-function TransportPage({ addBooking, notify, user }) {
-  const [tab, setTab] = useState("transfers");
+function TransportPage({ addBooking, notify, user, go, initialRental }) {
+  const [tab, setTab] = useState(initialRental ? "rental" : "transfers");
+  useEffect(() => { if (initialRental) setTab("rental"); }, [initialRental]);
   return (
     <Wrap>
+      <style>{`
+        @media(max-width:760px){
+          .hero-fields{flex-direction:column !important}
+          .hero-search-btn{padding:13px !important}
+        }
+      `}</style>
       <Eyebrow>ATS Logistics · fixed rates, instant booking</Eyebrow>
       <H2>Transfers & car rental</H2>
       <div style={{ display: "flex", gap: 8, margin: "6px 0 20px" }}>
@@ -5341,7 +6128,7 @@ function TransportPage({ addBooking, notify, user }) {
 
       {tab === "transfers" ? (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 24, alignItems: "start" }}>
-          <TransferWidget addBooking={addBooking} user={user} />
+          <TransferWidget addBooking={addBooking} user={user} go={go} />
           <div style={{ display: "grid", gap: 12 }}>
             {[[Plane, "Airport transfers", "AIBD ⇄ Dakar or AIBD ⇄ Saly — meet & greet at arrivals, fixed price per vehicle."],
               [Car, "Intercity", "Dakar ⇄ Saly and back — comfortable private transfer, any vehicle category."],
@@ -5355,7 +6142,7 @@ function TransportPage({ addBooking, notify, user }) {
           </div>
         </div>
       ) : (
-        <CarRentalWidget addBooking={addBooking} user={user} />
+        <CarRentalWidget addBooking={addBooking} user={user} initial={initialRental} />
       )}
     </Wrap>
   );
@@ -5534,7 +6321,7 @@ function BlogPage({ go }) {
       <div style={{ padding: big ? "20px 22px" : "16px 18px", display: "flex", flexDirection: "column", flex: 1 }}>
         <div style={{ fontSize: 12, color: "#8A968E", fontWeight: 600, marginBottom: 6 }}>{blogDate(a.date)}</div>
         <h3 className="disp" style={{ fontWeight: 800, fontSize: big ? 24 : 18, margin: 0, lineHeight: 1.25, color: "#1A1A1A" }}>{a.title}</h3>
-        <p style={{ fontSize: 14, lineHeight: 1.6, color: "#5A6B61", marginTop: 8, marginBottom: 12 }}>{a.excerpt}</p>
+        <p style={{ fontSize: 14, lineHeight: 1.6, color: "rgba(0,0,0,.8)", marginTop: 8, marginBottom: 12 }}>{a.excerpt}</p>
         <span style={{ marginTop: "auto", color: T.green, fontWeight: 700, fontSize: 13.5, display: "inline-flex", alignItems: "center", gap: 5 }}>Lire l'article <ArrowRight size={15} /></span>
       </div>
     </button>
@@ -5543,7 +6330,7 @@ function BlogPage({ go }) {
     <Wrap>
       <Eyebrow>Le blog ATS</Eyebrow>
       <H2>Récits, destinations & culture du Sénégal</H2>
-      <p style={{ maxWidth: 640, lineHeight: 1.6, color: "#3B4A42", marginTop: -4 }}>Nos coups de cœur, nos aventures et nos conseils pour découvrir le Sénégal autrement.</p>
+      <p style={{ maxWidth: 640, lineHeight: 1.6, color: "rgba(0,0,0,.8)", marginTop: -4 }}>Nos coups de cœur, nos aventures et nos conseils pour découvrir le Sénégal autrement.</p>
       <div style={{ marginTop: 20 }}><Card a={feat} big /></div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 22, marginTop: 22 }}>
         {rest.map((a) => <Card key={a.slug} a={a} />)}
