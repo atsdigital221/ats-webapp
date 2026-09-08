@@ -6565,10 +6565,10 @@ function CarRentalWidget({ addBooking, user, initial }) {
       title: "Confirm your car rental",
       total,
       image: cmap[car.slug] || null,
-      carName: car.name,
-      carType: `${car.type} · ${car.year}`,
+      carName: `${car.name} or similar`,
+      carType: car.type,
       rows: [
-        ["Car", car.name],
+        ["Vehicle", `${car.name} or similar`],
         ["Pick-up", `${pickup} · ${dateFrom} ${puTime}`],
         ["Return", `${dropoff || pickup} · ${dateFrom !== effTo ? effTo : dateFrom} ${doTime}`],
         ["Duration", `${days} day${days > 1 ? "s" : ""}`],
@@ -6576,10 +6576,10 @@ function CarRentalWidget({ addBooking, user, initial }) {
         ["Daily rate", fmtXOF(daily)],
       ],
       record: {
-        tour: { emoji: "🚗", name: `${car.name} — ${days}-day rental`, pole: "Car rental", dur: period, thumb: cmap[car.slug] || null },
+        tour: { emoji: "🚗", name: `${car.name} or similar — ${days}-day rental`, pole: "Car rental", dur: period, thumb: cmap[car.slug] || null },
         date: period,
         adults: car.seats, children: 0, infants: 0,
-        rental: { car: car.name, pickup, dropoff: dropoff || pickup, dateFrom, dateTo: effTo, puTime, doTime, days, daily, fuel: fuel === "with" ? "Included" : "Not included" },
+        rental: { car: `${car.name} or similar`, pickup, dropoff: dropoff || pickup, dateFrom, dateTo: effTo, puTime, doTime, days, daily, fuel: fuel === "with" ? "Included" : "Not included" },
       },
     });
   };
@@ -6617,12 +6617,12 @@ function CarRentalWidget({ addBooking, user, initial }) {
             {CARS.map((car) => (
               <div key={car.id} className={car.available ? "card-hover" : ""} style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 16, overflow: "hidden", display: "flex", flexDirection: "column", opacity: car.available ? 1 : 0.6 }}>
                 <div style={{ position: "relative", height: 150, background: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <span style={{ position: "absolute", top: 8, left: 8, background: "rgba(255,255,255,.92)", borderRadius: 999, padding: "3px 10px", fontSize: 11, fontWeight: 700, color: T.ink }}>{car.type} · {car.year}</span>
+                  <span style={{ position: "absolute", top: 8, left: 8, background: "rgba(255,255,255,.92)", borderRadius: 999, padding: "3px 10px", fontSize: 11, fontWeight: 700, color: T.ink }}>{car.type}</span>
                   {!car.available && <span style={{ position: "absolute", top: 8, right: 8, background: "#B3261E", color: "#fff", borderRadius: 999, padding: "3px 10px", fontSize: 11, fontWeight: 700 }}>Unavailable</span>}
                   {cmap[car.slug] ? <img src={cmap[car.slug]} alt={car.name} style={{ width: "100%", height: "100%", objectFit: "contain" }} /> : <Car size={46} color={T.green} strokeWidth={1.5} />}
                 </div>
                 <div style={{ padding: 16, display: "flex", flexDirection: "column", flex: 1 }}>
-                  <div className="disp" style={{ fontWeight: 700, fontSize: 16 }}>{car.name}</div>
+                  <div className="disp" style={{ fontWeight: 700, fontSize: 16 }}>{car.name} <span style={{ fontWeight: 500, fontSize: 12.5, opacity: 0.6 }}>or similar</span></div>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 6, margin: "8px 0" }}>
                     <span style={{ ...pill(T.indigo), display: "inline-flex", alignItems: "center", gap: 4 }}><Users size={12} /> {car.seats} seats</span>
                     <span style={{ ...pill(T.laterite), display: "inline-flex", alignItems: "center", gap: 4 }}><Settings2 size={12} /> {car.transmission}</span>
