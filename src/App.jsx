@@ -973,6 +973,7 @@ const NineDots = ({ color = "#111", size = 22 }) => (
 function Nav({ go, page, user, setSignin, bookings, currency, setCurrency, setChat, overHero }) {
   const [open, setOpen] = useState(false);
   const [prefOpen, setPrefOpen] = useState(false);
+  const [servOpen, setServOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [logoOk, setLogoOk] = useState(true);
   const logoDark = supabase.storage.from(PHOTO_BUCKET).getPublicUrl("site/logo.png").data.publicUrl;
@@ -1049,6 +1050,29 @@ function Nav({ go, page, user, setSignin, bookings, currency, setCurrency, setCh
             ? <img src={transparent ? logoWhite : logoDark} alt="Africa Tourism Solutions" onError={() => setLogoOk(false)} style={{ height: 40, display: "block" }} />
             : <span className="disp" style={{ fontWeight: 800, fontSize: 20, color: ink }}>ATS</span>}
         </button>
+
+        {/* Other services — dropdown next to the logo */}
+        <div className="nav-hide-sm" style={{ position: "relative" }}>
+          <button onClick={() => setServOpen((o) => !o)} aria-haspopup="menu" aria-expanded={servOpen}
+            style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "none", border: "none", cursor: "pointer", color: ink, fontFamily: "inherit", fontSize: 15, fontWeight: 700, padding: "8px 4px", whiteSpace: "nowrap" }}>
+            Other services
+            <ChevronDown size={17} style={{ transition: "transform .2s ease", transform: servOpen ? "rotate(180deg)" : "none" }} />
+          </button>
+          {servOpen && (
+            <>
+              <div onClick={() => setServOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 41 }} />
+              <div role="menu" style={{ position: "absolute", top: "calc(100% + 10px)", left: 0, zIndex: 42, background: "#fff", color: T.ink, border: `1px solid ${T.line}`, borderRadius: 18, boxShadow: "0 20px 48px rgba(0,0,0,.18)", padding: "10px", width: 320, animation: "ats-fadein .18s ease" }}>
+                {[[Plane, "Flights", "flights"], [Compass, "Tours & Experiences", "tours"], [Car, "Vehicles", "transport"], [Sparkles, "Trip Builder", "builder"], [Mic, "MICE", "events"]].map(([Ico, label, route]) => (
+                  <button key={route} role="menuitem" onClick={() => { nav(route); setServOpen(false); }} className="ats-row"
+                    style={{ display: "flex", alignItems: "center", gap: 14, width: "100%", background: "transparent", border: "1px solid transparent", cursor: "pointer", padding: "11px 12px", borderRadius: 14, textAlign: "left", fontFamily: "inherit" }}>
+                    <span className="ats-ico" style={{ width: 40, height: 40, borderRadius: 12, background: "#F2F5F3", color: T.green, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "background .16s ease, color .16s ease" }}><Ico size={20} strokeWidth={2} /></span>
+                    <span style={{ fontWeight: 700, fontSize: 15.5, color: T.ink }}>{label}</span>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
 
         {/* Right cluster (Skyscanner-style) */}
         <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 16 }}>
