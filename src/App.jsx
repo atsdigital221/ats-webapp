@@ -4058,6 +4058,7 @@ function AdminConsole({ user, isAdmin, isSuper, setSignin }) {
   const [comms, setComms] = useState([]);
   const [activity, setActivity] = useState([]);
   const [bookingFilter, setBookingFilter] = useState("all");
+  const [onlyRequests, setOnlyRequests] = useState(false);
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState("");
   const [newOrg, setNewOrg] = useState({ name: "", discount: "" });
@@ -4069,7 +4070,7 @@ function AdminConsole({ user, isAdmin, isSuper, setSignin }) {
       supabase.from("profiles").select("id,email,first_name,last_name,role,org_id").order("created_at"),
       supabase.from("organizations").select("*").order("created_at"),
       supabase.from("promo_codes").select("*").order("created_at"),
-      supabase.from("bookings").select("id,user_id,data,status,created_at").order("created_at", { ascending: false }),
+      supabase.from("bookings").select("id,user_id,data,status,created_at,guest_email,ref").order("created_at", { ascending: false }),
       supabase.from("commissions").select("*").order("created_at", { ascending: false }),
       supabase.from("admin_activity").select("*").order("created_at", { ascending: false }).limit(200),
     ]);
@@ -4121,9 +4122,51 @@ function AdminConsole({ user, isAdmin, isSuper, setSignin }) {
   const updateCode = async (id, patch) => { const { error } = await supabase.from("promo_codes").update(patch).eq("id", id); if (error) return flash("Error: " + error.message); flash("Code updated"); reload(); };
   const setCommStatus = async (id, status) => { const { error } = await supabase.from("commissions").update({ status }).eq("id", id); if (error) return flash("Error: " + error.message); flash("Commission " + status); reload(); };
 
+  // ---- Booking status management (admin) ----
+  const BOOKING_STATUSES = ["pending", "confirmed", "paid", "settled", "completed", "cancelled"];
+  const prevStatusBefore = (b, marker) => { const h = (b.data?.statusHistory || []).slice().reverse().find((x) => x.to === marker); return h?.from || "confirmed"; };
+  const patchBookingRow = async (b, patch, action) => {
+    const { error } = await supabase.from("bookings").update(patch).eq("id", b.id);
+    if (error) return flash("Error: " + error.message);
+    supabase.from("admin_activity").insert({ actor_id: user.id, actor_email: user.email, actor_role: isSuper ? "super_admin" : "admin", action, target_label: b.data?.tour?.name || b.ref || String(b.id).slice(0, 8), details: { ref: b.ref, from: b.status, to: patch.status } }).catch(() => {});
+    flash("Booking updated"); reload();
+  };
+  const setBookingStatus = (b, status) => {
+    if (status === b.status) return;
+    const hist = Array.isArray(b.data?.statusHistory) ? b.data.statusHistory : [];
+    const data = { ...(b.data || {}), statusHistory: [...hist, { at: new Date().toISOString(), from: b.status, to: status, by: "admin" }] };
+    patchBookingRow(b, { status, data }, "booking.status." + status);
+  };
+  const approveChange = (b) => {
+    const pc = b.data?.pendingChange || {};
+    const data = { ...b.data };
+    if (pc.date) { data.dateFrom = pc.date; data.date = pc.date; }
+    if (pc.adults != null) data.adults = pc.adults;
+    if (pc.children != null) data.children = pc.children;
+    const back = prevStatusBefore(b, "modification_requested");
+    const hist = Array.isArray(data.statusHistory) ? data.statusHistory : [];
+    data.statusHistory = [...hist, { at: new Date().toISOString(), from: b.status, to: back, by: "admin", applied: pc }];
+    delete data.pendingChange;
+    patchBookingRow(b, { data, status: back }, "booking.modify_approved");
+  };
+  const rejectChange = (b) => {
+    const data = { ...b.data };
+    const back = prevStatusBefore(b, "modification_requested");
+    const hist = Array.isArray(data.statusHistory) ? data.statusHistory : [];
+    data.statusHistory = [...hist, { at: new Date().toISOString(), from: b.status, to: back, by: "admin", rejected: data.pendingChange || null }];
+    delete data.pendingChange;
+    patchBookingRow(b, { data, status: back }, "booking.modify_rejected");
+  };
+  const confirmRefund = (b) => {
+    const data = { ...b.data, refund: { ...(b.data?.refund || {}), processedAt: new Date().toISOString() } };
+    const hist = Array.isArray(data.statusHistory) ? data.statusHistory : [];
+    data.statusHistory = [...hist, { at: new Date().toISOString(), from: b.status, to: "cancelled", by: "admin" }];
+    patchBookingRow(b, { data, status: "cancelled" }, "booking.refund_processed");
+  };
+
   // Booking channel: corporate / agent / direct
   const channelOf = (d) => (d && d.corp) ? "corporate" : (d && d.promo && d.promo.agentId) ? "agent" : "direct";
-  const custOf = (b) => b.data?.contact?.name || (profiles.find((p) => p.id === b.user_id) || {}).email || "—";
+  const custOf = (b) => b.data?.contact?.name || b.guest_email || (profiles.find((p) => p.id === b.user_id) || {}).email || "—";
   const emailOf = (id) => (profiles.find((p) => p.id === id) || {}).email || "—";
 
   const ROLES = ["client", "agent", "corporate", "admin", "super_admin"];
@@ -4132,8 +4175,10 @@ function AdminConsole({ user, isAdmin, isSuper, setSignin }) {
   const td = { padding: "8px 10px", fontSize: 13.5, borderBottom: `1px solid ${T.line}`, verticalAlign: "middle" };
   const sel = { ...input, padding: "6px 8px", fontSize: 13, width: "auto" };
   const tabs = [["users", "Users & roles"], ["orgs", "Corporate"], ["codes", "Promo codes"], ["bookings", "Bookings"], ["commissions", "Commissions"], ["analytics", "Analytics"], ["activity", isSuper ? "Activity (all)" : "Activity"]];
-  const actionLabel = (a) => ({ "promo_code.create": "created code", "promo_code.update": "edited code", "promo_code.activate": "activated code", "promo_code.deactivate": "deactivated code", "organization.create": "created org", "organization.update": "edited org", "organization.activate": "activated org", "organization.deactivate": "deactivated org", "profile.update": "changed user", "commission.approved": "approved commission", "commission.paid": "paid commission", "commission.cancelled": "cancelled commission" }[a] || a);
-  const shownBookings = bookings.filter((b) => bookingFilter === "all" || channelOf(b.data) === bookingFilter);
+  const actionLabel = (a) => ({ "promo_code.create": "created code", "promo_code.update": "edited code", "promo_code.activate": "activated code", "promo_code.deactivate": "deactivated code", "organization.create": "created org", "organization.update": "edited org", "organization.activate": "activated org", "organization.deactivate": "deactivated org", "profile.update": "changed user", "commission.approved": "approved commission", "commission.paid": "paid commission", "commission.cancelled": "cancelled commission", "booking.modify_approved": "approved a change", "booking.modify_rejected": "rejected a change", "booking.refund_processed": "processed a refund" }[a] || (a && a.startsWith("booking.status.") ? `set booking → ${a.slice(15)}` : a));
+  const REQUEST_STATES = ["modification_requested", "cancellation_requested"];
+  const requestCount = bookings.filter((b) => REQUEST_STATES.includes(b.status)).length;
+  const shownBookings = bookings.filter((b) => (bookingFilter === "all" || channelOf(b.data) === bookingFilter) && (!onlyRequests || REQUEST_STATES.includes(b.status)));
   const commStatusColor = { pending: "#B8860B", approved: T.indigo, paid: T.green, cancelled: "#B3261E" };
 
   return (
@@ -4234,13 +4279,14 @@ function AdminConsole({ user, isAdmin, isSuper, setSignin }) {
 
           {tab === "bookings" && (
             <div style={{ padding: 16 }}>
-              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14, alignItems: "center" }}>
                 {[["all", "All"], ["direct", "Direct"], ["agent", "Agent"], ["corporate", "Corporate"]].map(([k, l]) => (
                   <button key={k} onClick={() => setBookingFilter(k)} style={{ border: "none", cursor: "pointer", background: bookingFilter === k ? T.green : "#F7F7F7", color: bookingFilter === k ? "#fff" : "#1A1A1A", borderRadius: 999, padding: "6px 14px", fontWeight: 600, fontSize: 12.5 }}>{l}{k !== "all" ? ` · ${bookings.filter((b) => channelOf(b.data) === k).length}` : ` · ${bookings.length}`}</button>
                 ))}
+                <button onClick={() => setOnlyRequests((v) => !v)} style={{ border: "none", cursor: "pointer", marginLeft: "auto", background: onlyRequests ? "#B3261E" : (requestCount ? "#FBECEC" : "#F7F7F7"), color: onlyRequests ? "#fff" : (requestCount ? "#B3261E" : "#8A968E"), borderRadius: 999, padding: "6px 14px", fontWeight: 700, fontSize: 12.5, display: "inline-flex", alignItems: "center", gap: 6 }}><Info size={14} /> Action needed · {requestCount}</button>
               </div>
-              <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 720 }}>
-                <thead><tr><th style={th}>Item</th><th style={th}>Customer</th><th style={th}>Channel</th><th style={th}>Plan</th><th style={th}>Total</th><th style={th}>Status</th><th style={th}>Date</th></tr></thead>
+              <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 900 }}>
+                <thead><tr><th style={th}>Item</th><th style={th}>Customer</th><th style={th}>Channel</th><th style={th}>Plan</th><th style={th}>Total</th><th style={th}>Status</th><th style={th}>Manage</th><th style={th}>Date</th></tr></thead>
                 <tbody>
                   {shownBookings.map((b) => {
                     const d = b.data || {};
@@ -4262,11 +4308,35 @@ function AdminConsole({ user, isAdmin, isSuper, setSignin }) {
                           return fmtXOF(d.total);
                         })()}</td>
                         <td style={td}><span style={{ fontSize: 12, fontWeight: 700, color: statusColor(b.status) }}>● {statusLabel[b.status] || b.status}</span></td>
+                        <td style={td}>
+                          {b.status === "modification_requested" ? (
+                            <div style={{ minWidth: 210 }}>
+                              <div style={{ fontSize: 11.5, color: "rgba(0,0,0,.75)", marginBottom: 6, lineHeight: 1.5 }}>
+                                Requested:{d.pendingChange?.date ? ` ${d.pendingChange.date}` : ""}{d.pendingChange?.adults != null ? ` · ${d.pendingChange.adults}${d.pendingChange.children ? `+${d.pendingChange.children}ch` : ""} pax` : ""}{d.pendingChange?.note ? ` · “${d.pendingChange.note}”` : ""}
+                              </div>
+                              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                                <button onClick={() => approveChange(b)} style={{ border: "none", background: T.green, color: "#fff", borderRadius: 8, padding: "4px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Approve</button>
+                                <button onClick={() => rejectChange(b)} style={{ border: "1px solid #B3261E", background: "#fff", color: "#B3261E", borderRadius: 8, padding: "4px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Reject</button>
+                              </div>
+                            </div>
+                          ) : b.status === "cancellation_requested" ? (
+                            <div style={{ minWidth: 210 }}>
+                              <div style={{ fontSize: 11.5, color: "#B3261E", marginBottom: 6, lineHeight: 1.5 }}>
+                                Refund due: <strong>{fmtXOF(d.refund?.refundAmount || 0)}</strong> ({d.refund?.retainedPct}% retained on {fmtXOF(d.refund?.amountPaid || 0)})
+                              </div>
+                              <button onClick={() => confirmRefund(b)} style={{ border: "none", background: "#B3261E", color: "#fff", borderRadius: 8, padding: "4px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Confirm refund → cancel</button>
+                            </div>
+                          ) : (
+                            <select style={{ ...sel, width: 150 }} value={b.status} onChange={(e) => setBookingStatus(b, e.target.value)}>
+                              {[...new Set([...BOOKING_STATUSES, b.status])].map((s) => <option key={s} value={s}>{statusLabel[s] || s}</option>)}
+                            </select>
+                          )}
+                        </td>
                         <td style={td}>{new Date(b.created_at).toLocaleDateString()}</td>
                       </tr>
                     );
                   })}
-                  {shownBookings.length === 0 && <tr><td style={td} colSpan={7}>No booking in this view.</td></tr>}
+                  {shownBookings.length === 0 && <tr><td style={td} colSpan={8}>No booking in this view.</td></tr>}
                 </tbody>
               </table>
             </div>
