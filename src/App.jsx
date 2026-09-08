@@ -2129,9 +2129,10 @@ function Home({ go, notify, setBooking, filters, setFilters, setChat, addBooking
       </header>
 
       {/* CHOOSE YOUR AFRICA — moved to 2nd position, right after the hero */}
-      <section style={{ background: "#fff" }}>
+      <section className="africa-section" style={{ background: "#fff" }}>
         <style>{`
           @media(max-width:760px){
+            .africa-section{margin-top:100px}
             .africa-grid{gap:26px !important}
             .africa-globe-wrap{margin:0 auto !important;max-width:400px !important;order:-1}
           }
