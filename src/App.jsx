@@ -2065,6 +2065,10 @@ function Home({ go, notify, setBooking, filters, setFilters, setChat, addBooking
   const [country, setCountry] = useState(COUNTRIES[0]);
   const [search, setSearch] = useState({ dest: "Senegal", exp: "All", dateFrom: "", dateTo: "", pax: 2 });
   const featured = ["goree","bandia","lacrose","toubacouta","stlouis","lompoul","food","boat"].map((id) => TOURS.find((t) => t.id === id));
+  // Featured section theme tabs — "Featured" is the curated set, then the ATS themes (tour tags)
+  const FEAT_THEMES = ["Heritage", "Nature", "Culture", "Adventure", "Beach", "Safari", "Circuit", "Gastronomy", "Nightlife", "Wildlife"].filter((tg) => TOURS.some((t) => t.tag === tg));
+  const [featTab, setFeatTab] = useState("Featured");
+  const featList = featTab === "Featured" ? featured : TOURS.filter((t) => t.tag === featTab).slice(0, 12);
   const todayStr = new Date().toISOString().slice(0, 10);
   const heroUrl = supabase.storage.from(PHOTO_BUCKET).getPublicUrl("site/hero.jpg").data.publicUrl;
 
@@ -2159,6 +2163,26 @@ function Home({ go, notify, setBooking, filters, setFilters, setChat, addBooking
         </Wrap>
       </section>
 
+      {/* FEATURED TOURS — right after the Africa map, with theme tabs */}
+      <section style={{ background: "#fff", borderTop: `1px solid ${T.line}` }}>
+        <Wrap>
+          <div style={{ display: "flex", alignItems: "end", flexWrap: "wrap", gap: 12 }}>
+            <div><Eyebrow>Senegal · from the ATS catalogue</Eyebrow><H2>Featured tours & experiences</H2></div>
+            <button onClick={() => go("tours")} style={{ ...btnGreen, marginLeft: "auto", fontSize: 14 }}>See all tours →</button>
+          </div>
+          {/* Theme tabs — reference-style underlined tabs (card template unchanged) */}
+          <div style={{ display: "flex", gap: 26, borderBottom: `1px solid ${T.line}`, overflowX: "auto", margin: "8px 0 22px", WebkitOverflowScrolling: "touch" }}>
+            {["Featured", ...FEAT_THEMES].map((tg) => {
+              const on = featTab === tg;
+              return (
+                <button key={tg} onClick={() => setFeatTab(tg)} style={{ background: "none", border: "none", borderBottom: `2px solid ${on ? T.green : "transparent"}`, marginBottom: -1, padding: "8px 2px", cursor: "pointer", color: on ? T.ink : "rgba(0,0,0,.6)", fontWeight: on ? 700 : 600, fontSize: 15, fontFamily: "inherit", whiteSpace: "nowrap", flexShrink: 0 }}>{tg}</button>
+              );
+            })}
+          </div>
+          <TourGrid tours={featList} go={go} setBooking={setBooking} favorites={favorites} toggleFavorite={toggleFavorite} slider />
+        </Wrap>
+      </section>
+
       {/* PLAN YOUR TRIP */}
       <PlanTripSection go={go} />
 
@@ -2184,17 +2208,6 @@ function Home({ go, notify, setBooking, filters, setFilters, setChat, addBooking
             <TransferWidget addBooking={addBookingHome} compact user={user} go={go} />
             <div style={{ borderRadius: 16, overflow: "hidden", minHeight: 320, background: `linear-gradient(160deg, rgba(0,0,0,.35), rgba(0,0,0,.20)), url("${supabase.storage.from(PHOTO_BUCKET).getPublicUrl("site/transfer.jpg").data.publicUrl}") center/cover no-repeat, linear-gradient(140deg, ${T.green}, ${T.indigo})` }} />
           </div>
-        </Wrap>
-      </section>
-
-      {/* FEATURED TOURS */}
-      <section style={{ background: "#fff", borderTop: `1px solid ${T.line}` }}>
-        <Wrap>
-          <div style={{ display: "flex", alignItems: "end", flexWrap: "wrap", gap: 12 }}>
-            <div><Eyebrow>Senegal · from the ATS catalogue</Eyebrow><H2>Featured tours & experiences</H2></div>
-            <button onClick={() => go("tours")} style={{ ...btnGreen, marginLeft: "auto", fontSize: 14 }}>See all tours →</button>
-          </div>
-          <TourGrid tours={featured} go={go} setBooking={setBooking} favorites={favorites} toggleFavorite={toggleFavorite} slider />
         </Wrap>
       </section>
 
