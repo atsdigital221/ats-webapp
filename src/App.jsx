@@ -911,7 +911,7 @@ export default function ATSPlatformPreview() {
       )}
       <Footer {...ctx} />
       {signin && <SignInModal onClose={() => setSignin(false)} notify={notify} onDone={(msg) => { setSignin(false); if (msg) notify(msg); }} />}
-      {chat && <AIChat onClose={() => setChat(false)} go={go} />}
+      {chat && <AIChat onClose={() => setChat(false)} go={go} user={user} role={role} />}
 
       {/* Floating WhatsApp + AI */}
       <div style={{ position: "fixed", right: 16, bottom: 16, display: "flex", flexDirection: "column", gap: 10, zIndex: 50 }}>
@@ -5615,35 +5615,68 @@ function SignInModal({ onClose, onDone, notify }) {
   );
 }
 
-function AIChat({ onClose, go }) {
-  const [msgs, setMsgs] = useState([{ me: false, text: "Salut ! I'm the ATS Travel Assistant. Tell me your days and budget — e.g. « I have 5 days and $1,500 » — and I'll build a Senegal plan from real ATS products." }]);
+// Compact ATS tour catalogue passed to the assistant so it always matches the app
+function buildCatalogue() {
+  return TOURS.map((t) => {
+    const price = t.quote ? "on request" : `${fmtXOF(fromPrice(t))}/pers`;
+    return `${t.name} — ${t.pole} · ${t.tag} · ${t.dur} · ${price}`;
+  }).join("\n");
+}
+
+function AIChat({ onClose, go, user, role }) {
+  const [msgs, setMsgs] = useState([{ me: false, text: "Hi! I'm the ATS Travel Assistant 🌍 Ask me anything about Africa Tourism Solutions — tours, prices, transfers, Ma Tontine, booking… I reply in French or English. How can I help?" }]);
   const [txt, setTxt] = useState("");
-  const reply = (q) => {
-    const lower = q.toLowerCase();
-    if (lower.includes("5 day") || lower.includes("1500") || lower.includes("1,500"))
-      return "Perfect for 5 days / ~$1,500 for two: Day 1 Dakar City Tour · Day 2 Gorée Island · Day 3 Bandia Safari + Somone Lagoon · Day 4–5 Lompoul Desert Overnight. At the Private 1–2 pax basis with a Standard Sedan, that lands well inside budget with a mid-range hotel — and you can reserve it all with a 20% Tontine deposit. Want me to open the Trip Builder?";
-    if (lower.includes("honeymoon")) return "Honeymoon pick: 2 nights Lompoul desert camp under the stars, then Sine Saloum eco-lodge with private pirogue at sunset, finish with a Gorée day and a sunset Océane Cruise in Dakar. I can price it for your dates.";
-    if (lower.includes("family")) return "Family favourite: Bandia Safari (kids love the giraffes), Accrobaobab ziplines, Lac Rose, and Ngor Island beach day. Children 2–11 pay 70% on all ATS tours.";
-    return "I can plan by budget, days or interests (safari, heritage, beach, food…). Try: « Plan a family week in Senegal » or « honeymoon ideas ». For live booking, any plan converts to a Tontine payment schedule.";
+  const [busy, setBusy] = useState(false);
+  const scrollRef = useRef(null);
+  useEffect(() => { const el = scrollRef.current; if (el) el.scrollTop = el.scrollHeight; }, [msgs, busy]);
+
+  const send = async () => {
+    const q = txt.trim();
+    if (!q || busy) return;
+    setTxt("");
+    const next = [...msgs, { me: true, text: q }];
+    setMsgs(next);
+    setBusy(true);
+    try {
+      const apiMsgs = next.slice(1).map((m) => ({ role: m.me ? "user" : "assistant", content: m.text })); // drop the greeting
+      const userContext = user ? `Signed in as ${user.name}${role ? ` (role: ${role})` : ""}.` : "Visitor is not signed in.";
+      const { data, error } = await supabase.functions.invoke("ats-assistant", { body: { messages: apiMsgs, catalogue: buildCatalogue(), userContext } });
+      let reply = data?.reply;
+      if (error || !reply) {
+        try { reply = (await error?.context?.json())?.error; } catch { /* ignore */ }
+        reply = reply || "I'm having trouble reaching the assistant right now. You can reach our team on WhatsApp at +221 77 480 78 78 or infos@africatourismsolutions.com.";
+      }
+      setMsgs((m) => [...m, { me: false, text: reply }]);
+    } catch {
+      setMsgs((m) => [...m, { me: false, text: "Something went wrong. Please try again, or contact us on WhatsApp at +221 77 480 78 78." }]);
+    } finally {
+      setBusy(false);
+    }
   };
-  const send = () => { if (!txt.trim()) return; const q = txt; setTxt(""); setMsgs((m) => [...m, { me: true, text: q }, { me: false, text: reply(q) }]); };
+
   return (
-    <div style={{ position: "fixed", right: 16, bottom: 84, width: "min(380px, calc(100vw - 32px))", background: "#fff", border: `1px solid ${T.line}`, borderRadius: 18, boxShadow: "0 24px 60px rgba(0,0,0,.3)", zIndex: 80, display: "flex", flexDirection: "column", maxHeight: "70vh" }}>
+    <div style={{ position: "fixed", right: 16, bottom: 84, width: "min(390px, calc(100vw - 32px))", background: "#fff", border: `1px solid ${T.line}`, borderRadius: 18, boxShadow: "0 24px 60px rgba(0,0,0,.3)", zIndex: 80, display: "flex", flexDirection: "column", maxHeight: "72vh" }}>
       <div style={{ padding: "12px 16px", background: T.indigo, color: "#fff", borderRadius: "18px 18px 0 0", display: "flex", alignItems: "center" }}>
         <strong className="disp" style={{ display: "flex", alignItems: "center", gap: 8 }}><Bot size={20} /> ATS Travel Assistant</strong>
         <button onClick={onClose} aria-label="Close" style={{ marginLeft: "auto", background: "none", border: "none", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center" }}><X size={18} /></button>
       </div>
-      <div style={{ padding: 14, overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 10 }}>
+      <div ref={scrollRef} style={{ padding: 14, overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 10 }}>
         {msgs.map((m, i) => (
-          <div key={i} style={{ alignSelf: m.me ? "flex-end" : "flex-start", maxWidth: "85%", background: m.me ? T.green : T.paperDark, color: m.me ? "#fff" : T.ink, borderRadius: 14, padding: "10px 13px", fontSize: 14, lineHeight: 1.5 }}>{m.text}</div>
+          <div key={i} style={{ alignSelf: m.me ? "flex-end" : "flex-start", maxWidth: "85%", background: m.me ? T.green : T.paperDark, color: m.me ? "#fff" : T.ink, borderRadius: 14, padding: "10px 13px", fontSize: 14, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{m.text}</div>
         ))}
-        {msgs.length > 2 && (
+        {busy && (
+          <div style={{ alignSelf: "flex-start", background: T.paperDark, color: T.ink, borderRadius: 14, padding: "10px 14px", fontSize: 14 }}>
+            <span className="ats-typing"><span>·</span><span>·</span><span>·</span></span>
+          </div>
+        )}
+        {msgs.length > 2 && !busy && (
           <button style={{ ...btnGold, alignSelf: "flex-start", fontSize: 13, padding: "8px 14px" }} onClick={() => { onClose(); go("builder"); }}>Open Trip Builder →</button>
         )}
       </div>
+      <style>{`.ats-typing span{animation:atsBlink 1.2s infinite;font-size:20px;line-height:0}.ats-typing span:nth-child(2){animation-delay:.2s}.ats-typing span:nth-child(3){animation-delay:.4s}@keyframes atsBlink{0%,60%,100%{opacity:.25}30%{opacity:1}}`}</style>
       <div style={{ display: "flex", gap: 8, padding: 12, borderTop: `1px solid ${T.line}` }}>
-        <input style={{ ...input, flex: 1 }} placeholder="I have 5 days and $1,500…" value={txt} onChange={(e) => setTxt(e.target.value)} onKeyDown={(e) => e.key === "Enter" && send()} />
-        <button style={{ ...btnGold, borderRadius: 10, padding: "10px 16px" }} onClick={send}>Send</button>
+        <input style={{ ...input, flex: 1 }} placeholder="Ask about tours, prices, booking…" value={txt} onChange={(e) => setTxt(e.target.value)} onKeyDown={(e) => e.key === "Enter" && send()} disabled={busy} />
+        <button style={{ ...btnGold, borderRadius: 10, padding: "10px 16px", opacity: busy || !txt.trim() ? 0.6 : 1, cursor: busy || !txt.trim() ? "not-allowed" : "pointer" }} onClick={send} disabled={busy || !txt.trim()}>Send</button>
       </div>
     </div>
   );
