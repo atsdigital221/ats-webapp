@@ -4132,6 +4132,7 @@ function AdminConsole({ user, isAdmin, isSuper, setSignin }) {
   const [bookings, setBookings] = useState([]);
   const [comms, setComms] = useState([]);
   const [activity, setActivity] = useState([]);
+  const [waContacts, setWaContacts] = useState([]);
   const [bookingFilter, setBookingFilter] = useState("all");
   const [onlyRequests, setOnlyRequests] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -4141,15 +4142,16 @@ function AdminConsole({ user, isAdmin, isSuper, setSignin }) {
 
   const reload = async () => {
     setLoading(true);
-    const [p, o, c, b, cm, ac] = await Promise.all([
+    const [p, o, c, b, cm, ac, wa] = await Promise.all([
       supabase.from("profiles").select("id,email,first_name,last_name,role,org_id").order("created_at"),
       supabase.from("organizations").select("*").order("created_at"),
       supabase.from("promo_codes").select("*").order("created_at"),
       supabase.from("bookings").select("id,user_id,data,status,created_at,guest_email,ref").order("created_at", { ascending: false }),
       supabase.from("commissions").select("*").order("created_at", { ascending: false }),
       supabase.from("admin_activity").select("*").order("created_at", { ascending: false }).limit(200),
+      supabase.from("whatsapp_contacts").select("*"),
     ]);
-    setProfiles(p.data || []); setOrgs(o.data || []); setCodes(c.data || []); setBookings(b.data || []); setComms(cm.data || []); setActivity(ac.data || []); setLoading(false);
+    setProfiles(p.data || []); setOrgs(o.data || []); setCodes(c.data || []); setBookings(b.data || []); setComms(cm.data || []); setActivity(ac.data || []); setWaContacts(wa.data || []); setLoading(false);
   };
   useEffect(() => { if (isAdmin) reload(); }, [isAdmin]);
 
@@ -4242,6 +4244,29 @@ function AdminConsole({ user, isAdmin, isSuper, setSignin }) {
     const hist = Array.isArray(data.statusHistory) ? data.statusHistory : [];
     data.statusHistory = [...hist, { at: new Date().toISOString(), from: b.status, to: "cancelled", by: "admin" }];
     patchBookingRow(b, { data, status: "cancelled" }, "booking.refund_processed");
+  };
+
+  // ---- WhatsApp outreach (shared across admins to avoid double-messaging) ----
+  const waDigits = (p) => String(p || "").replace(/[^\d]/g, "").replace(/^0+/, ""); // international digits
+  const waMap = waContacts.reduce((m, r) => { m[r.phone] = r; return m; }, {});
+  const shortEmail = (e) => (e || "").split("@")[0];
+  const openWhatsApp = async (b) => {
+    const raw = b.data?.contact?.phone;
+    const phone = waDigits(raw);
+    if (!phone) { flash("No phone number on this booking."); return; }
+    const name = (b.data?.contact?.name || "").split(" ")[0] || "there";
+    const item = b.data?.tour?.name || "your booking";
+    const ref = b.ref ? ` (ref ${b.ref})` : "";
+    const text = `Hello ${name}, this is Africa Tourism Solutions about ${item}${ref}. `;
+    // Log the outreach first so other admins see it, then open WhatsApp
+    const prev = waMap[phone];
+    await supabase.from("whatsapp_contacts").upsert({
+      phone, customer_name: b.data?.contact?.name || null,
+      last_admin_id: user.id, last_admin_email: user.email,
+      last_at: new Date().toISOString(), count: (prev?.count || 0) + 1, updated_at: new Date().toISOString(),
+    }, { onConflict: "phone" });
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, "_blank", "noopener");
+    reload();
   };
 
   // Booking channel: corporate / agent / direct
@@ -4401,7 +4426,27 @@ function AdminConsole({ user, isAdmin, isSuper, setSignin }) {
                     return (
                       <tr key={b.id}>
                         <td style={td}><div style={{ fontWeight: 600 }}>{d.tour?.name || "—"}</div>{d.promo?.code && <div style={{ fontSize: 11.5, color: T.green }}>code {d.promo.code}</div>}{d.corp?.orgName && <div style={{ fontSize: 11.5, color: T.indigo }}>{d.corp.orgName}</div>}</td>
-                        <td style={td}>{custOf(b)}</td>
+                        <td style={td}>
+                          <div style={{ fontWeight: 600 }}>{custOf(b)}</div>
+                          {(() => {
+                            const phone = waDigits(d.contact?.phone);
+                            if (!phone) return <div style={{ fontSize: 11, color: "#8A968E" }}>No phone</div>;
+                            const c = waMap[phone];
+                            const mine = c && c.last_admin_id === user.id;
+                            return (
+                              <div style={{ marginTop: 5 }}>
+                                <button onClick={() => openWhatsApp(b)} title={`WhatsApp ${d.contact.phone}`} style={{ display: "inline-flex", alignItems: "center", gap: 6, border: `1px solid ${c ? "#E0C36B" : "#25D366"}`, background: c ? "#FFF8E6" : "#EAFBF0", color: c ? "#8a6d1a" : "#128C4B", borderRadius: 8, padding: "4px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+                                  <MessageCircle size={13} /> {c ? "Message again" : "WhatsApp"}
+                                </button>
+                                {c && (
+                                  <div style={{ fontSize: 10.5, marginTop: 3, color: mine ? T.green : "#B3261E", fontWeight: 600, lineHeight: 1.4 }}>
+                                    {mine ? "You contacted" : `Contacted by ${shortEmail(c.last_admin_email)}`} · {new Date(c.last_at).toLocaleDateString()}{c.count > 1 ? ` · ${c.count}×` : ""}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })()}
+                        </td>
                         <td style={td}><span style={{ fontSize: 11.5, fontWeight: 700, textTransform: "capitalize", color: ch === "agent" ? T.green : ch === "corporate" ? T.indigo : "#8A968E" }}>{ch}</span></td>
                         <td style={td}>{planLabel(d.plan)}</td>
                         <td style={td}>{(() => {
