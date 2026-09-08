@@ -218,8 +218,8 @@ function RangeDate({ from, to, onChange, triggerStyle, minDate, wide, align = "l
       </button>
       {open && (
         <>
-          <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 90 }} />
-          <div style={{ position: "absolute", top: up ? "auto" : "calc(100% + 6px)", bottom: up ? "calc(100% + 6px)" : "auto", left: align === "right" ? "auto" : 0, right: align === "right" ? 0 : "auto", zIndex: 91, background: "#fff", color: T.ink, border: `1px solid ${T.line}`, borderRadius: 16, boxShadow: "0 18px 40px rgba(0,0,0,.22)", padding: wide ? 20 : 14, width: wide ? "min(346px, calc(100vw - 28px))" : "min(290px, calc(100vw - 32px))", maxWidth: "94vw" }}>
+          <div className="mpop-backdrop" onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 90 }} />
+          <div className="mpop" style={{ position: "absolute", top: up ? "auto" : "calc(100% + 6px)", bottom: up ? "calc(100% + 6px)" : "auto", left: align === "right" ? "auto" : 0, right: align === "right" ? 0 : "auto", zIndex: 91, background: "#fff", color: T.ink, border: `1px solid ${T.line}`, borderRadius: 16, boxShadow: "0 18px 40px rgba(0,0,0,.22)", padding: wide ? 20 : 14, width: wide ? "min(346px, calc(100vw - 28px))" : "min(290px, calc(100vw - 32px))", maxWidth: "94vw" }}>
             <div style={{ display: "flex", alignItems: "center", marginBottom: 12 }}>
               <button type="button" disabled={!canPrev} onClick={() => setView((v) => ({ y: v.m === 0 ? v.y - 1 : v.y, m: v.m === 0 ? 11 : v.m - 1 }))}
                 style={{ ...btnCircle, opacity: canPrev ? 1 : 0.3, cursor: canPrev ? "pointer" : "not-allowed" }}>‹</button>
@@ -269,7 +269,7 @@ function AddressInput({ value, onChange, placeholder, bare }) {
       {open && results.length > 0 && (
         <>
           <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 40 }} />
-          <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, zIndex: 41, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 12, boxShadow: "0 14px 34px rgba(0,0,0,.18)", overflow: "hidden", maxHeight: 260, overflowY: "auto", minWidth: bare ? 340 : 0 }}>
+          <div className="mpop" style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, zIndex: 41, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 12, boxShadow: "0 14px 34px rgba(0,0,0,.18)", overflow: "hidden", maxHeight: 260, overflowY: "auto", minWidth: bare ? 340 : 0 }}>
             {results.map((r, i) => (
               <button key={i} onClick={() => choose(r)} style={{ display: "flex", gap: 8, width: "100%", textAlign: "left", background: "none", border: "none", borderBottom: `1px solid ${T.line}`, padding: "10px 12px", cursor: "pointer", lineHeight: 1.35, color: T.ink, alignItems: "flex-start" }}>
                 <MapPin size={15} style={{ flexShrink: 0, marginTop: 2, color: T.green }} />
@@ -324,7 +324,7 @@ function AirportInput({ value, onChange, placeholder, wide, Icon }) {
       {open && (
         <>
           <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 40 }} />
-          <div style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 41, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 14, boxShadow: "0 18px 44px rgba(0,0,0,.22)", overflow: "hidden", width: wide ? "min(430px, calc(100vw - 28px))" : "100%", minWidth: wide ? 360 : 0, maxHeight: 340, overflowY: "auto" }}>
+          <div className="mpop" style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 41, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 14, boxShadow: "0 18px 44px rgba(0,0,0,.22)", overflow: "hidden", width: wide ? "min(430px, calc(100vw - 28px))" : "100%", minWidth: wide ? 360 : 0, maxHeight: 340, overflowY: "auto" }}>
             {short ? (
               <div style={{ padding: "34px 20px", textAlign: "center", color: "rgba(0,0,0,.8)" }}>
                 <Search size={30} style={{ opacity: 0.55, marginBottom: 10 }} />
@@ -1590,8 +1590,8 @@ function HSelect({ Ico, label, value, options, onChange, flex = 1, minWidth = 0,
       <ChevronDown size={15} style={{ opacity: 0.5, flexShrink: 0 }} />
       {open && (
         <>
-          <div onClick={(e) => { e.stopPropagation(); setOpen(false); }} style={{ position: "fixed", inset: 0, zIndex: 90 }} />
-          <div onClick={(e) => e.stopPropagation()} role="listbox" style={{ position: "absolute", top: "calc(100% + 8px)", left: 0, zIndex: 91, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 16, boxShadow: "0 18px 44px rgba(0,0,0,.22)", overflow: "hidden auto", maxHeight: 330, width: `min(${popWidth}px, calc(100vw - 28px))`, padding: "6px 0", cursor: "default" }}>
+          <div className="mpop-backdrop" onClick={(e) => { e.stopPropagation(); setOpen(false); }} style={{ position: "fixed", inset: 0, zIndex: 90 }} />
+          <div onClick={(e) => e.stopPropagation()} role="listbox" className="mpop" style={{ position: "absolute", top: "calc(100% + 8px)", left: 0, zIndex: 91, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 16, boxShadow: "0 18px 44px rgba(0,0,0,.22)", overflow: "hidden auto", maxHeight: 330, width: `min(${popWidth}px, calc(100vw - 28px))`, padding: "6px 0", cursor: "default" }}>
             {options.map((o) => (
               <button key={o.v} onClick={() => { onChange(o.v); setOpen(false); }} role="option" aria-selected={o.v === value} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", textAlign: "left", background: o.v === value ? "rgba(0,146,69,.06)" : "none", border: "none", padding: "11px 18px", cursor: "pointer", color: T.ink, fontFamily: "inherit" }}>
                 <span style={{ flex: 1, minWidth: 0 }}>
@@ -1719,8 +1719,8 @@ function CarSearch({ go }) {
               <ChevronDown size={15} style={{ opacity: 0.5, flexShrink: 0 }} />
               {paxOpen && (
                 <>
-                  <div onClick={(e) => { e.stopPropagation(); setPaxOpen(false); }} style={{ position: "fixed", inset: 0, zIndex: 90 }} />
-                  <div onClick={(e) => e.stopPropagation()} role="dialog" style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, zIndex: 91, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 16, boxShadow: "0 18px 44px rgba(0,0,0,.22)", padding: 20, width: "min(300px, calc(100vw - 28px))", cursor: "default" }}>
+                  <div className="mpop-backdrop" onClick={(e) => { e.stopPropagation(); setPaxOpen(false); }} style={{ position: "fixed", inset: 0, zIndex: 90 }} />
+                  <div onClick={(e) => e.stopPropagation()} role="dialog" className="mpop" style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, zIndex: 91, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 16, boxShadow: "0 18px 44px rgba(0,0,0,.22)", padding: 20, width: "min(300px, calc(100vw - 28px))", cursor: "default" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 15, color: T.ink }}>Passengers</div>
@@ -1796,8 +1796,8 @@ function TourSearch({ go }) {
         <ChevronDown size={15} style={{ opacity: 0.5, flexShrink: 0 }} />
         {destOpen && (
           <>
-            <div onClick={(e) => { e.stopPropagation(); setDestOpen(false); }} style={{ position: "fixed", inset: 0, zIndex: 90 }} />
-            <div onClick={(e) => e.stopPropagation()} role="listbox" style={{ ...heroPop, width: "min(340px, calc(100vw - 28px))", padding: "8px 0" }}>
+            <div className="mpop-backdrop" onClick={(e) => { e.stopPropagation(); setDestOpen(false); }} style={{ position: "fixed", inset: 0, zIndex: 90 }} />
+            <div onClick={(e) => e.stopPropagation()} role="listbox" className="mpop" style={{ ...heroPop, width: "min(340px, calc(100vw - 28px))", padding: "8px 0" }}>
               <button onClick={() => { setDest("Senegal"); setDestOpen(false); }} style={heroRow} role="option" aria-selected={dest === "Senegal"}>
                 <MapPin size={20} color={T.green} strokeWidth={2} style={{ flexShrink: 0, marginTop: 2 }} />
                 <span style={{ flex: 1, minWidth: 0 }}>
@@ -1832,8 +1832,8 @@ function TourSearch({ go }) {
         )}
         {expOpen && (
           <>
-            <div onClick={() => setExpOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 90 }} />
-            <div role="listbox" style={{ ...heroPop, width: "min(460px, calc(100vw - 28px))", maxHeight: 400, overflowY: "auto" }}>
+            <div className="mpop-backdrop" onClick={() => setExpOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 90 }} />
+            <div role="listbox" className="mpop" style={{ ...heroPop, width: "min(460px, calc(100vw - 28px))", maxHeight: 400, overflowY: "auto" }}>
               {q ? (
                 matches.length ? matches.map((t) => (
                   <button key={t.id} onClick={() => pickTour(t)} style={heroRow} role="option" aria-selected={expSel === t.id}>
@@ -1894,8 +1894,8 @@ function TourSearch({ go }) {
         <ChevronDown size={15} style={{ opacity: 0.5, flexShrink: 0 }} />
         {travOpen && (
           <>
-            <div onClick={(e) => { e.stopPropagation(); setTravOpen(false); }} style={{ position: "fixed", inset: 0, zIndex: 90 }} />
-            <div onClick={(e) => e.stopPropagation()} role="dialog" style={{ ...heroPop, left: "auto", right: 0, width: "min(340px, calc(100vw - 28px))", padding: 20 }}>
+            <div className="mpop-backdrop" onClick={(e) => { e.stopPropagation(); setTravOpen(false); }} style={{ position: "fixed", inset: 0, zIndex: 90 }} />
+            <div onClick={(e) => e.stopPropagation()} role="dialog" className="mpop" style={{ ...heroPop, left: "auto", right: 0, width: "min(340px, calc(100vw - 28px))", padding: 20 }}>
               {[["adults", "Adults", ""], ["children", "Children", "Ages 0 to 17"]].map(([k, l, sub], i) => {
                 const min = k === "adults" ? 1 : 0;
                 return (
@@ -1970,8 +1970,8 @@ function HeroSearch({ go }) {
       <ChevronDown size={15} style={{ opacity: 0.5, flexShrink: 0 }} />
       {vcOpen && (
         <>
-          <div onClick={(e) => { e.stopPropagation(); setVcOpen(false); }} style={{ position: "fixed", inset: 0, zIndex: 90 }} />
-          <div onClick={(e) => e.stopPropagation()} style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, zIndex: 91, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 16, boxShadow: "0 18px 44px rgba(0,0,0,.22)", padding: 20, width: "min(360px, calc(100vw - 28px))", cursor: "default" }}>
+          <div className="mpop-backdrop" onClick={(e) => { e.stopPropagation(); setVcOpen(false); }} style={{ position: "fixed", inset: 0, zIndex: 90 }} />
+          <div onClick={(e) => e.stopPropagation()} className="mpop" style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, zIndex: 91, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 16, boxShadow: "0 18px 44px rgba(0,0,0,.22)", padding: 20, width: "min(360px, calc(100vw - 28px))", cursor: "default" }}>
             <div style={{ fontSize: 16, fontWeight: 700, color: T.ink, marginBottom: 14 }}>Voyageurs et classe</div>
             {travRows.map(([k, l, sub]) => (
               <div key={k} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderTop: k === "adults" ? "none" : `1px solid ${T.line}` }}>
@@ -2132,7 +2132,7 @@ function Home({ go, notify, setBooking, filters, setFilters, setChat, addBooking
       <section className="africa-section" style={{ background: "#fff" }}>
         <style>{`
           @media(max-width:760px){
-            .africa-section{margin-top:100px}
+            .africa-section{margin-top:150px}
             .africa-grid{gap:26px !important}
             .africa-globe-wrap{margin:0 auto !important;max-width:400px !important;order:-1}
           }
