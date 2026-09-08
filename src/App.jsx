@@ -1535,6 +1535,14 @@ const IconCarP = ({ size = 24 }) => (
 const IconPlane2 = ({ size = 24 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M24 13.5a2.5 2.5 0 0 1-2.5 2.5h-4.036l-4.226 6.487A2.97 2.97 0 0 1 10.633 24a2.63 2.63 0 0 1-2.462-3.553L10.019 16H6a4 4 0 0 1-3.473-2.015L.2 10.16a1.443 1.443 0 0 1 .525-2 1.41 1.41 0 0 1 1.652.25l1.417 1.418A4 4 0 0 0 6.622 11H21.5a2.5 2.5 0 0 1 2.5 2.5M17.731 9l-4.5-7.487A2.97 2.97 0 0 0 10.629 0a2.63 2.63 0 0 0-2.462 3.553L10.285 9Z"/></svg>
 );
+// Filled car (from site/icons/car-icon.svg) — fill inherits the tab colour (white active, dark inactive)
+const IconCarFilled = ({ size = 24 }) => (
+  <svg width={size} height={size} viewBox="0 0 128 128" fill="currentColor" aria-hidden="true">
+    <path d="M12.25,53.01c1.13-1.09,2.83-1.93,4.43-2.06l59.64-.09c5.01-4.43-5.92-10.09-9.84-11.49-18.65-6.65-38.61,1.57-56.51,6.32-1.78-.71-2.87-2.59-2.25-4.48.87-2.67,20.43-7.98,24.15-8.77,15.99-3.37,31.04-4.1,45.14,5.07,4.4,2.86,10.65,9.76,14.37,11.55,3.22,1.55,11.76,1.98,16.48,3.42,4.98,1.52,13.24,4.68,15.97,9.1,3.21,5.2,4.77,24.79-2.54,26.31-6.28,1.3-5.18-4.62-7.63-8.42-5.38-8.33-18.1-9.74-24.98-2.54-2.97,3.11-2.81,7.12-5.4,10.14l-37.09.1c-3.67-.77-3.51-5.03-5.25-7.7-5.35-8.2-18.13-9.64-25.07-2.63-2.83,2.86-3.85,10.42-6.23,11.1-5.99,1.7-8.63-10.66-8-14.91.27-1.84,9.33-18.75,10.64-20.02Z"/>
+    <path d="M97.42,77.05c15.48-3.14,17,17.6,6.52,20.27-15.86,4.05-18.82-17.77-6.52-20.27Z"/>
+    <path d="M24.7,77.05c18.65-3.79,16.5,26.01-1.45,20.01-8.49-2.83-8.28-18.04,1.45-20.01Z"/>
+  </svg>
+);
 
 // ---------------- HERO SEARCH (Expedia-style tabbed search card) ----------------
 // Stable, module-level pieces (defining components inside HeroSearch would remount
@@ -1919,7 +1927,7 @@ function TourSearch({ go }) {
 
 function HeroSearch({ go }) {
   const [tab, setTab] = useState("tours");
-  const tabs = [["tours", "Tours", IconBeach], ["cars", "Vehicles", IconCarP]]; // Flights: on request only, removed from the wizard
+  const tabs = [["tours", "Tours", IconBeach], ["cars", "Vehicles", IconCarFilled]]; // Flights: on request only, removed from the wizard
   const todayStr = new Date().toISOString().slice(0, 10);
 
   // Flights state
