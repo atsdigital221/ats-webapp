@@ -1648,12 +1648,12 @@ function CarSearch({ go }) {
         title: "Confirm your transfer",
         total: price,
         routeLabel,
-        vehicleName: veh.name,
+        vehicleName: `${veh.name} or similar`,
         vehicleSlug: veh.slug,
         vehicleMeta: `${veh.type} · ${veh.cap} passengers · ${veh.bags} bags`,
-        rows: [["Route", routeLabel], ["Vehicle", veh.name], ["Date", tDate], ["Pick-up", tTime], ["Passengers", pax]],
+        rows: [["Route", routeLabel], ["Vehicle", `${veh.name} or similar`], ["Date", tDate], ["Pick-up", tTime], ["Passengers", pax]],
         record: {
-          tour: { emoji: "🚙", name: `${veh.name} — ${routeLabel}`, pole: "Transfer", dur: `${tDate} · ${tTime}`, thumb: vmap[veh.slug] || null },
+          tour: { emoji: "🚙", name: `${veh.name} or similar — ${routeLabel}`, pole: "Transfer", dur: `${tDate} · ${tTime}`, thumb: vmap[veh.slug] || null },
           route: routeLabel, vehicle: veh.name, unit: "transfer", date: tDate, time: tTime, pax,
           adults: pax, children: 0, infants: 0, transfer: { time: tTime, unit: "transfer" },
         },
@@ -1700,7 +1700,7 @@ function CarSearch({ go }) {
                 : <Car size={19} color={T.green} strokeWidth={2} style={{ flexShrink: 0 }} />}
               <div style={{ minWidth: 0, flex: 1 }}>
                 <div style={heroLab}>Vehicle</div>
-                <div style={{ fontSize: 14.5, color: T.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{veh.name}</div>
+                <div style={{ fontSize: 14.5, color: T.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{veh.name} <span style={{ fontWeight: 500, opacity: 0.6 }}>or similar</span></div>
               </div>
               <ChevronDown size={15} style={{ opacity: 0.5, flexShrink: 0 }} />
             </div>
@@ -6395,7 +6395,7 @@ function VehiclePickerModal({ prices, vmap, pax, onSelect, onClose }) {
                   {vmap[v.slug] ? <img src={vmap[v.slug]} alt={v.name} style={{ width: "100%", height: "100%", objectFit: "contain" }} /> : <Car size={44} color={T.green} strokeWidth={1.5} />}
                 </div>
                 <div style={{ padding: "12px 14px" }}>
-                  <div className="disp" style={{ fontWeight: 700, fontSize: 15.5 }}>{v.name}</div>
+                  <div className="disp" style={{ fontWeight: 700, fontSize: 15.5 }}>{v.name} <span style={{ fontWeight: 500, fontSize: 12, opacity: 0.6 }}>or similar</span></div>
                   <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 12.5, opacity: 0.7, margin: "5px 0 8px" }}><span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><Users size={13} /> {v.cap}</span><span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><Luggage size={13} /> {v.bags}</span></div>
                   <div style={{ fontWeight: 800, fontSize: 16, color: T.green }} className="disp">{fmtXOF(prices[i])}</div>
                 </div>
@@ -6459,7 +6459,7 @@ function TransferWidget({ addBooking, compact, user, go }) {
             : <Car size={19} color={T.green} strokeWidth={2} style={{ flexShrink: 0 }} />}
           <div style={{ minWidth: 0, flex: 1 }}>
             <div style={heroLab}>Vehicle</div>
-            <div style={{ fontSize: 14.5, color: T.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{veh.name} · {fmtXOF(price)}</div>
+            <div style={{ fontSize: 14.5, color: T.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{veh.name} <span style={{ fontWeight: 500, opacity: 0.6 }}>or similar</span> · {fmtXOF(price)}</div>
           </div>
           <ChevronDown size={15} style={{ opacity: 0.5, flexShrink: 0 }} />
         </div>
