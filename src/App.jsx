@@ -620,6 +620,22 @@ export default function ATSPlatformPreview() {
   const signOut = async () => { await supabase.auth.signOut(); setUser(null); setBookings([]); setFavorites([]); go("home"); notify("Signed out"); };
 
   // ---- Persist a record (booking / quote / itinerary request) ----
+  // Remember guest bookings in this browser so the client can find them again
+  const rememberGuest = (entry) => {
+    try {
+      const list = JSON.parse(localStorage.getItem("ats_guest_bookings") || "[]");
+      localStorage.setItem("ats_guest_bookings", JSON.stringify([entry, ...list.filter((x) => x.id !== entry.id)].slice(0, 20)));
+    } catch { /* ignore */ }
+  };
+  const bookingSummary = (b) => {
+    const rows = [];
+    if (b.tour?.name) rows.push(["Item", b.tour.name]);
+    const d = b.dateFrom || b.date; if (d) rows.push(["Date", String(d)]);
+    const pax = (b.adults || 0) + (b.children || 0); if (pax) rows.push(["Travelers", String(pax)]);
+    if (b.total) rows.push(["Total", fmtXOF(b.total)]);
+    rows.push(["Plan", planLabel(b.plan)]);
+    return rows;
+  };
   const saveRecord = async (b) => {
     if (user) {
       const { data, error } = await supabase.from("bookings").insert({ user_id: user.id, data: b, status: b.status || "pending" }).select("id, data, status, created_at").single();
@@ -627,6 +643,22 @@ export default function ATSPlatformPreview() {
       const rec = mapRow(data);
       setBookings((x) => [rec, ...x]);
       return rec;
+    }
+    // Guest booking — persist server-side, keyed by email + reference + magic token
+    const email = b.contact?.email || "";
+    if (email) {
+      try {
+        const { data, error } = await supabase.functions.invoke("guest-booking", { body: { data: { ...b, status: b.status || "pending" }, email } });
+        if (!error && data?.id) {
+          const rec = { ...b, _id: data.id, _status: b.status || "pending", _ref: data.ref, _token: data.manageToken, _guest: true };
+          setBookings((x) => [rec, ...x]);
+          rememberGuest({ id: data.id, ref: data.ref, token: data.manageToken, email, created: Date.now() });
+          const manageUrl = `${window.location.origin}/?manage=${data.manageToken}`;
+          const kind = b.plan === "quote" ? "quote" : b.plan === "itinerary" ? "itinerary" : "booking";
+          supabase.functions.invoke("send-confirmation", { body: { to: email, name: b.contact?.name || "", kind, reference: data.ref, manageUrl, summary: bookingSummary(b) } }).catch(() => {});
+          return rec;
+        }
+      } catch { /* fall through to local */ }
     }
     const local = { ...b, _status: b.status || "pending" };
     setBookings((x) => [local, ...x]);
@@ -717,15 +749,20 @@ export default function ATSPlatformPreview() {
   }, []);
   const confirmBooking = (b) => {
     setBooking(null);
+    // Ma Tontine Voyage — a free account is mandatory (instalments must be traced)
+    if (b.plan === "deposit" && !user) {
+      setPendingPay(b); setSignin(true);
+      notify("Create a free account to book with Ma Tontine Voyage — it lets us track your instalments.");
+      return;
+    }
     // Quote / itinerary requests: no payment, just save + notify
     if (b.plan === "quote" || b.plan === "itinerary") {
       saveRecord(b);
-      notify("Request sent — an ATS advisor will reply with a personalised price.");
-      if (!user) setSignin(true); else go("account");
+      notify(user ? "Request sent — an ATS advisor will reply with a personalised price." : "Request sent — your reference is on its way by email. An ATS advisor will reply shortly.");
+      if (user) go("account");
       return;
     }
-    // Paid booking (full or deposit) → sign-in required, then PayDunya
-    if (!user) { setPendingPay(b); setSignin(true); notify("Sign in to complete your payment."); return; }
+    // Paid booking — full payment works for guests too (deposit handled above)
     startPayment(b);
   };
 
@@ -2370,8 +2407,10 @@ const ZONE_COORDS = {
 };
 const tourCoords = (t) => ZONE_COORDS[t.zone] || [14.4974, -14.4524];
 
-function TourDetail({ tourId, go, setBooking, favorites = [], toggleFavorite, initialDate, initialPax }) {
+function TourDetail({ tourId, go, setBooking, favorites = [], toggleFavorite, initialDate, initialPax, user, setSignin, notify }) {
   const t = TOURS.find((x) => x.id === tourId) || TOURS[0];
+  // Ma Tontine Voyage needs a free account; guests are sent to sign-in instead
+  const startTontine = () => { if (!user) { setSignin && setSignin(true); notify && notify("Create a free account to book with Ma Tontine Voyage."); return; } openBooking("deposit"); };
   const [mlat, mlon] = tourCoords(t);
   const fav = favorites.includes(t.id);
   const [pax, setPax] = useState(initialPax || 2);
@@ -2638,7 +2677,7 @@ function TourDetail({ tourId, go, setBooking, favorites = [], toggleFavorite, in
             ) : (
               <>
                 <button disabled={!dateOk} style={{ ...btnGold, width: "100%", marginTop: 14, borderRadius: 12, opacity: dateOk ? 1 : 0.5, cursor: dateOk ? "pointer" : "not-allowed" }} onClick={() => dateOk && openBooking("full")}>Pay in full</button>
-                <button disabled={!tontinePossible} style={{ width: "100%", marginTop: 8, background: "#1A1A1A", color: "#fff", border: "none", borderRadius: 12, padding: "12px 14px", fontWeight: 800, cursor: tontinePossible ? "pointer" : "not-allowed", fontSize: 15, opacity: tontinePossible ? 1 : 0.5 }} onClick={() => tontinePossible && openBooking("deposit")}>Pay with Ma Tontine (20%)</button>
+                <button disabled={!tontinePossible} style={{ width: "100%", marginTop: 8, background: "#1A1A1A", color: "#fff", border: "none", borderRadius: 12, padding: "12px 14px", fontWeight: 800, cursor: tontinePossible ? "pointer" : "not-allowed", fontSize: 15, opacity: tontinePossible ? 1 : 0.5 }} onClick={() => tontinePossible && startTontine()}>Pay with Ma Tontine (20%)</button>
                 {!dateOk && <div style={{ fontSize: 12.5, color: "#8A968E", marginTop: 8, textAlign: "center" }}>Choose a travel date to book.</div>}
               </>
             )}
@@ -2686,7 +2725,7 @@ function TourDetail({ tourId, go, setBooking, favorites = [], toggleFavorite, in
             </div>
             <div style={{ display: "flex", gap: 8 }}>
               <button style={{ ...btnGold, flex: 1, borderRadius: 12, fontSize: 14, padding: "11px 8px", opacity: dateOk ? 1 : 0.5 }} onClick={() => dateOk ? openBooking("full") : showFlash("Choose a travel date above to book.")}>Pay in full</button>
-              <button style={{ flex: 1, background: "#1A1A1A", color: "#fff", border: "none", borderRadius: 12, padding: "11px 8px", fontWeight: 800, cursor: "pointer", fontSize: 14, opacity: tontinePossible ? 1 : 0.5 }} onClick={() => tontinePossible ? openBooking("deposit") : showFlash(dateOk ? "Ma Tontine needs a travel date at least 15 days away." : "Choose a travel date above to book.")}>Ma Tontine</button>
+              <button style={{ flex: 1, background: "#1A1A1A", color: "#fff", border: "none", borderRadius: 12, padding: "11px 8px", fontWeight: 800, cursor: "pointer", fontSize: 14, opacity: tontinePossible ? 1 : 0.5 }} onClick={() => tontinePossible ? startTontine() : showFlash(dateOk ? "Ma Tontine needs a travel date at least 15 days away." : "Choose a travel date above to book.")}>Ma Tontine</button>
             </div>
             {!dateOk && <div style={{ fontSize: 11, color: "#8A968E", marginTop: 5, textAlign: "center" }}>Choose a travel date to book.</div>}
           </>
@@ -5201,10 +5240,14 @@ function BookingModal({ tour, user, onClose, onConfirm }) {
   const daysUntil = date ? Math.ceil((new Date(date + "T00:00:00") - new Date(todayStr + "T00:00:00")) / 86400000) : null;
   const optAvailable = (o) => daysUntil != null && daysUntil >= o.days;
   const tontineAvailable = TONTINE_OPTIONS.some(optAvailable);
+  const tontineAllowed = tontineAvailable && !!user; // Ma Tontine requires a free account
   const selectedOpt = TONTINE_OPTIONS.find((o) => o.key === sched) || TONTINE_OPTIONS[3];
   const baseN = selectedOpt.n;                 // instalments implied by the chosen period
   const maxTr = baseN + 2;                      // client may go up to +2 instalments
   const months = Math.min(Math.max(1, tranches), maxTr); // effective number of instalments
+
+  // a guest can never sit on the deposit plan (account required)
+  useEffect(() => { if (!user) setPlan((p) => (p === "deposit" ? "full" : p)); }, [user]);
 
   // keep schedule + plan valid when the date changes
   useEffect(() => {
@@ -5331,11 +5374,17 @@ function BookingModal({ tour, user, onClose, onConfirm }) {
             <div style={sect}>Payment</div>
             <div style={{ display: "flex", gap: 8 }}>
               <button onClick={() => setPlan("full")} style={{ flex: 1, border: `1.5px solid ${plan === "full" ? T.green : T.line}`, background: plan === "full" ? T.green : "#fff", borderRadius: 12, padding: "10px 8px", fontWeight: 600, fontSize: 13, cursor: "pointer", color: plan === "full" ? "#fff" : T.ink }}>Pay in full</button>
-              <button onClick={() => tontineAvailable && setPlan("deposit")} disabled={!tontineAvailable} title={!tontineAvailable ? "Choose a travel date further away to pay in instalments" : ""}
-                style={{ flex: 1, border: `1.5px solid ${plan === "deposit" ? T.green : T.line}`, background: plan === "deposit" ? T.green : "#fff", borderRadius: 12, padding: "10px 8px", fontWeight: 600, fontSize: 13, cursor: tontineAvailable ? "pointer" : "not-allowed", color: plan === "deposit" ? "#fff" : T.ink, opacity: tontineAvailable ? 1 : 0.45 }}>
+              <button onClick={() => tontineAllowed && setPlan("deposit")} disabled={!tontineAllowed} title={!user ? "A free account is required for Ma Tontine Voyage" : !tontineAvailable ? "Choose a travel date further away to pay in instalments" : ""}
+                style={{ flex: 1, border: `1.5px solid ${plan === "deposit" ? T.green : T.line}`, background: plan === "deposit" ? T.green : "#fff", borderRadius: 12, padding: "10px 8px", fontWeight: 600, fontSize: 13, cursor: tontineAllowed ? "pointer" : "not-allowed", color: plan === "deposit" ? "#fff" : T.ink, opacity: tontineAllowed ? 1 : 0.45 }}>
                 Ma Tontine Voyage · 20% deposit
               </button>
             </div>
+            {tontineAvailable && !user && (
+              <div style={{ marginTop: 10, background: "#f8f8f8", border: "1px solid #ECECEC", borderRadius: 10, padding: "10px 12px", fontSize: 13, lineHeight: 1.5, color: "rgba(0,0,0,.8)", display: "flex", gap: 8, alignItems: "flex-start" }}>
+                <Info size={15} color={T.green} style={{ flexShrink: 0, marginTop: 2 }} />
+                <span>Ma Tontine Voyage needs a free account so we can track your instalments. You can still <strong>pay in full</strong> as a guest, or sign in to pay in instalments.</span>
+              </div>
+            )}
             {!tontineAvailable && (
               <div style={{ marginTop: 10, background: "#f8f8f8", border: "1px solid #ECECEC", borderRadius: 10, padding: "10px 12px", fontSize: 13, lineHeight: 1.5, color: "rgba(0,0,0,.8)" }}>
                 {!date
