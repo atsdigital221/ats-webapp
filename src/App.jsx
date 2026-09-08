@@ -725,6 +725,22 @@ export default function ATSPlatformPreview() {
     notify("Request cancelled.");
   };
 
+  // ---- Client self-service (modify / cancel) — rules & refund enforced server-side ----
+  // For a signed-in owner we pass the booking id (JWT proves ownership); for a guest, the
+  // manage_token from the magic link. Returns the authoritative updated booking view.
+  const manageBooking = async (action, { id, token, change } = {}) => {
+    const { data, error } = await supabase.functions.invoke("manage-booking", { body: { action, id, token, change } });
+    if (error || !data?.booking) {
+      let msg = "Something went wrong — please try again.";
+      try { msg = (await error?.context?.json())?.error || msg; } catch { /* ignore */ }
+      return { error: data?.error || msg };
+    }
+    const v = data.booking;
+    // Reflect the change in the in-memory list (matched by id)
+    setBookings((list) => list.map((x) => (x._id === v.id ? { ...x, ...v.data, _status: v.status, _id: v.id } : x)));
+    return { booking: v };
+  };
+
   const [pendingPay, setPendingPay] = useState(null);
   const go = (name, params = {}) => {
     const p = { name, ...params };
@@ -783,6 +799,18 @@ export default function ATSPlatformPreview() {
     }
   }, []);
 
+  // Guest booking magic link (?manage=<token>) → open the self-service management page
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const mt = params.get("manage");
+    if (!mt) return;
+    params.delete("manage");
+    const qs = params.toString();
+    window.history.replaceState({ atsPage: { name: "manage", token: mt } }, "", window.location.pathname + (qs ? `?${qs}` : ""));
+    setPage({ name: "manage", token: mt });
+    window.scrollTo({ top: 0 });
+  }, []);
+
   // Handle return from PayDunya (?payment=success|cancel[&token=…]) → confirm + show page
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -808,7 +836,7 @@ export default function ATSPlatformPreview() {
     }
   }, []);
 
-  const ctx = { go, notify, setBooking, user, setUser, role, isAdmin: role === "admin" || role === "super_admin", isSuper: role === "super_admin", bookings, favorites, toggleFavorite, filters, setFilters, setSignin, setChat, signOut, saveRecord, patchBooking, cancelBooking, payInstallment, currency, setCurrency };
+  const ctx = { go, notify, setBooking, user, setUser, role, isAdmin: role === "admin" || role === "super_admin", isSuper: role === "super_admin", bookings, favorites, toggleFavorite, filters, setFilters, setSignin, setChat, signOut, saveRecord, patchBooking, cancelBooking, manageBooking, payInstallment, currency, setCurrency };
 
   return (
     <div style={{ background: T.paper, color: T.ink, fontFamily: "'Century Gothic','Poppins',system-ui,sans-serif", minHeight: "100vh" }}>
@@ -848,6 +876,7 @@ export default function ATSPlatformPreview() {
           {page.name === "about" && <AboutPage {...ctx} />}
           {page.name === "account" && <AccountPage {...ctx} />}
           {page.name === "payment" && <PaymentResult status={page.status} {...ctx} />}
+          {page.name === "manage" && <ManageBookingPage token={page.token} {...ctx} />}
           {page.name === "terms" && <TermsPage />}
         </>
       )}
@@ -4784,10 +4813,27 @@ function PaymentResult({ status, go, user, setSignin }) {
 // ---------------- ACCOUNT ----------------
 const planLabel = (p) => p === "deposit" ? "Ma Tontine Voyage" : p === "quote" ? "Quote requested" : p === "itinerary" ? "Custom itinerary" : "Paid in full";
 const planColor = (p) => p === "deposit" ? T.laterite : p === "quote" ? T.indigo : p === "itinerary" ? T.indigo : T.green;
-const statusLabel = { pending: "In progress", confirmed: "Confirmed", paid: "Paid", cancelled: "Cancelled", settled: "Fully paid" };
-const statusColor = (s) => s === "cancelled" ? "#B3261E" : s === "settled" || s === "confirmed" || s === "paid" ? T.green : T.laterite;
+const statusLabel = { pending: "In progress", confirmed: "Confirmed", paid: "Paid", cancelled: "Cancelled", settled: "Fully paid", completed: "Completed", modification_requested: "Change requested", cancellation_requested: "Cancellation requested" };
+const statusColor = (s) => s === "cancelled" ? "#B3261E" : s === "cancellation_requested" ? "#B3261E" : s === "modification_requested" ? T.gold : s === "settled" || s === "confirmed" || s === "paid" || s === "completed" ? T.green : T.laterite;
 
-function AccountPage({ user, bookings, favorites = [], toggleFavorite, setSignin, notify, signOut, patchBooking, cancelBooking, payInstallment, role, go }) {
+// ---- ATS cancellation policy (mirror of the server; used for on-screen previews only) ----
+const retainedPctFor = (days) => days == null ? 10 : days < 3 ? 100 : days < 7 ? 50 : days < 10 ? 30 : 10;
+const MODIFY_MIN_DAYS = 7;
+const bookingDaysToDeparture = (b) => {
+  const ds = b?.dateFrom || b?.date || b?.transfer?.date;
+  if (!ds || !/^\d{4}-\d{2}-\d{2}/.test(String(ds))) return null;
+  const dep = new Date(String(ds).slice(0, 10) + "T00:00:00");
+  const today = new Date(new Date().toISOString().slice(0, 10) + "T00:00:00");
+  return Math.ceil((dep - today) / 86400000);
+};
+const isPaidStatus = (s) => s === "paid" || s === "confirmed" || s === "settled";
+const bookingAmountPaid = (b) => {
+  if (!isPaidStatus(b._status)) return 0;
+  if (b.plan === "deposit") return Number(b.paidAmount ?? b.deposit ?? 0);
+  return Number(b.paidAmount ?? b.total ?? 0);
+};
+
+function AccountPage({ user, bookings, favorites = [], toggleFavorite, setSignin, notify, signOut, patchBooking, cancelBooking, manageBooking, payInstallment, role, go }) {
   const [filter, setFilter] = useState("all");
   const [detail, setDetail] = useState(null);
   const [payTarget, setPayTarget] = useState(null);
@@ -4880,7 +4926,7 @@ function AccountPage({ user, bookings, favorites = [], toggleFavorite, setSignin
         );
       })}
 
-      {detail && <BookingDetail rec={detail} onClose={() => setDetail(null)} notify={notify} patchBooking={patchBooking} cancelBooking={cancelBooking} user={user} onPay={(r) => setPayTarget(r)} />}
+      {detail && <BookingDetail rec={detail} onClose={() => setDetail(null)} notify={notify} patchBooking={patchBooking} cancelBooking={cancelBooking} manageBooking={manageBooking} user={user} onPay={(r) => setPayTarget(r)} />}
       {payTarget && <InstallmentModal rec={payTarget} onClose={() => setPayTarget(null)} onConfirm={(amt, pm) => { const r = payTarget; setPayTarget(null); payInstallment(r, amt, pm); }} />}
     </Wrap>
   );
@@ -4996,10 +5042,9 @@ function downloadInvoice(rec, user) {
   if (w) { w.document.write(html); w.document.close(); }
 }
 
-function BookingDetail({ rec, onClose, notify, patchBooking, cancelBooking, user, onPay }) {
+function BookingDetail({ rec, onClose, notify, patchBooking, cancelBooking, manageBooking, user, onPay }) {
   const it = rec.itinerary;
   const ts = rec.plan === "deposit" ? tontineState(rec) : null;
-  const canCancel = rec._status !== "cancelled" && rec._status !== "settled";
   return (
     <Overlay onClose={onClose}>
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -5056,13 +5101,207 @@ function BookingDetail({ rec, onClose, notify, patchBooking, cancelBooking, user
           <button style={{ ...btnGreen, fontSize: 13.5, padding: "9px 16px" }} onClick={() => downloadInvoice(rec, user)}>Download invoice</button>
         )}
         <button style={{ background: "none", border: "none", cursor: "pointer", fontWeight: 700, color: T.indigo, fontSize: 13.5 }} onClick={() => notify("Opening WhatsApp chat with ATS: +221 77 480 78 78")}>Contact ATS</button>
-        {canCancel && (
-          <button style={{ marginLeft: "auto", background: "none", border: `1.5px solid #B3261E`, borderRadius: 10, cursor: "pointer", fontWeight: 700, color: "#B3261E", padding: "9px 16px", fontSize: 13.5 }}
-            onClick={async () => { await cancelBooking(rec); onClose(); }}>Cancel {rec.plan === "quote" ? "request" : rec.plan === "itinerary" ? "request" : "booking"}</button>
-        )}
       </div>
+
+      <BookingManager view={viewFromRecord(rec)} run={(action, change) => manageBooking(action, { id: rec._id, change })} notify={notify} onChanged={onClose} />
+
       <button style={{ background: "none", border: "none", cursor: "pointer", marginTop: 12, fontWeight: 600, color: T.ink, opacity: 0.6, width: "100%", fontSize: 14 }} onClick={onClose}>Close</button>
     </Overlay>
+  );
+}
+
+// Build the server-shaped management "view" from a local record (previews only; the
+// server re-computes eligibility & refund authoritatively on the actual action).
+function viewFromRecord(rec) {
+  const days = bookingDaysToDeparture(rec);
+  const amountPaid = bookingAmountPaid(rec);
+  const pct = retainedPctFor(days);
+  const closed = rec._status === "cancelled" || rec._status === "completed";
+  return {
+    id: rec._id, ref: rec._ref, status: rec._status, data: rec,
+    days, amountPaid, retainedPct: pct,
+    refundPreview: Math.max(0, Math.round(amountPaid * (100 - pct) / 100)),
+    canModify: !closed && rec._status !== "settled" && (days == null || days >= MODIFY_MIN_DAYS),
+    canCancel: !closed, modifyMinDays: MODIFY_MIN_DAYS,
+  };
+}
+
+// Shared self-service controls: request a date/traveller change, or cancel (with the
+// policy-based refund shown up front). Used in the account modal AND the guest page.
+function BookingManager({ view: v, run, notify, onChanged }) {
+  const d = v.data || {};
+  const isLogistics = !!(d.rental || d.transfer || d.route);
+  const [mode, setMode] = useState(null); // null | "modify" | "cancel"
+  const [busy, setBusy] = useState(false);
+  const [date, setDate] = useState(d.dateFrom || d.date || "");
+  const [adults, setAdults] = useState(d.adults ?? 2);
+  const [children, setChildren] = useState(d.children ?? 0);
+  const [note, setNote] = useState("");
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const closed = v.status === "cancelled" || v.status === "completed";
+
+  const submit = async (action, change) => {
+    setBusy(true);
+    const r = await run(action, change);
+    setBusy(false);
+    if (r.error) { notify(r.error); return; }
+    setMode(null);
+    if (action === "modify") notify("Change requested — an ATS advisor will confirm it shortly.");
+    else notify(r.booking?.status === "cancelled" ? "Booking cancelled." : "Cancellation requested — our team will process your refund.");
+    onChanged && onChanged(r.booking);
+  };
+
+  const box = { background: T.paperDark, border: `1px solid ${T.line}`, borderRadius: 12, padding: "12px 14px", marginTop: 12 };
+
+  return (
+    <div>
+      {/* Pending change already requested */}
+      {d.pendingChange && v.status === "modification_requested" && (
+        <div style={{ ...box, background: "#FFF8E6", borderColor: "#F1E2A6" }}>
+          <div style={{ fontWeight: 700, fontSize: 13.5, display: "flex", alignItems: "center", gap: 6 }}><Clock size={15} color={T.gold} /> Change requested — awaiting ATS confirmation</div>
+          <div style={{ fontSize: 13, marginTop: 6, lineHeight: 1.6, color: "rgba(0,0,0,.8)" }}>
+            {d.pendingChange.date && <>New date: <strong>{d.pendingChange.date}</strong><br /></>}
+            {d.pendingChange.adults != null && <>Travellers: <strong>{d.pendingChange.adults}{d.pendingChange.children ? ` + ${d.pendingChange.children} child` : ""}</strong></>}
+          </div>
+        </div>
+      )}
+      {/* Refund summary after a cancellation request */}
+      {d.refund && (v.status === "cancellation_requested" || v.status === "cancelled") && (
+        <div style={{ ...box, background: "#FBECEC", borderColor: "#F0C9C6" }}>
+          <div style={{ fontWeight: 700, fontSize: 13.5, color: "#B3261E" }}>{v.status === "cancelled" ? "Booking cancelled" : "Cancellation requested"}</div>
+          <div style={{ fontSize: 13, marginTop: 6, lineHeight: 1.6, color: "rgba(0,0,0,.8)" }}>
+            {d.refund.amountPaid > 0
+              ? <>Per our cancellation policy, {d.refund.retainedPct}% of {fmtXOF(d.refund.amountPaid)} is retained — <strong>refund due: {fmtXOF(d.refund.refundAmount)}</strong>, processed within 3–5 days.</>
+              : <>This booking wasn't paid, so nothing is charged.</>}
+          </div>
+        </div>
+      )}
+
+      {/* Actions */}
+      {!closed && v.status !== "cancellation_requested" && (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 14, alignItems: "center" }}>
+          {v.canModify && v.status !== "modification_requested" && (
+            <button style={{ background: "none", border: `1.5px solid ${T.line}`, borderRadius: 10, cursor: "pointer", fontWeight: 700, color: T.ink, padding: "9px 16px", fontSize: 13.5 }} onClick={() => setMode(mode === "modify" ? null : "modify")}>Change date / travellers</button>
+          )}
+          {!v.canModify && v.status !== "modification_requested" && v.days != null && v.days < v.modifyMinDays && (
+            <span style={{ fontSize: 12.5, color: "rgba(0,0,0,.65)" }}>Changes close {v.modifyMinDays} days before departure — contact ATS for last-minute changes.</span>
+          )}
+          {v.canCancel && (
+            <button style={{ marginLeft: "auto", background: "none", border: `1.5px solid #B3261E`, borderRadius: 10, cursor: "pointer", fontWeight: 700, color: "#B3261E", padding: "9px 16px", fontSize: 13.5 }} onClick={() => setMode(mode === "cancel" ? null : "cancel")}>Cancel {d.plan === "quote" || d.plan === "itinerary" ? "request" : "booking"}</button>
+          )}
+        </div>
+      )}
+
+      {/* Modify form */}
+      {mode === "modify" && (
+        <div style={box}>
+          <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10 }}>Request a change</div>
+          <label style={{ ...label, marginTop: 0 }}>New travel date</label>
+          <RangeDate from={date} to={date} onChange={(f) => setDate(f)} triggerStyle={input} wide single minDate={todayStr} />
+          <div style={{ display: "flex", gap: 18, marginTop: 12, flexWrap: "wrap" }}>
+            <div>
+              <div style={label}>{isLogistics ? "Passengers" : "Adults"}</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <button onClick={() => setAdults((a) => Math.max(1, a - 1))} style={btnCircle} aria-label="Fewer">−</button>
+                <span style={{ fontWeight: 700, minWidth: 18, textAlign: "center" }}>{adults}</span>
+                <button onClick={() => setAdults((a) => a + 1)} style={btnCircle} aria-label="More">+</button>
+              </div>
+            </div>
+            {!isLogistics && (
+              <div>
+                <div style={label}>Children (3–12)</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <button onClick={() => setChildren((c) => Math.max(0, c - 1))} style={btnCircle} aria-label="Fewer">−</button>
+                  <span style={{ fontWeight: 700, minWidth: 18, textAlign: "center" }}>{children}</span>
+                  <button onClick={() => setChildren((c) => c + 1)} style={btnCircle} aria-label="More">+</button>
+                </div>
+              </div>
+            )}
+          </div>
+          <label style={{ ...label }}>Note for ATS (optional)</label>
+          <textarea style={{ ...input, minHeight: 60, resize: "vertical" }} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Anything we should know about this change?" />
+          <div style={{ fontSize: 12.5, color: "rgba(0,0,0,.7)", marginTop: 8, lineHeight: 1.5 }}>Your change is submitted for confirmation — any price difference is settled with ATS before it's applied.</div>
+          <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
+            <button disabled={busy} style={{ ...btnGold, fontSize: 13.5, padding: "9px 18px", opacity: busy ? 0.6 : 1 }} onClick={() => submit("modify", { date, adults, children, note })}>{busy ? "Sending…" : "Request change"}</button>
+            <button style={{ background: "none", border: `1.5px solid ${T.line}`, borderRadius: 10, cursor: "pointer", fontWeight: 700, color: T.ink, padding: "9px 18px", fontSize: 13.5 }} onClick={() => setMode(null)}>Back</button>
+          </div>
+        </div>
+      )}
+
+      {/* Cancel confirm with policy preview */}
+      {mode === "cancel" && (
+        <div style={{ ...box, background: "#FBECEC", borderColor: "#F0C9C6" }}>
+          <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 8, color: "#B3261E" }}>Cancel this {d.plan === "quote" || d.plan === "itinerary" ? "request" : "booking"}?</div>
+          <div style={{ fontSize: 13.5, lineHeight: 1.6, color: "rgba(0,0,0,.8)" }}>
+            {v.amountPaid > 0 ? (
+              <>You've paid <strong>{fmtXOF(v.amountPaid)}</strong>. {v.days != null && <>Your departure is in <strong>{v.days} day{v.days > 1 ? "s" : ""}</strong>, so </>}our policy retains <strong>{v.retainedPct}%</strong> — you would be refunded <strong>{fmtXOF(v.refundPreview)}</strong>{v.refundPreview > 0 ? " within 3–5 days" : " (no refund)"}.</>
+            ) : (
+              <>This booking isn't paid yet — cancelling is free.</>
+            )}
+          </div>
+          <div style={{ fontSize: 12, color: "rgba(0,0,0,.6)", marginTop: 6 }}>See our full <TermsLink>Cancellation Policy</TermsLink>. Third-party supplier penalties may apply.</div>
+          <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
+            <button disabled={busy} style={{ background: "#B3261E", color: "#fff", border: "none", borderRadius: 10, cursor: "pointer", fontWeight: 700, padding: "9px 18px", fontSize: 13.5, opacity: busy ? 0.6 : 1 }} onClick={() => submit("cancel")}>{busy ? "Processing…" : "Confirm cancellation"}</button>
+            <button style={{ background: "none", border: `1.5px solid ${T.line}`, borderRadius: 10, cursor: "pointer", fontWeight: 700, color: T.ink, padding: "9px 18px", fontSize: 13.5 }} onClick={() => setMode(null)}>Keep booking</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Guest self-service page reached from the confirmation email's magic link (?manage=<token>)
+function ManageBookingPage({ token, manageBooking, notify, go }) {
+  const [state, setState] = useState({ loading: true, view: null, error: "" });
+  const load = async () => {
+    const r = await manageBooking("get", { token });
+    if (r.error) setState({ loading: false, view: null, error: r.error });
+    else setState({ loading: false, view: r.booking, error: "" });
+  };
+  useEffect(() => { load(); }, [token]);
+
+  const run = async (action, change) => {
+    const r = await manageBooking(action, { token, change });
+    if (r.booking) setState((s) => ({ ...s, view: r.booking }));
+    return r;
+  };
+
+  const v = state.view;
+  const d = v?.data || {};
+  return (
+    <Wrap>
+      <button onClick={() => go("home")} style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "none", border: "none", cursor: "pointer", color: T.ink, fontWeight: 700, fontSize: 14, padding: 0, marginBottom: 14 }}><ChevronLeft size={18} /> Home</button>
+      <Eyebrow>Manage your booking</Eyebrow>
+      {state.loading ? (
+        <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 16, padding: 24 }}>Loading your booking…</div>
+      ) : state.error || !v ? (
+        <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 16, padding: 24 }}>
+          <div style={{ fontWeight: 700, marginBottom: 6 }}>We couldn't open this booking.</div>
+          <div style={{ fontSize: 13.5, color: "rgba(0,0,0,.75)", lineHeight: 1.6 }}>{state.error || "The link may have expired."} You can reach us on WhatsApp at +221 77 480 78 78 or by email at infos@africatourismsolutions.com.</div>
+        </div>
+      ) : (
+        <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 16, padding: "22px 24px", maxWidth: 640 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <Thumb rec={d} size={44} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div className="disp" style={{ fontWeight: 800, fontSize: 19 }}>{d.tour?.name || "Your booking"}</div>
+              <div style={{ fontSize: 12.5, color: "rgba(0,0,0,.7)" }}>Reference <strong>{v.ref}</strong></div>
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 8, margin: "12px 0 14px" }}>
+            <span style={{ ...pill(planColor(d.plan)), fontSize: 12 }}>{planLabel(d.plan)}</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: statusColor(v.status), alignSelf: "center" }}>● {statusLabel[v.status] || "In progress"}</span>
+          </div>
+          <div style={{ background: T.paperDark, borderRadius: 12, padding: "12px 14px", fontSize: 14, lineHeight: 1.7 }}>
+            {(d.adults != null) && <Row l="Travellers" v={`${d.adults}${d.children ? ` + ${d.children} child` : ""}`} />}
+            {(d.dateFrom || d.date) && <Row l="Date" v={d.dateFrom || d.date} />}
+            {d.plan !== "quote" && d.plan !== "itinerary" && d.total != null && <Row l="Total" v={fmtXOF(d.total)} />}
+            {v.amountPaid > 0 && <Row l="Paid" v={fmtXOF(v.amountPaid)} />}
+          </div>
+          <BookingManager view={v} run={run} notify={notify} onChanged={(b) => b && setState((s) => ({ ...s, view: b }))} />
+        </div>
+      )}
+    </Wrap>
   );
 }
 
