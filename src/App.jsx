@@ -154,7 +154,7 @@ const MONTHS = ["January", "February", "March", "April", "May", "June", "July", 
 const WD = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
 const iso = (y, m, d) => `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 
-function RangeDate({ from, to, onChange, triggerStyle, minDate, wide, align = "left", single }) {
+function RangeDate({ from, to, onChange, triggerStyle, minDate, wide, align = "left", single, up }) {
   const [open, setOpen] = useState(false);
   const now = new Date();
   const todayStr = iso(now.getFullYear(), now.getMonth(), now.getDate());
@@ -215,7 +215,7 @@ function RangeDate({ from, to, onChange, triggerStyle, minDate, wide, align = "l
       {open && (
         <>
           <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 90 }} />
-          <div style={{ position: "absolute", top: "calc(100% + 6px)", left: align === "right" ? "auto" : 0, right: align === "right" ? 0 : "auto", zIndex: 91, background: "#fff", color: T.ink, border: `1px solid ${T.line}`, borderRadius: 16, boxShadow: "0 18px 40px rgba(0,0,0,.22)", padding: wide ? 20 : 14, width: wide ? "min(346px, calc(100vw - 28px))" : "min(290px, calc(100vw - 32px))", maxWidth: "94vw" }}>
+          <div style={{ position: "absolute", top: up ? "auto" : "calc(100% + 6px)", bottom: up ? "calc(100% + 6px)" : "auto", left: align === "right" ? "auto" : 0, right: align === "right" ? 0 : "auto", zIndex: 91, background: "#fff", color: T.ink, border: `1px solid ${T.line}`, borderRadius: 16, boxShadow: "0 18px 40px rgba(0,0,0,.22)", padding: wide ? 20 : 14, width: wide ? "min(346px, calc(100vw - 28px))" : "min(290px, calc(100vw - 32px))", maxWidth: "94vw" }}>
             <div style={{ display: "flex", alignItems: "center", marginBottom: 12 }}>
               <button type="button" disabled={!canPrev} onClick={() => setView((v) => ({ y: v.m === 0 ? v.y - 1 : v.y, m: v.m === 0 ? 11 : v.m - 1 }))}
                 style={{ ...btnCircle, opacity: canPrev ? 1 : 0.3, cursor: canPrev ? "pointer" : "not-allowed" }}>‹</button>
@@ -2599,7 +2599,7 @@ function TourDetail({ tourId, go, setBooking, favorites = [], toggleFavorite, in
 
                 <div style={{ marginTop: 12 }}>
                   <label style={label}>Travel date</label>
-                  <input type="date" min={minDate} value={dateFrom} onChange={(e) => setTripDate(e.target.value)} style={input} />
+                  <RangeDate from={dateFrom} to={dateFrom} onChange={(f) => setTripDate(f)} triggerStyle={input} wide single minDate={minDate} align="right" />
                   {dateOk && (
                     <div style={{ fontSize: 12, marginTop: 5, color: "rgba(0,0,0,.8)", fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}>
                       <Check size={14} color={T.green} /> {tontinePossible ? "Ma Tontine eligible" : "Available · full payment only (under 15 days)"}
@@ -2679,7 +2679,9 @@ function TourDetail({ tourId, go, setBooking, favorites = [], toggleFavorite, in
                 <button onClick={() => setPax(Math.max(1, pax - 1))} style={btnCircle} aria-label="Fewer">−</button>
                 <span style={{ fontWeight: 700, minWidth: 14, textAlign: "center" }}>{pax}</span>
                 <button onClick={() => setPax(pax + 1)} style={btnCircle} aria-label="More">+</button>
-                <input type="date" min={minDate} value={dateFrom} onChange={(e) => setTripDate(e.target.value)} style={{ ...input, width: 132, minWidth: 0, flexShrink: 1, padding: "9px 10px", fontSize: 13, WebkitAppearance: "none", appearance: "none" }} />
+                <div style={{ width: 138, minWidth: 0, flexShrink: 1 }}>
+                  <RangeDate from={dateFrom} to={dateFrom} onChange={(f) => setTripDate(f)} triggerStyle={{ ...input, padding: "9px 10px", fontSize: 13 }} wide single minDate={minDate} align="right" up />
+                </div>
               </div>
             </div>
             <div style={{ display: "flex", gap: 8 }}>
