@@ -2222,6 +2222,17 @@ function Home({ go, notify, setBooking, filters, setFilters, setChat, addBooking
         </Wrap>
       </section>
 
+      {/* QUICK TRANSFER BOOKING (ATS Logistics) — right after Tours & experiences */}
+      <section style={{ background: "#fff" }}>
+        <Wrap style={{ padding: "36px 20px" }}>
+          <div style={{ display: "flex", alignItems: "end", gap: 12, flexWrap: "wrap", marginBottom: 16 }}>
+            <div><Eyebrow>ATS Logistics</Eyebrow><h2 className="disp" style={{ fontSize: 24, fontWeight: 800, margin: "6px 0 0" }}>Need a transfer or a car? Book it now.</h2></div>
+            <button onClick={() => go("transport")} style={{ marginLeft: "auto", background: "none", border: "none", color: T.indigo, fontWeight: 700, cursor: "pointer", fontSize: 14, display: "inline-flex", alignItems: "center", gap: 4 }}>All transport services <ArrowRight size={15} /></button>
+          </div>
+          <HomeTransportPicker go={go} />
+        </Wrap>
+      </section>
+
       {/* PLAN YOUR TRIP */}
       <PlanTripSection go={go} />
 
@@ -2236,17 +2247,6 @@ function Home({ go, notify, setBooking, filters, setFilters, setChat, addBooking
         </Wrap>
       </section>
       */}
-
-      {/* QUICK TRANSFER BOOKING (ATS Logistics) */}
-      <section style={{ background: "#fff" }}>
-        <Wrap style={{ padding: "36px 20px" }}>
-          <div style={{ display: "flex", alignItems: "end", gap: 12, flexWrap: "wrap", marginBottom: 16 }}>
-            <div><Eyebrow>ATS Logistics</Eyebrow><h2 className="disp" style={{ fontSize: 24, fontWeight: 800, margin: "6px 0 0" }}>Need a transfer or a car? Book it now.</h2></div>
-            <button onClick={() => go("transport")} style={{ marginLeft: "auto", background: "none", border: "none", color: T.indigo, fontWeight: 700, cursor: "pointer", fontSize: 14, display: "inline-flex", alignItems: "center", gap: 4 }}>All transport services <ArrowRight size={15} /></button>
-          </div>
-          <HomeTransportPicker go={go} />
-        </Wrap>
-      </section>
 
       {/* AI */}
       <Wrap style={{ paddingTop: 0 }}>
