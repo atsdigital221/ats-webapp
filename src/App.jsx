@@ -1062,7 +1062,7 @@ function Nav({ go, page, user, setSignin, bookings, currency, setCurrency, setCh
             <>
               <div onClick={() => setServOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 41 }} />
               <div role="menu" style={{ position: "absolute", top: "calc(100% + 10px)", left: 0, zIndex: 42, background: "#fff", color: T.ink, border: `1px solid ${T.line}`, borderRadius: 18, boxShadow: "0 20px 48px rgba(0,0,0,.18)", padding: "10px", width: 320, animation: "ats-fadein .18s ease" }}>
-                {[[Plane, "Flights", "flights"], [Compass, "Tours & Experiences", "tours"], [Car, "Vehicles", "transport"], [Sparkles, "Trip Builder", "builder"], [Mic, "MICE", "events"]].map(([Ico, label, route]) => (
+                {[[Plane, "Flights", "flights"], [Compass, "Tours & Experiences", "tours"], [Car, "Vehicles", "transport"], [Sparkles, "Trip Builder", "builder"], [Mic, "MICE", "events"], [Users, "Agents", "agents"], [Building2, "Corporate", "corporate"]].map(([Ico, label, route]) => (
                   <button key={route} role="menuitem" onClick={() => { nav(route); setServOpen(false); }} className="ats-row"
                     style={{ display: "flex", alignItems: "center", gap: 14, width: "100%", background: "transparent", border: "1px solid transparent", cursor: "pointer", padding: "11px 12px", borderRadius: 14, textAlign: "left", fontFamily: "inherit" }}>
                     <span className="ats-ico" style={{ width: 40, height: 40, borderRadius: 12, background: "#F2F5F3", color: T.green, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "background .16s ease, color .16s ease" }}><Ico size={20} strokeWidth={2} /></span>
