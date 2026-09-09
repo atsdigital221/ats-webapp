@@ -894,6 +894,8 @@ export default function ATSPlatformPreview() {
           {page.name === "flights" && <FlightsPage {...ctx} initial={page.fp} initialLegs={page.flegs} />}
           {page.name === "transport" && <TransportPage addBooking={confirmBooking} notify={notify} user={user} go={go} initialRental={page.rental} />}
           {page.name === "transferCheckout" && <TransferCheckoutPage detail={page.detail} user={user} go={go} onConfirm={confirmBooking} />}
+          {page.name === "vehicle" && <VehicleDetailPage mode={page.mode} id={page.id} go={go} user={user} />}
+          {page.name === "rentalCheckout" && <Wrap><RentalCheckoutPage detail={page.detail} user={user} onBack={() => (window.history.length > 1 ? window.history.back() : go("home"))} onConfirm={confirmBooking} /></Wrap>}
           {page.name === "events" && <EventsPage {...ctx} />}
           {page.name === "micework" && <MiceWorkPage {...ctx} service={page.service} />}
           {page.name === "corporate" && <CorporatePage {...ctx} />}
@@ -2242,10 +2244,7 @@ function Home({ go, notify, setBooking, filters, setFilters, setChat, addBooking
             <div><Eyebrow>ATS Logistics</Eyebrow><h2 className="disp" style={{ fontSize: 24, fontWeight: 800, margin: "6px 0 0" }}>Need a transfer or a car? Book it now.</h2></div>
             <button onClick={() => go("transport")} style={{ marginLeft: "auto", background: "none", border: "none", color: T.indigo, fontWeight: 700, cursor: "pointer", fontSize: 14, display: "inline-flex", alignItems: "center", gap: 4 }}>All transport services <ArrowRight size={15} /></button>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 20, alignItems: "stretch" }}>
-            <TransferWidget addBooking={addBookingHome} compact user={user} go={go} />
-            <div style={{ borderRadius: 16, overflow: "hidden", minHeight: 320, background: `linear-gradient(160deg, rgba(0,0,0,.35), rgba(0,0,0,.20)), url("${supabase.storage.from(PHOTO_BUCKET).getPublicUrl("site/transfer.jpg").data.publicUrl}") center/cover no-repeat, linear-gradient(140deg, ${T.green}, ${T.indigo})` }} />
-          </div>
+          <HomeTransportPicker go={go} />
         </Wrap>
       </section>
 
@@ -6485,6 +6484,249 @@ function VehiclePickerModal({ prices, vmap, pax, onSelect, onClose }) {
     </div>
   );
 }
+
+// Lowest transfer price across the 6 routes for a given vehicle index
+const transferFromPrice = (i) => Math.min(...TRANSFER_ROUTES.map((r) => r.prices[i]));
+
+// ---- Home block: browse vehicles first (grid) → open a dedicated vehicle page ----
+function HomeTransportPicker({ go }) {
+  const [tab, setTab] = useState("transfer");
+  const vmap = useVehiclePhotoMap();
+  const cmap = usePhotoMap("rentals");
+  const cardBase = { background: "#fff", border: `1px solid ${T.line}`, borderRadius: 16, overflow: "hidden", display: "flex", flexDirection: "column", textAlign: "left", cursor: "pointer", padding: 0, fontFamily: "inherit" };
+  return (
+    <div>
+      {/* Tabs */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 18, flexWrap: "wrap" }}>
+        {[["transfer", "Airport transfer", Bus], ["rental", "Car rental", Car]].map(([k, l, Ico]) => {
+          const on = tab === k;
+          return <button key={k} onClick={() => setTab(k)} style={{ display: "inline-flex", alignItems: "center", gap: 7, border: `1.5px solid ${on ? T.green : "rgba(0,0,0,.18)"}`, background: on ? T.green : "#fff", color: on ? "#fff" : T.ink, borderRadius: 999, padding: "9px 18px", fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}><Ico size={16} /> {l}</button>;
+        })}
+      </div>
+
+      {tab === "transfer" ? (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(230px, 1fr))", gap: 16 }}>
+          {VEHICLES.map((v, i) => (
+            <button key={v.slug} className="card-hover" style={cardBase} onClick={() => go("vehicle", { mode: "transfer", id: v.slug })}>
+              <div style={{ height: 130, background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", borderBottom: `1px solid ${T.line}` }}>
+                {vmap[v.slug] ? <img src={vmap[v.slug]} alt={v.name} style={{ width: "100%", height: "100%", objectFit: "contain" }} /> : <Car size={44} color={T.green} strokeWidth={1.4} />}
+              </div>
+              <div style={{ padding: 14, display: "flex", flexDirection: "column", flex: 1 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: T.indigo }}>{v.type}</span>
+                <div className="disp" style={{ fontWeight: 700, fontSize: 15.5, margin: "2px 0 6px" }}>{v.name} <span style={{ fontWeight: 500, fontSize: 12, opacity: 0.6 }}>or similar</span></div>
+                <div style={{ display: "flex", gap: 12, fontSize: 12.5, color: "rgba(0,0,0,.7)", marginBottom: 10 }}>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><Users size={13} /> {v.cap}</span>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><Luggage size={13} /> {v.bags}</span>
+                </div>
+                <div style={{ marginTop: "auto", display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 8 }}>
+                  <div><span style={{ fontSize: 11.5, color: "rgba(0,0,0,.6)" }}>from </span><span className="disp" style={{ fontWeight: 800, fontSize: 16, color: T.green }}>{fmtXOF(transferFromPrice(i))}</span></div>
+                  <span style={{ color: T.green, fontWeight: 700, fontSize: 13, display: "inline-flex", alignItems: "center", gap: 3 }}>Select <ArrowRight size={14} /></span>
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+      ) : (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: 16 }}>
+          {CARS.map((car) => (
+            <button key={car.id} disabled={!car.available} className={car.available ? "card-hover" : ""} style={{ ...cardBase, cursor: car.available ? "pointer" : "not-allowed", opacity: car.available ? 1 : 0.6 }} onClick={() => car.available && go("vehicle", { mode: "rental", id: car.id })}>
+              <div style={{ position: "relative", height: 140, background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", borderBottom: `1px solid ${T.line}` }}>
+                <span style={{ position: "absolute", top: 8, left: 8, background: "rgba(255,255,255,.92)", borderRadius: 999, padding: "3px 10px", fontSize: 11, fontWeight: 700, color: T.ink }}>{car.type}</span>
+                {!car.available && <span style={{ position: "absolute", top: 8, right: 8, background: "#B3261E", color: "#fff", borderRadius: 999, padding: "3px 10px", fontSize: 11, fontWeight: 700 }}>Unavailable</span>}
+                {cmap[car.slug] ? <img src={cmap[car.slug]} alt={car.name} style={{ width: "100%", height: "100%", objectFit: "contain" }} /> : <Car size={46} color={T.green} strokeWidth={1.4} />}
+              </div>
+              <div style={{ padding: 15, display: "flex", flexDirection: "column", flex: 1 }}>
+                <div className="disp" style={{ fontWeight: 700, fontSize: 16 }}>{car.name} <span style={{ fontWeight: 500, fontSize: 12, opacity: 0.6 }}>or similar</span></div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 10, fontSize: 12.5, color: "rgba(0,0,0,.7)", margin: "8px 0 12px" }}>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><Users size={13} /> {car.seats}</span>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><Settings2 size={13} /> {car.transmission}</span>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><Fuel size={13} /> {car.fuel}</span>
+                </div>
+                <div style={{ marginTop: "auto", display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 8 }}>
+                  <div><span style={{ fontSize: 11.5, color: "rgba(0,0,0,.6)" }}>from </span><span className="disp" style={{ fontWeight: 800, fontSize: 17, color: T.green }}>{fmtXOF(car.daily)}</span><span style={{ fontSize: 12, opacity: 0.6 }}> /day</span></div>
+                  {car.available && <span style={{ color: T.green, fontWeight: 700, fontSize: 13, display: "inline-flex", alignItems: "center", gap: 3 }}>Select <ArrowRight size={14} /></span>}
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---- Dedicated vehicle page: pick date & details for one chosen vehicle, then book ----
+function VehicleDetailPage({ mode, id, go, user }) {
+  const vmap = useVehiclePhotoMap();
+  const cmap = usePhotoMap("rentals");
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const minRental = new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10);
+  useEffect(() => { window.scrollTo({ top: 0 }); }, []);
+
+  // Transfer state
+  const [dirI, setDirI] = useState(0);
+  const [tDate, setTDate] = useState("");
+  const [tTime, setTTime] = useState("10 h 30");
+  const [pax, setPax] = useState(2);
+  const [paxOpen, setPaxOpen] = useState(false);
+  // Rental state
+  const [pickup, setPickup] = useState("");
+  const [dropoff, setDropoff] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [puTime, setPuTime] = useState("10 h 30");
+  const [doTime, setDoTime] = useState("10 h 30");
+  const [fuel, setFuel] = useState("with");
+
+  const back = () => (window.history.length > 1 ? window.history.back() : go("home"));
+  const card = { background: "#fff", border: `1px solid ${T.line}`, borderRadius: 18, padding: 22 };
+
+  if (mode === "transfer") {
+    const vehIndex = VEHICLES.findIndex((v) => v.slug === id);
+    const veh = VEHICLES[vehIndex] || VEHICLES[0];
+    const dir = TRANSFER_DIRECTIONS[dirI];
+    const price = TRANSFER_ROUTES.find((r) => r.id === dir.pricesId).prices[vehIndex < 0 ? 0 : vehIndex];
+    const routeLabel = `${dir.from} → ${dir.to}`;
+    const capOk = veh.cap >= pax;
+    const ready = !!tDate && capOk && pax > 0;
+    const book = () => {
+      if (!ready) return;
+      const vName = `${veh.name} or similar`;
+      go("transferCheckout", { detail: {
+        title: "Confirm your transfer", total: price, routeLabel, vehicleName: vName, vehicleSlug: veh.slug,
+        vehicleMeta: `${veh.type} · ${veh.cap} passengers · ${veh.bags} bags`,
+        rows: [["Route", routeLabel], ["Vehicle", vName], ["Date", tDate], ["Pick-up", tTime], ["Passengers", pax]],
+        record: { tour: { emoji: "🚙", name: `${vName} — ${routeLabel}`, pole: "Transfer", dur: `${tDate} · ${tTime}`, thumb: vmap[veh.slug] || null }, route: routeLabel, vehicle: vName, unit: "transfer", date: tDate, time: tTime, pax, adults: pax, children: 0, infants: 0, transfer: { time: tTime, unit: "transfer" } },
+      } });
+    };
+    return (
+      <Wrap>
+        <button onClick={back} style={backBtn}><ChevronLeft size={18} /> Back to vehicles</button>
+        <Eyebrow>ATS Logistics · Airport / city transfer</Eyebrow>
+        <h2 className="disp" style={{ fontWeight: 800, fontSize: "clamp(22px,3vw,30px)", margin: "6px 0 20px", color: T.ink }}>{veh.name} <span style={{ fontWeight: 500, fontSize: 16, opacity: 0.55 }}>or similar</span></h2>
+        <div className="veh-cols" style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(320px, 420px)", gap: 24, alignItems: "start" }}>
+          {/* Media + specs */}
+          <div style={{ ...card, padding: 0, overflow: "hidden" }}>
+            <div style={{ height: 260, background: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              {vmap[veh.slug] ? <img src={vmap[veh.slug]} alt={veh.name} style={{ width: "100%", height: "100%", objectFit: "contain", padding: 16 }} /> : <Car size={72} color={T.green} strokeWidth={1.2} />}
+            </div>
+            <div style={{ padding: "18px 22px", borderTop: `1px solid ${T.line}`, display: "flex", gap: 22, flexWrap: "wrap" }}>
+              {[[Users, `Up to ${veh.cap} passengers`], [Luggage, `${veh.bags} bags`], [Route, "Meet & greet · fixed rate"]].map(([Ico, t]) => (
+                <span key={t} style={{ display: "inline-flex", alignItems: "center", gap: 7, fontSize: 13.5, color: "rgba(0,0,0,.75)" }}><Ico size={16} color={T.green} /> {t}</span>
+              ))}
+            </div>
+          </div>
+          {/* Booking form */}
+          <div style={card}>
+            <div style={{ ...sect, marginTop: 0 }}>Your transfer</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <HSelect Ico={Route} label="Route" value={dirI} onChange={setDirI} popWidth={260} options={TRANSFER_DIRECTIONS.map((d, i) => ({ v: i, label: `${d.from} → ${d.to}` }))} />
+              <HField Ico={Calendar} label="Transfer date">
+                <RangeDate from={tDate} to={tDate} onChange={(f) => setTDate(f)} triggerStyle={{ background: "transparent", border: "none", padding: 0 }} wide single minDate={todayStr} />
+              </HField>
+              <div style={{ display: "flex", gap: 10 }}>
+                <TimeField label="Pick-up time" value={tTime} onChange={setTTime} />
+                <div style={{ ...heroBox, position: "relative", cursor: "pointer" }} onClick={() => setPaxOpen((o) => !o)} role="button">
+                  <Users size={19} color={T.green} strokeWidth={2} style={{ flexShrink: 0 }} />
+                  <div style={{ minWidth: 0, flex: 1 }}><div style={heroLab}>Passengers</div><div style={{ fontSize: 14.5, color: T.ink }}>{pax} passenger{pax > 1 ? "s" : ""}</div></div>
+                  <ChevronDown size={15} style={{ opacity: 0.5, flexShrink: 0 }} />
+                  {paxOpen && (
+                    <>
+                      <div className="mpop-backdrop" onClick={(e) => { e.stopPropagation(); setPaxOpen(false); }} style={{ position: "fixed", inset: 0, zIndex: 90 }} />
+                      <div className="mpop" onClick={(e) => e.stopPropagation()} role="dialog" style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, zIndex: 91, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 16, boxShadow: "0 18px 44px rgba(0,0,0,.22)", padding: 20, width: "min(300px, calc(100vw - 28px))", cursor: "default" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                          <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontSize: 15, color: T.ink }}>Passengers</div><div style={{ fontSize: 12.5, color: "rgba(0,0,0,.8)" }}>Up to {veh.cap} for this vehicle</div></div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                            <button onClick={() => setPax((x) => Math.max(1, x - 1))} disabled={pax <= 1} aria-label="Less" style={{ ...btnCircle, width: 44, height: 44, fontSize: 20, opacity: pax <= 1 ? 0.4 : 1 }}>−</button>
+                            <span style={{ fontWeight: 600, minWidth: 20, textAlign: "center", fontSize: 15 }}>{pax}</span>
+                            <button onClick={() => setPax((x) => Math.min(50, x + 1))} aria-label="More" style={{ ...btnCircle, width: 44, height: 44, fontSize: 20 }}>+</button>
+                          </div>
+                        </div>
+                        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 16 }}><button onClick={(e) => { e.stopPropagation(); setPaxOpen(false); }} style={{ background: T.green, color: "#fff", border: "none", borderRadius: 999, padding: "11px 28px", fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}>Done</button></div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+            <div style={{ display: "flex", alignItems: "flex-end", gap: 12, marginTop: 16 }}>
+              <div><div className="disp" style={{ fontWeight: 800, fontSize: 24, color: T.green }}>{fmtXOF(price)}</div><div style={{ fontSize: 12, opacity: 0.6 }}>per vehicle · fixed rate</div></div>
+              <button disabled={!ready} style={{ ...btnGold, marginLeft: "auto", opacity: ready ? 1 : 0.55, cursor: ready ? "pointer" : "not-allowed" }} onClick={book}>Book →</button>
+            </div>
+            {!capOk && <div style={{ fontSize: 12.5, color: T.laterite, marginTop: 8 }}>This vehicle seats up to {veh.cap} — pick a larger category or reduce passengers.</div>}
+            {capOk && !tDate && <div style={{ fontSize: 12.5, color: "rgba(0,0,0,.7)", marginTop: 8 }}>Choose a date to book.</div>}
+          </div>
+        </div>
+        <style>{`@media(max-width:820px){.veh-cols{grid-template-columns:1fr !important}}`}</style>
+      </Wrap>
+    );
+  }
+
+  // ---- Rental ----
+  const car = CARS.find((c) => c.id === id) || CARS[0];
+  const effTo = dateTo || dateFrom;
+  const days = dateFrom ? Math.max(1, Math.round((new Date(effTo + "T00:00:00") - new Date(dateFrom + "T00:00:00")) / 86400000)) : 0;
+  const daily = fuel === "without" ? Math.max(0, car.daily - FUEL_PER_DAY) : car.daily;
+  const total = daily * (days || 1);
+  const ready = pickup.trim() && dateFrom;
+  const book = () => {
+    if (!ready) return;
+    const single = effTo === dateFrom;
+    const period = single ? dateFrom : `${dateFrom} → ${effTo}`;
+    const cName = `${car.name} or similar`;
+    go("rentalCheckout", { detail: {
+      title: "Confirm your car rental", total, image: cmap[car.slug] || null, carName: cName, carType: car.type,
+      rows: [["Vehicle", cName], ["Pick-up", `${pickup} · ${dateFrom} ${puTime}`], ["Return", `${dropoff || pickup} · ${effTo} ${doTime}`], ["Duration", `${days} day${days > 1 ? "s" : ""}`], ["Fuel", fuel === "with" ? "Included" : "Not included"], ["Daily rate", fmtXOF(daily)]],
+      record: { tour: { emoji: "🚗", name: `${cName} — ${days}-day rental`, pole: "Car rental", dur: period, thumb: cmap[car.slug] || null }, date: period, adults: car.seats, children: 0, infants: 0, rental: { car: cName, pickup, dropoff: dropoff || pickup, dateFrom, dateTo: effTo, puTime, doTime, days, daily, fuel: fuel === "with" ? "Included" : "Not included" } },
+    } });
+  };
+  return (
+    <Wrap>
+      <button onClick={back} style={backBtn}><ChevronLeft size={18} /> Back to vehicles</button>
+      <Eyebrow>ATS Logistics · Car rental</Eyebrow>
+      <h2 className="disp" style={{ fontWeight: 800, fontSize: "clamp(22px,3vw,30px)", margin: "6px 0 20px", color: T.ink }}>{car.name} <span style={{ fontWeight: 500, fontSize: 16, opacity: 0.55 }}>or similar</span></h2>
+      <div className="veh-cols" style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(320px, 420px)", gap: 24, alignItems: "start" }}>
+        <div style={{ ...card, padding: 0, overflow: "hidden" }}>
+          <div style={{ position: "relative", height: 270, background: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <span style={{ position: "absolute", top: 12, left: 12, background: "rgba(255,255,255,.92)", borderRadius: 999, padding: "4px 12px", fontSize: 12, fontWeight: 700, color: T.ink }}>{car.type}</span>
+            {cmap[car.slug] ? <img src={cmap[car.slug]} alt={car.name} style={{ width: "100%", height: "100%", objectFit: "contain", padding: 16 }} /> : <Car size={72} color={T.green} strokeWidth={1.2} />}
+          </div>
+          <div style={{ padding: "18px 22px", borderTop: `1px solid ${T.line}`, display: "flex", gap: 22, flexWrap: "wrap" }}>
+            {[[Users, `${car.seats} seats`], [Settings2, car.transmission], [Fuel, car.fuel], [MapPin, car.location]].map(([Ico, t]) => (
+              <span key={t} style={{ display: "inline-flex", alignItems: "center", gap: 7, fontSize: 13.5, color: "rgba(0,0,0,.75)" }}><Ico size={16} color={T.green} /> {t}</span>
+            ))}
+          </div>
+        </div>
+        <div style={card}>
+          <div style={{ ...sect, marginTop: 0 }}>Your rental</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <HField Ico={MapPin} label="Pick-up"><AddressInput bare value={pickup} onChange={setPickup} placeholder="Address in Dakar…" /></HField>
+            <HField Ico={MapPin} label="Drop-off"><AddressInput bare value={dropoff} onChange={setDropoff} placeholder="Same drop-off" /></HField>
+            <HField Ico={Calendar} label="Rental dates">
+              <RangeDate from={dateFrom} to={dateTo} minDate={minRental} onChange={(f, tt) => { setDateFrom(f); setDateTo(tt); }} triggerStyle={{ background: "transparent", border: "none", padding: 0 }} wide />
+            </HField>
+            <div style={{ display: "flex", gap: 10 }}>
+              <TimeField label="Pick-up time" value={puTime} onChange={setPuTime} />
+              <TimeField label="Drop-off time" value={doTime} onChange={setDoTime} />
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              {[["with", "With fuel"], ["without", "Without fuel"]].map(([k, l]) => (
+                <button key={k} onClick={() => setFuel(k)} style={{ flex: 1, border: `1.5px solid ${fuel === k ? T.green : T.line}`, background: fuel === k ? T.green : "#fff", color: fuel === k ? "#fff" : T.ink, borderRadius: 10, padding: "9px 8px", fontWeight: 600, fontSize: 13, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5, fontFamily: "inherit" }}><Fuel size={13} /> {l}</button>
+              ))}
+            </div>
+          </div>
+          <div style={{ display: "flex", alignItems: "flex-end", gap: 12, marginTop: 16 }}>
+            <div><div className="disp" style={{ fontWeight: 800, fontSize: 24, color: T.green }}>{fmtXOF(daily)}<span style={{ fontSize: 12, fontWeight: 500, opacity: 0.6 }}> /day</span></div>{days > 0 && <div style={{ fontSize: 12, opacity: 0.7 }}>Total {days}d: <strong>{fmtXOF(total)}</strong></div>}</div>
+            <button disabled={!ready} style={{ ...btnGold, marginLeft: "auto", opacity: ready ? 1 : 0.55, cursor: ready ? "pointer" : "not-allowed" }} onClick={book}>Book →</button>
+          </div>
+          {!ready && <div style={{ fontSize: 12.5, color: "rgba(0,0,0,.7)", marginTop: 8 }}>Enter a pick-up address and rental dates to continue.</div>}
+        </div>
+      </div>
+      <style>{`@media(max-width:820px){.veh-cols{grid-template-columns:1fr !important}}`}</style>
+    </Wrap>
+  );
+}
+const backBtn = { display: "inline-flex", alignItems: "center", gap: 6, background: "none", border: "none", cursor: "pointer", color: T.ink, fontWeight: 700, fontSize: 14, padding: 0, marginBottom: 14, fontFamily: "inherit" };
 
 function TransferWidget({ addBooking, compact, user, go }) {
   const [dirI, setDirI] = useState(0);
