@@ -2108,7 +2108,7 @@ function Home({ go, notify, setBooking, filters, setFilters, setChat, addBooking
   const [featTab, setFeatTab] = useState("Featured");
   const featList = featTab === "Featured" ? featured : TOURS.filter((t) => t.tag === featTab).slice(0, 12);
   const todayStr = new Date().toISOString().slice(0, 10);
-  const heroUrl = supabase.storage.from(PHOTO_BUCKET).getPublicUrl("site/hero.jpg").data.publicUrl;
+  const heroUrl = supabase.storage.from(PHOTO_BUCKET).getPublicUrl("site/Hero.webp").data.publicUrl;
 
   return (
     <>
@@ -2280,7 +2280,7 @@ function PortalTabs({ go }) {
     traveler: {
       title: "Plan, book and manage — all in one place",
       cta: ["Open my account", "account"],
-      img: "site/hero.jpg",
+      img: "site/Hero.webp",
       steps: [
         ["Browse & pick", "Explore 35+ Senegal experiences, filter by theme, then choose your dates and travellers — prices adjust with your group size."],
         ["Book your way", "Pay in full as a guest, or create a free account to reserve with a 20% Ma Tontine Voyage deposit and settle the balance in instalments before departure."],
@@ -2290,7 +2290,7 @@ function PortalTabs({ go }) {
     tripbuilder: {
       title: "Build your own trip, your way",
       cta: ["Open Trip Builder", "builder"],
-      img: "site/hero.jpg",
+      img: "site/Hero.webp",
       steps: [
         ["Design your trip", "Set your destination, dates and travellers, then assemble your own itinerary — hotels, transport and experiences picked from the ATS catalogue."],
         ["Reserve with 20%", "Lock it in with just a 20% deposit through Ma Tontine Voyage, and spread the balance in instalments before departure."],
@@ -2310,7 +2310,7 @@ function PortalTabs({ go }) {
     agent: {
       title: "Sell ATS, earn commission on every booking",
       cta: ["Open agent portal", "agents"],
-      img: "site/hero.jpg",
+      img: "site/Hero.webp",
       steps: [
         ["Join the program", "Get your personal agent code from ATS — your discount and commission rates are configured on it."],
         ["Book for your clients", "Enter your client's details at checkout; your code applies their discount and records your commission automatically."],
