@@ -2247,7 +2247,6 @@ function Home({ go, notify, setBooking, filters, setFilters, setChat, addBooking
 
       {/* PORTALS */}
       <Wrap>
-        <H2>A portal for every client</H2>
         <PortalTabs go={go} />
       </Wrap>
 
@@ -2273,25 +2272,94 @@ function SearchField({ label: l, children }) {
 }
 function PortalTabs({ go }) {
   const [tab, setTab] = useState("traveler");
-  const content = {
-    traveler: ["Save favorites and itineraries · track bookings and trip countdowns · pay instalments · download invoices · chat with ATS on WhatsApp.", "Open my account", "account"],
-    corporate: ["Request and approve quotations internally · manage traveler groups · consolidated invoicing · dedicated account manager for governments, embassies, NGOs and companies.", "Open corporate portal", "corporate"],
-    agent: ["Net rates and commission tracking · white-label quotations in minutes · manage your customers and bookings · monthly reports.", "Open agent portal", "agents"],
+  const [step, setStep] = useState(0);
+  const TABS = { traveler: "Travelers", corporate: "Corporate & NGO", agent: "Travel agents" };
+  const PORTALS = {
+    traveler: {
+      title: "Plan, book and manage — all in one place",
+      cta: ["Open my account", "account"],
+      img: "site/hero.jpg",
+      steps: [
+        ["Browse & pick", "Explore 35+ Senegal experiences, filter by theme, then choose your dates and travellers — prices adjust with your group size."],
+        ["Book your way", "Pay in full as a guest, or create a free account to reserve with a 20% Ma Tontine Voyage deposit and settle the balance in instalments before departure."],
+        ["Manage everything", "Track your bookings, change your date or number of travellers, cancel if plans shift, download invoices, and chat with ATS on WhatsApp."],
+      ],
+    },
+    corporate: {
+      title: "Preferential rates with Book Now, Pay Later",
+      cta: ["Open corporate portal", "corporate"],
+      img: "site/transfer.jpg",
+      steps: [
+        ["Get your rate", "Your organization is set up with a negotiated preferential discount that applies automatically to every booking your team makes."],
+        ["Book now, pay later", "Reserve tours, transfers and cars without paying upfront — every booking is invoiced to your corporate account instead of charged."],
+        ["Consolidated billing", "See exactly what's outstanding, settle on your terms, and lean on a dedicated account manager for governments, embassies, NGOs and companies."],
+      ],
+    },
+    agent: {
+      title: "Sell ATS, earn commission on every booking",
+      cta: ["Open agent portal", "agents"],
+      img: "site/hero.jpg",
+      steps: [
+        ["Join the program", "Get your personal agent code from ATS — your discount and commission rates are configured on it."],
+        ["Book for your clients", "Enter your client's details at checkout; your code applies their discount and records your commission automatically."],
+        ["Track & get paid", "Follow your bookings and commissions in the agent portal, with monthly reports and payouts."],
+      ],
+    },
   };
+  const p = PORTALS[tab];
+  const n = p.steps.length;
+  const go2 = (k) => { setTab(k); setStep(0); };
+  const prev = () => setStep((s) => (s - 1 + n) % n);
+  const next = () => setStep((s) => (s + 1) % n);
+  const imgUrl = supabase.storage.from(PHOTO_BUCKET).getPublicUrl(p.img).data.publicUrl;
+
   return (
-    <>
-      <div style={{ display: "flex", gap: 8, margin: "6px 0 16px", flexWrap: "wrap" }}>
-        {[["traveler", "Travelers"], ["corporate", "Corporate & NGO"], ["agent", "Travel agents"]].map(([k, l]) => (
-          <button key={k} onClick={() => setTab(k)} style={{ border: `1px solid ${tab === k ? T.green : T.line}`, background: tab === k ? T.green : "#fff", color: tab === k ? "#fff" : T.ink, borderRadius: 999, padding: "9px 18px", fontWeight: 600, cursor: "pointer", fontSize: 14 }}>{l}</button>
-        ))}
+    <div className="portal-card" style={{ background: "#F6F1E6", borderRadius: 24, overflow: "hidden", display: "grid", gridTemplateColumns: "1.05fr 0.95fr", alignItems: "stretch" }}>
+      <style>{`@media(max-width:860px){.portal-card{grid-template-columns:1fr !important}.portal-card .portal-media{min-height:220px !important;order:-1}}`}</style>
+      {/* LEFT — content */}
+      <div style={{ padding: "clamp(24px,4vw,44px)" }}>
+        <span style={{ display: "inline-block", background: T.green, color: "#fff", fontSize: 11.5, fontWeight: 700, letterSpacing: ".04em", textTransform: "uppercase", borderRadius: 8, padding: "5px 12px" }}>How it works</span>
+
+        {/* Tab pills */}
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", margin: "16px 0 6px" }}>
+          {Object.entries(TABS).map(([k, l]) => {
+            const on = tab === k;
+            return <button key={k} onClick={() => go2(k)} style={{ border: `1.5px solid ${on ? T.green : "rgba(0,0,0,.18)"}`, background: on ? T.green : "transparent", color: on ? "#fff" : T.ink, borderRadius: 999, padding: "8px 16px", fontWeight: 700, cursor: "pointer", fontSize: 13.5, fontFamily: "inherit" }}>{l}</button>;
+          })}
+        </div>
+
+        <h2 className="disp" style={{ fontSize: "clamp(24px,3.2vw,34px)", fontWeight: 800, color: T.ink, letterSpacing: "-0.02em", lineHeight: 1.12, margin: "14px 0 18px", maxWidth: 460 }}>{p.title}</h2>
+
+        {/* Step */}
+        <div style={{ display: "flex", gap: 16, minHeight: 118 }}>
+          <div style={{ flexShrink: 0, width: 44, height: 44, borderRadius: "50%", background: "#fff", border: `1.5px solid ${T.green}`, color: T.green, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 18, fontFamily: "'Century Gothic','Poppins',sans-serif" }}>{step + 1}</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="disp" style={{ fontWeight: 800, fontSize: 18, color: T.ink, marginBottom: 5 }}>{p.steps[step][0]}</div>
+            <p style={{ margin: 0, fontSize: 14.5, lineHeight: 1.6, color: "rgba(0,0,0,.75)" }}>{p.steps[step][1]}</p>
+          </div>
+        </div>
+
+        {/* Stepper controls */}
+        <div style={{ display: "flex", alignItems: "center", gap: 14, marginTop: 18 }}>
+          <button onClick={prev} aria-label="Previous step" style={portalArrow}><ChevronLeft size={18} /></button>
+          <button onClick={next} aria-label="Next step" style={portalArrow}><ChevronRight size={18} /></button>
+          <div style={{ display: "flex", gap: 6, marginLeft: 4 }}>
+            {p.steps.map((_, i) => (
+              <button key={i} onClick={() => setStep(i)} aria-label={`Step ${i + 1}`} style={{ width: i === step ? 22 : 8, height: 8, borderRadius: 999, border: "none", background: i === step ? T.green : "rgba(0,0,0,.2)", cursor: "pointer", transition: "width .2s ease, background .2s ease", padding: 0 }} />
+            ))}
+          </div>
+          <span style={{ marginLeft: "auto", fontSize: 12.5, color: "rgba(0,0,0,.55)", fontWeight: 600 }}>{step + 1} / {n}</span>
+        </div>
+
+        <button style={{ ...btnGold, marginTop: 24, fontSize: 14.5, padding: "12px 24px" }} onClick={() => go(p.cta[1])}>{p.cta[0]} →</button>
       </div>
-      <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 16, padding: 24, fontSize: 15, lineHeight: 1.7 }}>
-        <p style={{ margin: 0 }}>{content[tab][0]}</p>
-        <button style={{ ...btnGreen, marginTop: 14, fontSize: 14 }} onClick={() => go(content[tab][2])}>{content[tab][1]} →</button>
-      </div>
-    </>
+
+      {/* RIGHT — image */}
+      <div className="portal-media" style={{ position: "relative", minHeight: 380, background: `linear-gradient(160deg, rgba(0,0,0,.10), rgba(0,0,0,.10)), url("${imgUrl}") center/cover no-repeat, linear-gradient(150deg, ${T.green}, ${T.indigo})`, margin: 10, borderRadius: 18 }} />
+    </div>
   );
 }
+const portalArrow = { width: 40, height: 40, borderRadius: "50%", border: "1.5px solid rgba(0,0,0,.18)", background: "#fff", color: T.ink, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 };
 
 // ---------------- TOURS LISTING ----------------
 // ---- Tour photos (Supabase Storage bucket "tour-photos") ----
