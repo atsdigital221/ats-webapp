@@ -6542,8 +6542,10 @@ function HomeTransportPicker({ go }) {
         })}
       </div>
 
+      {/* Mobile: one horizontal scrolling row instead of a long vertical list */}
+      <style>{`@media(max-width:760px){.tp-grid{grid-template-columns:none!important;grid-auto-flow:column;grid-auto-columns:min(240px,74vw);overflow-x:auto;padding-bottom:10px;-webkit-overflow-scrolling:touch;scroll-snap-type:x proximity}.tp-grid>button{scroll-snap-align:start}}`}</style>
       {tab === "transfer" ? (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(230px, 1fr))", gap: 16 }}>
+        <div className="tp-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(230px, 1fr))", gap: 16 }}>
           {VEHICLES.map((v, i) => (
             <button key={v.slug} className="card-hover" style={cardBase} onClick={() => go("vehicle", { mode: "transfer", id: v.slug })}>
               <div style={{ height: 130, background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", borderBottom: `1px solid ${T.line}` }}>
@@ -6565,7 +6567,7 @@ function HomeTransportPicker({ go }) {
           ))}
         </div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: 16 }}>
+        <div className="tp-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: 16 }}>
           {CARS.map((car) => (
             <button key={car.id} disabled={!car.available} className={car.available ? "card-hover" : ""} style={{ ...cardBase, cursor: car.available ? "pointer" : "not-allowed", opacity: car.available ? 1 : 0.6 }} onClick={() => car.available && go("vehicle", { mode: "rental", id: car.id })}>
               <div style={{ position: "relative", height: 140, background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", borderBottom: `1px solid ${T.line}` }}>
