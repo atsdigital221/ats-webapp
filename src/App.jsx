@@ -2337,10 +2337,10 @@ function PortalTabs({ go }) {
           })}
         </div>
 
-        <h2 className="disp" style={{ fontSize: "clamp(24px,3.2vw,34px)", fontWeight: 800, color: T.ink, letterSpacing: "-0.02em", lineHeight: 1.12, margin: "14px 0 18px", maxWidth: 460 }}>{p.title}</h2>
+        <h2 className="disp" style={{ fontSize: "clamp(20px,2.5vw,27px)", fontWeight: 800, color: T.ink, letterSpacing: "-0.02em", lineHeight: 1.15, margin: "14px 0 18px", maxWidth: 440, minHeight: 62, display: "flex", alignItems: "flex-end" }}>{p.title}</h2>
 
         {/* Step */}
-        <div style={{ display: "flex", gap: 16, minHeight: 118 }}>
+        <div style={{ display: "flex", gap: 16, minHeight: 132 }}>
           <div style={{ flexShrink: 0, width: 44, height: 44, borderRadius: "50%", background: "#fff", border: `1.5px solid ${T.green}`, color: T.green, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 18, fontFamily: "'Century Gothic','Poppins',sans-serif" }}>{step + 1}</div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div className="disp" style={{ fontWeight: 800, fontSize: 18, color: T.ink, marginBottom: 5 }}>{p.steps[step][0]}</div>
