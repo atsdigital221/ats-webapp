@@ -2017,13 +2017,13 @@ function HeroSearch({ go }) {
   return (
     <div className="hero-widget" style={{ background: "#fff", borderRadius: 20, boxShadow: "0 24px 60px rgba(9,20,15,.24)", padding: "8px 16px 18px", maxWidth: 1120, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
       {/* Web only: split the widget into a translucent container (holding the pills) + a white search bar. Mobile stays a single white panel. */}
-      <style>{`@media(min-width:761px){.hero-widget{background:rgba(255,255,255,.14)!important;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.4);padding:12px 14px 14px!important}.hero-widget .hero-searchbar{background:#fff;border-radius:16px;padding:14px 16px 16px;box-shadow:0 12px 34px rgba(9,20,15,.16)}}`}</style>
+      <style>{`@media(min-width:761px){.hero-widget{background:transparent!important;box-shadow:none!important;border:none!important;padding:0!important}.hero-widget .hero-searchbar{background:#fff;border-radius:16px;padding:14px 16px 16px;box-shadow:0 12px 34px rgba(9,20,15,.16)}}`}</style>
       {/* main tabs — pills, centered */}
       <div style={{ display: "flex", justifyContent: "center", gap: 12, padding: "4px 0 6px" }}>
         {tabs.map(([k, l, Ico, sz]) => {
           const on = tab === k;
           return (
-            <button key={k} onClick={() => setTab(k)} style={{ display: "inline-flex", alignItems: "center", gap: 8, background: on ? T.green : "transparent", border: `1px solid ${on ? T.green : T.ink}`, borderRadius: 999, cursor: "pointer", color: on ? "#fff" : T.ink, fontWeight: on ? 700 : 600, fontSize: 14, padding: "9px 22px", fontFamily: "inherit", transition: "background .15s ease, color .15s ease, border-color .15s ease" }}>
+            <button key={k} onClick={() => setTab(k)} style={{ display: "inline-flex", alignItems: "center", gap: 8, background: on ? T.green : "#fff", border: `1px solid ${on ? T.green : "#fff"}`, boxShadow: on ? "none" : "0 2px 10px rgba(0,0,0,.14)", borderRadius: 999, cursor: "pointer", color: on ? "#fff" : "#111", fontWeight: on ? 700 : 600, fontSize: 14, padding: "9px 22px", fontFamily: "inherit", transition: "background .15s ease, color .15s ease, border-color .15s ease" }}>
               <Ico size={sz || 19} strokeWidth={1.9} />
               <span>{l}</span>
             </button>
