@@ -2128,11 +2128,15 @@ function Home({ go, notify, setBooking, filters, setFilters, setChat, addBooking
         </div>
       </header>
 
-      {/* CHOOSE YOUR AFRICA — moved to 2nd position, right after the hero */}
+      {/* PORTALS — right after the hero */}
+      <Wrap>
+        <PortalTabs go={go} />
+      </Wrap>
+
+      {/* CHOOSE YOUR AFRICA */}
       <section className="africa-section" style={{ background: "#fff" }}>
         <style>{`
           @media(max-width:760px){
-            .africa-section{margin-top:280px}
             .africa-grid{gap:26px !important}
             .africa-globe-wrap{margin:0 auto !important;max-width:400px !important;order:-1}
           }
@@ -2245,11 +2249,6 @@ function Home({ go, notify, setBooking, filters, setFilters, setChat, addBooking
         </Wrap>
       </section>
 
-      {/* PORTALS */}
-      <Wrap>
-        <PortalTabs go={go} />
-      </Wrap>
-
       {/* AI */}
       <Wrap style={{ paddingTop: 0 }}>
         <div style={{ background: `linear-gradient(120deg, ${T.green}, ${T.ink})`, color: T.paper, borderRadius: 20, padding: "34px 26px", display: "flex", gap: 20, flexWrap: "wrap", alignItems: "center" }}>
@@ -2315,7 +2314,7 @@ function PortalTabs({ go }) {
 
   return (
     <div className="portal-card" style={{ background: "#F6F1E6", borderRadius: 24, overflow: "hidden", display: "grid", gridTemplateColumns: "1.05fr 0.95fr", alignItems: "stretch" }}>
-      <style>{`@media(max-width:860px){.portal-card{grid-template-columns:1fr !important}.portal-card .portal-media{min-height:220px !important;order:-1}}`}</style>
+      <style>{`@media(max-width:860px){.portal-card{grid-template-columns:1fr !important}.portal-card .portal-media{min-height:220px !important;order:-1}}@media(max-width:560px){.portal-card{margin-top:280px}}`}</style>
       {/* LEFT — content */}
       <div style={{ padding: "clamp(24px,4vw,44px)" }}>
         <span style={{ display: "inline-block", background: T.green, color: "#fff", fontSize: 11.5, fontWeight: 700, letterSpacing: ".04em", textTransform: "uppercase", borderRadius: 8, padding: "5px 12px" }}>How it works</span>
