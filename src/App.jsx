@@ -6617,7 +6617,7 @@ function VehicleDetailPage({ mode, id, go, user }) {
   const [fuel, setFuel] = useState("with");
 
   const back = () => (window.history.length > 1 ? window.history.back() : go("home"));
-  const card = { background: "#fff", border: `1px solid ${T.line}`, borderRadius: 18, padding: 22 };
+  const card = { background: "#fff", border: `1px solid ${T.line}`, borderRadius: 18, padding: 22, minWidth: 0 };
 
   if (mode === "transfer") {
     const veh = VEHICLES[vehIndex] || VEHICLES[0];
@@ -6672,7 +6672,7 @@ function VehicleDetailPage({ mode, id, go, user }) {
               <HField Ico={Calendar} label="Transfer date">
                 <RangeDate from={tDate} to={tDate} onChange={(f) => setTDate(f)} triggerStyle={{ background: "transparent", border: "none", padding: 0 }} wide single minDate={todayStr} />
               </HField>
-              <div style={{ display: "flex", gap: 10 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(148px, 1fr))", gap: 10 }}>
                 <TimeField label="Pick-up time" value={tTime} onChange={setTTime} />
                 <div style={{ ...heroBox, position: "relative", cursor: "pointer" }} onClick={() => setPaxOpen((o) => !o)} role="button">
                   <Users size={19} color={T.green} strokeWidth={2} style={{ flexShrink: 0 }} />
@@ -6705,7 +6705,7 @@ function VehicleDetailPage({ mode, id, go, user }) {
             {capOk && !tDate && <div style={{ fontSize: 12.5, color: "rgba(0,0,0,.7)", marginTop: 8 }}>Choose a date to book.</div>}
           </div>
         </div>
-        <style>{`@media(max-width:820px){.veh-cols{grid-template-columns:1fr !important}}`}</style>
+        <style>{`@media(max-width:820px){.veh-cols{grid-template-columns:minmax(0,1fr) !important}}`}</style>
       </Wrap>
     );
   }
@@ -6763,7 +6763,7 @@ function VehicleDetailPage({ mode, id, go, user }) {
             <HField Ico={Calendar} label="Rental dates">
               <RangeDate from={dateFrom} to={dateTo} minDate={minRental} onChange={(f, tt) => { setDateFrom(f); setDateTo(tt); }} triggerStyle={{ background: "transparent", border: "none", padding: 0 }} wide />
             </HField>
-            <div style={{ display: "flex", gap: 10 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(148px, 1fr))", gap: 10 }}>
               <TimeField label="Pick-up time" value={puTime} onChange={setPuTime} />
               <TimeField label="Drop-off time" value={doTime} onChange={setDoTime} />
             </div>
@@ -6780,7 +6780,7 @@ function VehicleDetailPage({ mode, id, go, user }) {
           {!ready && <div style={{ fontSize: 12.5, color: "rgba(0,0,0,.7)", marginTop: 8 }}>Enter a pick-up address and rental dates to continue.</div>}
         </div>
       </div>
-      <style>{`@media(max-width:820px){.veh-cols{grid-template-columns:1fr !important}}`}</style>
+      <style>{`@media(max-width:820px){.veh-cols{grid-template-columns:minmax(0,1fr) !important}}`}</style>
     </Wrap>
   );
 }
