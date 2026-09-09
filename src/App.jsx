@@ -2132,7 +2132,7 @@ function Home({ go, notify, setBooking, filters, setFilters, setChat, addBooking
       <section className="africa-section" style={{ background: "#fff" }}>
         <style>{`
           @media(max-width:760px){
-            .africa-section{margin-top:150px}
+            .africa-section{margin-top:280px}
             .africa-grid{gap:26px !important}
             .africa-globe-wrap{margin:0 auto !important;max-width:400px !important;order:-1}
           }
