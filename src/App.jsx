@@ -2122,7 +2122,7 @@ function Home({ go, notify, setBooking, filters, setFilters, setChat, addBooking
         <div style={{
           width: "100%", position: "relative", zIndex: 6,
           height: "clamp(360px,42vw,520px)",
-          background: `linear-gradient(rgba(0,0,0,.62), rgba(0,0,0,.62)), url("${heroUrl}") center/cover no-repeat, linear-gradient(160deg, #006B33 0%, ${T.green} 65%, #00A84F 100%)`,
+          background: `linear-gradient(rgba(0,0,0,.62), rgba(0,0,0,.62)), url("${heroUrl}") center bottom/cover no-repeat, linear-gradient(160deg, #006B33 0%, ${T.green} 65%, #00A84F 100%)`,
         }}>
           {/* Overlay pinned to the hero top — grows downward and may overflow the hero without stretching it */}
           <div style={{ position: "absolute", top: "clamp(80px,15vw,185px)", left: 0, right: 0, padding: "0 clamp(20px,4vw,54px)", display: "flex", flexDirection: "column", alignItems: "center" }}>
