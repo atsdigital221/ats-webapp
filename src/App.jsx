@@ -6485,6 +6485,40 @@ function VehiclePickerModal({ prices, vmap, pax, onSelect, onClose }) {
   );
 }
 
+// Rental fleet picker (choose another car from a vehicle detail page)
+function RentalPickerModal({ cmap, onSelect, onClose }) {
+  return (
+    <div role="dialog" aria-modal="true" onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 70, background: "rgba(11,46,27,.55)", display: "flex", alignItems: "flex-start", justifyContent: "center", padding: 14, overflowY: "auto" }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background: T.paper, borderRadius: 20, width: "100%", maxWidth: 760, margin: "24px 0", padding: 22 }}>
+        <div style={{ display: "flex", alignItems: "center", marginBottom: 14 }}>
+          <h3 className="disp" style={{ fontWeight: 800, fontSize: 20, margin: 0 }}>Choose your car</h3>
+          <button onClick={onClose} aria-label="Close" style={{ ...btnCircle, marginLeft: "auto" }}><X size={16} /></button>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 14 }}>
+          {CARS.map((car) => {
+            const ok = car.available;
+            return (
+              <button key={car.id} disabled={!ok} onClick={() => ok && onSelect(car.id)}
+                className={ok ? "card-hover" : ""} style={{ textAlign: "left", background: "#fff", border: `1px solid ${T.line}`, borderRadius: 16, overflow: "hidden", cursor: ok ? "pointer" : "not-allowed", opacity: ok ? 1 : 0.45, padding: 0, display: "flex", flexDirection: "column" }}>
+                <div style={{ position: "relative", height: 130, background: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <span style={{ position: "absolute", top: 8, left: 8, background: "rgba(255,255,255,.9)", borderRadius: 999, padding: "3px 10px", fontSize: 11, fontWeight: 700, color: T.ink }}>{car.type}</span>
+                  {!ok && <span style={{ position: "absolute", top: 8, right: 8, background: "#B3261E", color: "#fff", borderRadius: 999, padding: "3px 10px", fontSize: 11, fontWeight: 700 }}>Unavailable</span>}
+                  {cmap[car.slug] ? <img src={cmap[car.slug]} alt={car.name} style={{ width: "100%", height: "100%", objectFit: "contain" }} /> : <Car size={44} color={T.green} strokeWidth={1.5} />}
+                </div>
+                <div style={{ padding: "12px 14px" }}>
+                  <div className="disp" style={{ fontWeight: 700, fontSize: 15.5 }}>{car.name} <span style={{ fontWeight: 500, fontSize: 12, opacity: 0.6 }}>or similar</span></div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 12.5, opacity: 0.7, margin: "5px 0 8px" }}><span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><Users size={13} /> {car.seats}</span><span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><Settings2 size={13} /> {car.transmission}</span></div>
+                  <div style={{ fontWeight: 800, fontSize: 16, color: T.green }} className="disp">{fmtXOF(car.daily)}<span style={{ fontSize: 12, fontWeight: 500, opacity: 0.6 }}> /day</span></div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Lowest transfer price across the 6 routes for a given vehicle index
 const transferFromPrice = (i) => Math.min(...TRANSFER_ROUTES.map((r) => r.prices[i]));
 
@@ -6565,11 +6599,15 @@ function VehicleDetailPage({ mode, id, go, user }) {
 
   // Transfer state
   const [dirI, setDirI] = useState(0);
+  const [vehIndex, setVehIndex] = useState(() => Math.max(0, VEHICLES.findIndex((v) => v.slug === id)));
+  const [vehPicker, setVehPicker] = useState(false);
   const [tDate, setTDate] = useState("");
   const [tTime, setTTime] = useState("10 h 30");
   const [pax, setPax] = useState(2);
   const [paxOpen, setPaxOpen] = useState(false);
   // Rental state
+  const [carId, setCarId] = useState(id);
+  const [carPicker, setCarPicker] = useState(false);
   const [pickup, setPickup] = useState("");
   const [dropoff, setDropoff] = useState("");
   const [dateFrom, setDateFrom] = useState("");
@@ -6582,10 +6620,10 @@ function VehicleDetailPage({ mode, id, go, user }) {
   const card = { background: "#fff", border: `1px solid ${T.line}`, borderRadius: 18, padding: 22 };
 
   if (mode === "transfer") {
-    const vehIndex = VEHICLES.findIndex((v) => v.slug === id);
     const veh = VEHICLES[vehIndex] || VEHICLES[0];
     const dir = TRANSFER_DIRECTIONS[dirI];
-    const price = TRANSFER_ROUTES.find((r) => r.id === dir.pricesId).prices[vehIndex < 0 ? 0 : vehIndex];
+    const prices = TRANSFER_ROUTES.find((r) => r.id === dir.pricesId).prices;
+    const price = prices[vehIndex];
     const routeLabel = `${dir.from} → ${dir.to}`;
     const capOk = veh.cap >= pax;
     const ready = !!tDate && capOk && pax > 0;
@@ -6621,6 +6659,16 @@ function VehicleDetailPage({ mode, id, go, user }) {
             <div style={{ ...sect, marginTop: 0 }}>Your transfer</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               <HSelect Ico={Route} label="Route" value={dirI} onChange={setDirI} popWidth={260} options={TRANSFER_DIRECTIONS.map((d, i) => ({ v: i, label: `${d.from} → ${d.to}` }))} />
+              {/* Vehicle — change without leaving the page */}
+              <div style={{ ...heroBox, position: "relative", cursor: "pointer" }} onClick={() => setVehPicker(true)} role="button" aria-haspopup="dialog">
+                {vmap[veh.slug] ? <img src={vmap[veh.slug]} alt="" style={{ width: 48, height: 32, objectFit: "contain", flexShrink: 0 }} /> : <Car size={19} color={T.green} strokeWidth={2} style={{ flexShrink: 0 }} />}
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={heroLab}>Vehicle</div>
+                  <div style={{ fontSize: 14.5, color: T.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{veh.name} <span style={{ fontWeight: 500, opacity: 0.6 }}>or similar</span> · {fmtXOF(price)}</div>
+                </div>
+                <ChevronDown size={15} style={{ opacity: 0.5, flexShrink: 0 }} />
+              </div>
+              {vehPicker && <VehiclePickerModal prices={prices} vmap={vmap} pax={pax} onSelect={(i) => { setVehIndex(i); setVehPicker(false); }} onClose={() => setVehPicker(false)} />}
               <HField Ico={Calendar} label="Transfer date">
                 <RangeDate from={tDate} to={tDate} onChange={(f) => setTDate(f)} triggerStyle={{ background: "transparent", border: "none", padding: 0 }} wide single minDate={todayStr} />
               </HField>
@@ -6663,7 +6711,7 @@ function VehicleDetailPage({ mode, id, go, user }) {
   }
 
   // ---- Rental ----
-  const car = CARS.find((c) => c.id === id) || CARS[0];
+  const car = CARS.find((c) => c.id === carId) || CARS[0];
   const effTo = dateTo || dateFrom;
   const days = dateFrom ? Math.max(1, Math.round((new Date(effTo + "T00:00:00") - new Date(dateFrom + "T00:00:00")) / 86400000)) : 0;
   const daily = fuel === "without" ? Math.max(0, car.daily - FUEL_PER_DAY) : car.daily;
@@ -6700,6 +6748,16 @@ function VehicleDetailPage({ mode, id, go, user }) {
         <div style={card}>
           <div style={{ ...sect, marginTop: 0 }}>Your rental</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {/* Vehicle — change the car without leaving the page */}
+            <div style={{ ...heroBox, position: "relative", cursor: "pointer" }} onClick={() => setCarPicker(true)} role="button" aria-haspopup="dialog">
+              {cmap[car.slug] ? <img src={cmap[car.slug]} alt="" style={{ width: 48, height: 32, objectFit: "contain", flexShrink: 0 }} /> : <Car size={19} color={T.green} strokeWidth={2} style={{ flexShrink: 0 }} />}
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={heroLab}>Vehicle</div>
+                <div style={{ fontSize: 14.5, color: T.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{car.name} <span style={{ fontWeight: 500, opacity: 0.6 }}>or similar</span> · {fmtXOF(car.daily)}/day</div>
+              </div>
+              <ChevronDown size={15} style={{ opacity: 0.5, flexShrink: 0 }} />
+            </div>
+            {carPicker && <RentalPickerModal cmap={cmap} onSelect={(cid) => { setCarId(cid); setCarPicker(false); }} onClose={() => setCarPicker(false)} />}
             <HField Ico={MapPin} label="Pick-up"><AddressInput bare value={pickup} onChange={setPickup} placeholder="Address in Dakar…" /></HField>
             <HField Ico={MapPin} label="Drop-off"><AddressInput bare value={dropoff} onChange={setDropoff} placeholder="Same drop-off" /></HField>
             <HField Ico={Calendar} label="Rental dates">
