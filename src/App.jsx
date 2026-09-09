@@ -6604,13 +6604,13 @@ function VehicleDetailPage({ mode, id, go, user }) {
         <button onClick={back} style={backBtn}><ChevronLeft size={18} /> Back to vehicles</button>
         <Eyebrow>ATS Logistics · Airport / city transfer</Eyebrow>
         <h2 className="disp" style={{ fontWeight: 800, fontSize: "clamp(22px,3vw,30px)", margin: "6px 0 20px", color: T.ink }}>{veh.name} <span style={{ fontWeight: 500, fontSize: 16, opacity: 0.55 }}>or similar</span></h2>
-        <div className="veh-cols" style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(320px, 420px)", gap: 24, alignItems: "start" }}>
+        <div className="veh-cols" style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(320px, 420px)", gap: 24, alignItems: "stretch" }}>
           {/* Media + specs */}
-          <div style={{ ...card, padding: 0, overflow: "hidden" }}>
-            <div style={{ height: 260, background: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              {vmap[veh.slug] ? <img src={vmap[veh.slug]} alt={veh.name} style={{ width: "100%", height: "100%", objectFit: "contain", padding: 16 }} /> : <Car size={72} color={T.green} strokeWidth={1.2} />}
+          <div style={{ ...card, padding: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+            <div style={{ flex: 1, minHeight: 300, background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+              {vmap[veh.slug] ? <img src={vmap[veh.slug]} alt={veh.name} style={{ maxHeight: 300, maxWidth: "100%", width: "auto", objectFit: "contain" }} /> : <Car size={90} color={T.green} strokeWidth={1.2} />}
             </div>
-            <div style={{ padding: "18px 22px", borderTop: `1px solid ${T.line}`, display: "flex", gap: 22, flexWrap: "wrap" }}>
+            <div style={{ padding: "18px 22px", borderTop: `1px solid ${T.line}`, display: "flex", gap: 22, flexWrap: "wrap", flexShrink: 0 }}>
               {[[Users, `Up to ${veh.cap} passengers`], [Luggage, `${veh.bags} bags`], [Route, "Meet & greet · fixed rate"]].map(([Ico, t]) => (
                 <span key={t} style={{ display: "inline-flex", alignItems: "center", gap: 7, fontSize: 13.5, color: "rgba(0,0,0,.75)" }}><Ico size={16} color={T.green} /> {t}</span>
               ))}
@@ -6686,12 +6686,12 @@ function VehicleDetailPage({ mode, id, go, user }) {
       <Eyebrow>ATS Logistics · Car rental</Eyebrow>
       <h2 className="disp" style={{ fontWeight: 800, fontSize: "clamp(22px,3vw,30px)", margin: "6px 0 20px", color: T.ink }}>{car.name} <span style={{ fontWeight: 500, fontSize: 16, opacity: 0.55 }}>or similar</span></h2>
       <div className="veh-cols" style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(320px, 420px)", gap: 24, alignItems: "start" }}>
-        <div style={{ ...card, padding: 0, overflow: "hidden" }}>
-          <div style={{ position: "relative", height: 270, background: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <span style={{ position: "absolute", top: 12, left: 12, background: "rgba(255,255,255,.92)", borderRadius: 999, padding: "4px 12px", fontSize: 12, fontWeight: 700, color: T.ink }}>{car.type}</span>
-            {cmap[car.slug] ? <img src={cmap[car.slug]} alt={car.name} style={{ width: "100%", height: "100%", objectFit: "contain", padding: 16 }} /> : <Car size={72} color={T.green} strokeWidth={1.2} />}
+        <div style={{ ...card, padding: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+          <div style={{ position: "relative", flex: 1, minHeight: 300, background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+            <span style={{ position: "absolute", top: 12, left: 12, background: "rgba(255,255,255,.92)", borderRadius: 999, padding: "4px 12px", fontSize: 12, fontWeight: 700, color: T.ink, zIndex: 1 }}>{car.type}</span>
+            {cmap[car.slug] ? <img src={cmap[car.slug]} alt={car.name} style={{ maxHeight: 300, maxWidth: "100%", width: "auto", objectFit: "contain" }} /> : <Car size={90} color={T.green} strokeWidth={1.2} />}
           </div>
-          <div style={{ padding: "18px 22px", borderTop: `1px solid ${T.line}`, display: "flex", gap: 22, flexWrap: "wrap" }}>
+          <div style={{ padding: "18px 22px", borderTop: `1px solid ${T.line}`, display: "flex", gap: 22, flexWrap: "wrap", flexShrink: 0 }}>
             {[[Users, `${car.seats} seats`], [Settings2, car.transmission], [Fuel, car.fuel], [MapPin, car.location]].map(([Ico, t]) => (
               <span key={t} style={{ display: "inline-flex", alignItems: "center", gap: 7, fontSize: 13.5, color: "rgba(0,0,0,.75)" }}><Ico size={16} color={T.green} /> {t}</span>
             ))}
