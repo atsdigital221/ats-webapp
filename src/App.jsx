@@ -2015,7 +2015,9 @@ function HeroSearch({ go }) {
   );
 
   return (
-    <div style={{ background: "#fff", borderRadius: 20, boxShadow: "0 24px 60px rgba(9,20,15,.24)", padding: "8px 16px 18px", maxWidth: 1120, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
+    <div className="hero-widget" style={{ background: "#fff", borderRadius: 20, boxShadow: "0 24px 60px rgba(9,20,15,.24)", padding: "8px 16px 18px", maxWidth: 1120, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
+      {/* Web only: split the widget into a translucent container (holding the pills) + a white search bar. Mobile stays a single white panel. */}
+      <style>{`@media(min-width:761px){.hero-widget{background:rgba(255,255,255,.14)!important;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.4);padding:12px 14px 14px!important}.hero-widget .hero-searchbar{background:#fff;border-radius:16px;padding:14px 16px 16px;box-shadow:0 12px 34px rgba(9,20,15,.16)}}`}</style>
       {/* main tabs — pills, centered */}
       <div style={{ display: "flex", justifyContent: "center", gap: 12, padding: "4px 0 6px" }}>
         {tabs.map(([k, l, Ico, sz]) => {
@@ -2029,6 +2031,7 @@ function HeroSearch({ go }) {
         })}
       </div>
 
+      <div className="hero-searchbar">
       {tab === "flights" ? (
         <div style={{ marginTop: 14 }}>
           {/* flight sub-tabs */}
@@ -2091,6 +2094,7 @@ function HeroSearch({ go }) {
       ) : (
         <TourSearch go={go} />
       )}
+      </div>
     </div>
   );
 }
