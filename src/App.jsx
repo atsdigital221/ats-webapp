@@ -6685,7 +6685,7 @@ function VehicleDetailPage({ mode, id, go, user }) {
       <button onClick={back} style={backBtn}><ChevronLeft size={18} /> Back to vehicles</button>
       <Eyebrow>ATS Logistics · Car rental</Eyebrow>
       <h2 className="disp" style={{ fontWeight: 800, fontSize: "clamp(22px,3vw,30px)", margin: "6px 0 20px", color: T.ink }}>{car.name} <span style={{ fontWeight: 500, fontSize: 16, opacity: 0.55 }}>or similar</span></h2>
-      <div className="veh-cols" style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(320px, 420px)", gap: 24, alignItems: "start" }}>
+      <div className="veh-cols" style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(320px, 420px)", gap: 24, alignItems: "stretch" }}>
         <div style={{ ...card, padding: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>
           <div style={{ position: "relative", flex: 1, minHeight: 300, background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
             <span style={{ position: "absolute", top: 12, left: 12, background: "rgba(255,255,255,.92)", borderRadius: 999, padding: "4px 12px", fontSize: 12, fontWeight: 700, color: T.ink, zIndex: 1 }}>{car.type}</span>
