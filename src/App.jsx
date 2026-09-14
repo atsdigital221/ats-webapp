@@ -208,7 +208,7 @@ function RangeDate({ from, to, onChange, triggerStyle, minDate, wide, align = "l
   const canPrev = new Date(view.y, view.m, 1) > new Date(minD.getFullYear(), minD.getMonth(), 1);
 
   const pick = (ds) => {
-    if (single) { onChange(ds, ds); setOpen(false); return; } // one date, pick & close
+    if (single) { onChange(ds, ds); return; } // one date — wait for Done/Valider
     if (!from || (from && to)) { onChange(ds, ""); return; }
     if (ds < from) { onChange(ds, ""); return; }
     onChange(from, ds); // wait for "Done" — do not auto-close
@@ -301,7 +301,9 @@ function AddressInput({ value, onChange, placeholder, bare }) {
   const [results, setResults] = useState([]);
   const [open, setOpen] = useState(false);
   useEffect(() => { setQ(value || ""); }, [value]);
+  const skipRef = useRef(false);
   useEffect(() => {
+    if (skipRef.current) { skipRef.current = false; return; }
     if (!q || q.trim().length < 3) { setResults([]); return; }
     const id = setTimeout(async () => {
       try {
@@ -315,7 +317,7 @@ function AddressInput({ value, onChange, placeholder, bare }) {
   }, [q]);
   const preciseOf = (r) => r.name || (r.display_name || "").split(",")[0].trim();
   const contextOf = (r) => (r.display_name || "").split(",").slice(1).join(",").trim();
-  const choose = (r) => { const p = preciseOf(r); onChange(p); setQ(p); setOpen(false); setResults([]); };
+  const choose = (r) => { const p = preciseOf(r); skipRef.current = true; onChange(p); setQ(p); setOpen(false); setResults([]); };
   const mobile = useIsMobile();
   if (mobile) {
     return (
@@ -388,7 +390,9 @@ function AirportInput({ value, onChange, placeholder, wide, Icon }) {
   const [results, setResults] = useState([]);
   const [open, setOpen] = useState(false);
   useEffect(() => { setQ(value || ""); }, [value]);
+  const skipRef = useRef(false);
   useEffect(() => {
+    if (skipRef.current) { skipRef.current = false; return; }
     if (!q || q.trim().length < 2) { setResults([]); return; }
     const id = setTimeout(async () => {
       try {
@@ -401,7 +405,7 @@ function AirportInput({ value, onChange, placeholder, wide, Icon }) {
   }, [q]);
   const labelOf = (r) => `${r.city_name || r.name} (${r.code})`;
   const contextOf = (r) => [r.name && r.name !== r.city_name ? r.name : null, r.country_name].filter(Boolean).join(" · ");
-  const choose = (r) => { const p = labelOf(r); onChange(p); setQ(p); setOpen(false); setResults([]); };
+  const choose = (r) => { const p = labelOf(r); skipRef.current = true; onChange(p); setQ(p); setOpen(false); setResults([]); };
   const short = !q || q.trim().length < 2;
   const mobile = useIsMobile();
   if (mobile) {
