@@ -991,10 +991,10 @@ function Nav({ go, page, user, setSignin, bookings, currency, setCurrency, setCh
   const ink = transparent ? "#fff" : T.ink;
 
   const links = [
-    ["home", "Home"], ["tours", "Tours"], ["builder", "Trip Builder"], ["transport", "Transports"], ["flights", "Flights"],
+    ["home", "Home"], ["tours", "Activities"], ["builder", "Trip Builder"], ["transport", "Transports"], ["flights", "Flights"],
     ["events", "MICE"], ["corporate", "Corporate"], ["agents", "Agents"], ["blog", "Blog"], ["about", "About Us"],
   ];
-  const leftLinks = [["tours", "Tours"], ["transport", "Transports"]];
+  const leftLinks = [["tours", "Activities"], ["transport", "Transports"]];
   const rightLinks = [["builder", "Trip Builder"], ["events", "MICE"]];
   const nav = (k) => { go(k); setOpen(false); };
   const [lang, setLang] = useState(() => { try { return localStorage.getItem("ats_lang") || "EN"; } catch { return "EN"; } });
@@ -1013,7 +1013,7 @@ function Nav({ go, page, user, setSignin, bookings, currency, setCurrency, setCh
   ) : (
     <button onClick={() => { setSignin(true); setOpen(false); }} style={{ display: "inline-flex", alignItems: "center", gap: 7, justifyContent: "center", color: "#fff", background: T.green, padding: "11px 16px", borderRadius: 12, border: "none", cursor: "pointer", fontWeight: 700, width: full ? "100%" : "auto" }}><UserRound size={17} strokeWidth={2.2} /> Sign in</button>
   );
-  const topNav = [["tours", "Tours", MapIcon], ["transport", "Transport", Car], ["flights", "Flights", Plane], ["builder", "Trip Builder", Sparkles]];
+  const topNav = [["tours", "Activities", MapIcon], ["transport", "Transport", Car], ["flights", "Flights", Plane], ["builder", "Trip Builder", Sparkles]];
   const TopLink = ({ k, l, Ico }) => {
     const active = page.name === k;
     return (
@@ -1031,7 +1031,7 @@ function Nav({ go, page, user, setSignin, bookings, currency, setCurrency, setCh
   const MEGA = [
     { key: "services", label: "Travel Services", title: "Travel Services", desc: "All our Africa travel solutions in one platform", cols: [
       { title: "Book", items: [
-        { Ico: Compass, label: "Tours & Experiences", sub: "Experiences across Senegal", act: () => goItem("tours") },
+        { Ico: Compass, label: "Activities & Experiences", sub: "Experiences across Senegal", act: () => goItem("tours") },
         { Ico: Car, label: "Cars", sub: "Airport transfers & car rental", act: () => goItem("transport") },
         { Ico: Plane, label: "Flights", sub: "Search & book flights", act: () => goItem("flights") },
         { Ico: Hotel, label: "Hotels", sub: "Hotel booking", soon: true },
@@ -1045,7 +1045,7 @@ function Nav({ go, page, user, setSignin, bookings, currency, setCurrency, setCh
     { key: "destinations", label: "Destinations", title: "Destinations", desc: "Explore destinations across Africa", cols: [
       { title: "Senegal regions", items: REGIONS.map((r) => ({ Ico: MapPin, label: r, act: () => goRegion(r) })) },
       { title: "Explore", items: [
-        { Ico: Compass, label: "See all tours", sub: "All regions", act: goAllTours },
+        { Ico: Compass, label: "See all activities", sub: "All regions", act: goAllTours },
         { Ico: Globe, label: "Other countries", sub: "Coming soon", soon: true },
       ] },
     ] },
@@ -1213,7 +1213,7 @@ function Nav({ go, page, user, setSignin, bookings, currency, setCurrency, setCh
       {/* Full-height slide-in drawer */}
       {open && createPortal((() => {
         const mainMenu = [
-          ["home", "Home", Compass], ["tours", "Tours", MapIcon], ["builder", "Trip Builder", Sparkles],
+          ["home", "Home", Compass], ["tours", "Activities", MapIcon], ["builder", "Trip Builder", Sparkles],
           ["transport", "Cars", Car], ["flights", "Flights", Plane], ["events", "MICE", Mic],
           ["corporate", "Corporate", Building2], ["agents", "Agents", Users],
         ];
@@ -1358,7 +1358,7 @@ function HeroSlider({ go, setBooking }) {
   return (
     <div ref={wrapRef} className="hero-slider" style={{ width: trackW, maxWidth: "100%", margin: "0 auto" }}>
       <div style={{ width: headerW, maxWidth: "100%" }}>
-        <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: ".16em", textTransform: "uppercase", marginBottom: 12, opacity: 0.9 }}>Popular Tours</div>
+        <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: ".16em", textTransform: "uppercase", marginBottom: 12, opacity: 0.9 }}>Popular Activities</div>
         <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 16, paddingRight: 4 }}>
           <div style={{ flex: 1, height: 2, background: "rgba(255,255,255,.35)", borderRadius: 2, position: "relative" }}>
             <div style={{ position: "absolute", left: 0, top: 0, height: "100%", width: `${((i + 1) / positions) * 100}%`, background: "#fff", borderRadius: 2, transition: "width .3s ease" }} />
@@ -1519,7 +1519,7 @@ function ServicesFan({ go }) {
   const items = [
     ["transport", "Transport", "transport", "Airport transfers or vehicle hire at fixed rates. Pick your dates and pay instantly — no quote needed."],
     ["trip-builder", "Trip Builder", "builder", "Assemble your own trip — destination, hotel, transport, experiences — then reserve with a 20% deposit."],
-    ["tour", "Tours", "tours", "Browse 35+ guided experiences. Pick a date, pay in full or via Ma Tontine, and you're booked."],
+    ["tour", "Activities", "tours", "Browse 35+ guided experiences. Pick a date, pay in full or via Ma Tontine, and you're booked."],
     ["flights", "Flights", "flights", "Domestic & international flights. Our IATA-accredited team handles booking, changes and group fares."],
     ["mice", "MICE", "events", "Conferences, incentives, team building and events — send your brief, ATS handles logistics end to end."],
   ];
@@ -1856,7 +1856,6 @@ function TourSearch({ go }) {
   const addRecent = (id) => setRecents((r) => persistRecents([id, ...r.filter((x) => x !== id)].slice(0, 5)));
   const removeRecent = (id) => setRecents((r) => persistRecents(r.filter((x) => x !== id)));
   const recentTours = recents.map((id) => TOURS.find((t) => t.id === id)).filter(Boolean);
-  const popularTours = ["goree", "bandia", "lacrose", "toubacouta", "stlouis", "lompoul"].map((id) => TOURS.find((t) => t.id === id)).filter(Boolean);
 
   const q = expQ.trim().toLowerCase();
   const matches = q
@@ -1882,7 +1881,7 @@ function TourSearch({ go }) {
               <button onClick={() => { setDest("Senegal"); setDestOpen(false); }} style={heroRow} role="option" aria-selected={dest === "Senegal"}>
                 <MapPin size={20} color={T.green} strokeWidth={2} style={{ flexShrink: 0, marginTop: 2 }} />
                 <span style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 15, fontWeight: 700 }}>Senegal</div>
+                  <div style={{ fontSize: 14, fontWeight: 700 }}>Senegal</div>
                   <div style={{ fontSize: 13, color: "rgba(0,0,0,.8)" }}>Available · 35+ experiences</div>
                 </span>
                 {dest === "Senegal" && <Check size={18} color={T.green} style={{ flexShrink: 0, marginTop: 4 }} />}
@@ -1890,7 +1889,7 @@ function TourSearch({ go }) {
               <div style={{ ...heroRow, cursor: "not-allowed", opacity: 0.45 }} role="option" aria-disabled="true" aria-selected="false">
                 <MapPin size={20} color={T.ink} strokeWidth={2} style={{ flexShrink: 0, marginTop: 2 }} />
                 <span style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 15, fontWeight: 700 }}>Rwanda</div>
+                  <div style={{ fontSize: 14, fontWeight: 700 }}>Rwanda</div>
                   <div style={{ fontSize: 13, color: "rgba(0,0,0,.8)" }}>Coming soon</div>
                 </span>
               </div>
@@ -1920,7 +1919,7 @@ function TourSearch({ go }) {
                   <button key={t.id} onClick={() => pickTour(t)} style={heroRow} role="option" aria-selected={expSel === t.id}>
                     <Compass size={20} color={T.ink} strokeWidth={2} style={{ flexShrink: 0, marginTop: 2 }} />
                     <span style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 15, fontWeight: 700 }}>{t.name}</div>
+                      <div style={{ fontSize: 14, fontWeight: 700 }}>{t.name}</div>
                       <div style={{ fontSize: 13, color: "rgba(0,0,0,.8)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{[t.pole, t.tag, t.dur].filter(Boolean).join(" · ")}</div>
                     </span>
                   </button>
@@ -1929,12 +1928,12 @@ function TourSearch({ go }) {
                 )
               ) : recentTours.length ? (
                 <>
-                  <div style={{ fontSize: 15, fontWeight: 700, padding: "16px 18px 4px", color: T.ink }}>Recent searches</div>
+                  <div style={{ fontSize: 11, fontWeight: 700, padding: "14px 18px 4px", color: "rgba(0,0,0,.5)", textTransform: "uppercase", letterSpacing: ".1em" }}>Recent searches</div>
                   {recentTours.map((t) => (
                     <button key={t.id} onClick={() => pickTour(t)} style={heroRow} role="option" aria-selected={expSel === t.id}>
                       <Clock size={20} color={T.ink} strokeWidth={2} style={{ flexShrink: 0, marginTop: 2 }} />
                       <span style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 15, fontWeight: 700 }}>{t.name}</div>
+                        <div style={{ fontSize: 14, fontWeight: 700 }}>{t.name}</div>
                         <div style={{ fontSize: 13, color: "rgba(0,0,0,.8)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{[t.pole, t.tag, t.dur].filter(Boolean).join(" · ")}</div>
                       </span>
                       <span role="button" tabIndex={0} aria-label={`Remove ${t.name}`} onClick={(e) => { e.stopPropagation(); removeRecent(t.id); }} style={{ flexShrink: 0, marginTop: 4, color: T.ink, display: "flex", cursor: "pointer" }}><X size={17} /></span>
@@ -1942,18 +1941,10 @@ function TourSearch({ go }) {
                   ))}
                 </>
               ) : (
-                <>
-                  <div style={{ fontSize: 15, fontWeight: 700, padding: "16px 18px 4px", color: T.ink }}>Popular destinations</div>
-                  {popularTours.map((t) => (
-                    <button key={t.id} onClick={() => pickTour(t)} style={heroRow} role="option" aria-selected={expSel === t.id}>
-                      <MapPin size={20} color={T.ink} strokeWidth={2} style={{ flexShrink: 0, marginTop: 2 }} />
-                      <span style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 15, fontWeight: 700 }}>{t.name}</div>
-                        <div style={{ fontSize: 13, color: "rgba(0,0,0,.8)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{[t.pole, t.tag, t.dur].filter(Boolean).join(" · ")}</div>
-                      </span>
-                    </button>
-                  ))}
-                </>
+                <div style={{ padding: "16px 18px", display: "flex", alignItems: "center", gap: 10, color: "rgba(0,0,0,.6)" }}>
+                  <Search size={18} style={{ flexShrink: 0, opacity: 0.7 }} />
+                  <span style={{ fontSize: 14 }}>Search activities</span>
+                </div>
               )}
             </div>
           </>
@@ -1982,7 +1973,7 @@ function TourSearch({ go }) {
                 return (
                   <div key={k} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 0", borderTop: i === 0 ? "none" : `1px solid ${T.line}` }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 15, color: T.ink }}>{l}</div>
+                      <div style={{ fontSize: 14, color: T.ink }}>{l}</div>
                       {sub && <div style={{ fontSize: 12.5, color: "rgba(0,0,0,.8)" }}>{sub}</div>}
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
@@ -2008,7 +1999,7 @@ function TourSearch({ go }) {
 
 function HeroSearch({ go }) {
   const [tab, setTab] = useState("tours");
-  const tabs = [["tours", "Tours", IconBeach, 16], ["cars", "Cars", IconCarFilled, 19], ["flights", "Flights", IconPlane2, 18]];
+  const tabs = [["tours", "Activities", IconBeach, 16], ["cars", "Cars", IconCarFilled, 19], ["flights", "Flights", IconPlane2, 18]];
   const todayStr = new Date().toISOString().slice(0, 10);
 
   // Flights state
@@ -2057,7 +2048,7 @@ function HeroSearch({ go }) {
             {travRows.map(([k, l, sub]) => (
               <div key={k} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderTop: k === "adults" ? "none" : `1px solid ${T.line}` }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 15, color: T.ink }}>{l}</div>
+                  <div style={{ fontSize: 14, color: T.ink }}>{l}</div>
                   {sub && <div style={{ fontSize: 12.5, color: "rgba(0,0,0,.8)" }}>{sub}</div>}
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -2294,8 +2285,8 @@ function Home({ go, notify, setBooking, filters, setFilters, setChat, addBooking
       <section style={{ background: "#fff", borderTop: `1px solid ${T.line}` }}>
         <Wrap>
           <div style={{ display: "flex", alignItems: "end", flexWrap: "wrap", gap: 12 }}>
-            <div><Eyebrow>Senegal · from the ATS catalogue</Eyebrow><H2>Featured tours & experiences</H2></div>
-            <button onClick={() => go("tours")} style={{ ...btnGreen, marginLeft: "auto", fontSize: 14 }}>See all tours →</button>
+            <div><Eyebrow>Senegal · from the ATS catalogue</Eyebrow><H2>Featured activities & experiences</H2></div>
+            <button onClick={() => go("tours")} style={{ ...btnGreen, marginLeft: "auto", fontSize: 14 }}>See all activities →</button>
           </div>
           {/* Theme tabs — reference-style underlined tabs (card template unchanged) */}
           <div style={{ display: "flex", gap: 26, borderBottom: `1px solid ${T.line}`, overflowX: "auto", margin: "8px 0 22px", WebkitOverflowScrolling: "touch" }}>
@@ -2595,7 +2586,7 @@ function ToursPage({ go, setBooking, filters, setFilters, favorites, toggleFavor
   return (
     <Wrap>
       <Eyebrow>Senegal · 6 regions · transport quoted separately</Eyebrow>
-      <H2>All tours & experiences</H2>
+      <H2>All activities & experiences</H2>
 
       <div style={{ position: "relative", maxWidth: 560, margin: "6px 0 18px" }}>
         <Search size={19} style={{ position: "absolute", left: 16, top: "50%", transform: "translateY(-50%)", color: "#8A968E", pointerEvents: "none" }} />
@@ -7548,7 +7539,7 @@ function Footer({ go, notify }) {
         </div>
         <div>
           <div style={head}>Explore</div>
-          {[["tours", "Tours & experiences"], ["builder", "Trip Builder"], ["transport", "Transfers & car hire"], ["flights", "Flights"], ["events", "Events & MICE"], ["corporate", "Corporate travel"], ["agents", "Agents / B2B"], ["blog", "Blog"], ["about", "About Us"], ["terms", "Terms & cancellation policy"]].map(([k, l]) => (
+          {[["tours", "Activities & experiences"], ["builder", "Trip Builder"], ["transport", "Transfers & car hire"], ["flights", "Flights"], ["events", "Events & MICE"], ["corporate", "Corporate travel"], ["agents", "Agents / B2B"], ["blog", "Blog"], ["about", "About Us"], ["terms", "Terms & cancellation policy"]].map(([k, l]) => (
             <button key={k} onClick={() => go(k)} className="foot-link" style={{ display: "block", background: "none", border: "none", color: "rgba(255,255,255,.74)", cursor: "pointer", padding: "4px 0", fontSize: 14, fontFamily: "inherit", textAlign: "left" }}>{l}</button>
           ))}
         </div>
