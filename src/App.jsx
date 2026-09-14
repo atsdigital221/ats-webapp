@@ -269,7 +269,7 @@ function AddressInput({ value, onChange, placeholder, bare }) {
       {open && results.length > 0 && (
         <>
           <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 40 }} />
-          <div className="mpop" style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, zIndex: 41, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 12, boxShadow: "0 14px 34px rgba(0,0,0,.18)", overflow: "hidden", maxHeight: 260, overflowY: "auto", minWidth: bare ? 340 : 0 }}>
+          <div className="mpop" style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, right: bare ? "auto" : 0, width: bare ? "min(360px, calc(100vw - 24px))" : undefined, zIndex: 41, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 12, boxShadow: "0 14px 34px rgba(0,0,0,.18)", overflow: "hidden", maxHeight: 260, overflowY: "auto", minWidth: 0 }}>
             {results.map((r, i) => (
               <button key={i} onClick={() => choose(r)} style={{ display: "flex", gap: 8, width: "100%", textAlign: "left", background: "none", border: "none", borderBottom: `1px solid ${T.line}`, padding: "10px 12px", cursor: "pointer", lineHeight: 1.35, color: T.ink, alignItems: "flex-start" }}>
                 <MapPin size={15} style={{ flexShrink: 0, marginTop: 2, color: T.green }} />
@@ -324,18 +324,18 @@ function AirportInput({ value, onChange, placeholder, wide, Icon }) {
       {open && (
         <>
           <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 40 }} />
-          <div className="mpop" style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 41, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 14, boxShadow: "0 18px 44px rgba(0,0,0,.22)", overflow: "hidden", width: wide ? "min(430px, calc(100vw - 28px))" : "100%", minWidth: wide ? 360 : 0, maxHeight: 340, overflowY: "auto" }}>
+          <div className="mpop" style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 41, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 14, boxShadow: "0 18px 44px rgba(0,0,0,.22)", overflow: "hidden", width: wide ? "min(430px, calc(100vw - 28px))" : "100%", minWidth: 0, maxHeight: 340, overflowY: "auto" }}>
             {short ? (
-              <div style={{ padding: "34px 20px", textAlign: "center", color: "rgba(0,0,0,.8)" }}>
-                <Search size={30} style={{ opacity: 0.55, marginBottom: 10 }} />
-                <div style={{ fontSize: 14.5 }}>Search by city or airport</div>
+              <div style={{ padding: "24px 18px", textAlign: "center", color: "rgba(0,0,0,.8)" }}>
+                <Search size={26} style={{ opacity: 0.55, marginBottom: 8 }} />
+                <div style={{ fontSize: 13.5 }}>Search by city or airport</div>
               </div>
             ) : results.length > 0 ? results.map((r, i) => (
               <button key={i} onClick={() => choose(r)} style={{ display: "flex", gap: 12, width: "100%", textAlign: "left", background: "none", border: "none", borderBottom: `1px solid ${T.line}`, padding: "13px 16px", cursor: "pointer", lineHeight: 1.4, color: T.ink, alignItems: "flex-start" }}>
                 <Plane size={18} style={{ flexShrink: 0, marginTop: 2, color: T.ink }} />
                 <span style={{ minWidth: 0, flex: 1 }}>
-                  <div style={{ fontSize: 15, fontWeight: 700 }}>{r.city_name || r.name} <span style={{ color: T.ink }}>({r.code})</span></div>
-                  <div style={{ fontSize: 13, opacity: 0.65, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{contextOf(r)}</div>
+                  <div style={{ fontSize: 14, fontWeight: 700 }}>{r.city_name || r.name} <span style={{ color: T.ink }}>({r.code})</span></div>
+                  <div style={{ fontSize: 12.5, opacity: 0.65, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{contextOf(r)}</div>
                 </span>
               </button>
             )) : (
@@ -879,6 +879,7 @@ export default function ATSPlatformPreview() {
         .toast{animation:slideup .25s ease}
         @media (prefers-reduced-motion:reduce){.card-hover,.pulse,.toast{transition:none;animation:none}}
         button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid ${T.gold};outline-offset:2px}
+        @media(max-width:760px){input,textarea,select{font-size:16px !important}.mpop{max-width:calc(100vw - 20px) !important}}
       `}</style>
 
       <Nav {...ctx} page={page} overHero={page.name === "home"} />
@@ -2095,13 +2096,13 @@ function HeroSearch({ go }) {
   return (
     <div className="hero-widget" style={{ background: "#fff", borderRadius: 20, boxShadow: "0 24px 60px rgba(9,20,15,.24)", padding: "8px 16px 18px", maxWidth: 1120, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
       {/* Web only: split the widget into a translucent container (holding the pills) + a white search bar. Mobile stays a single white panel. */}
-      <style>{`@media(min-width:761px){.hero-widget{background:transparent!important;box-shadow:none!important;border:none!important;padding:0!important}.hero-widget .hero-searchbar{background:#fff;border-radius:16px;padding:14px 16px 16px;box-shadow:0 12px 34px rgba(9,20,15,.16)}}`}</style>
+      <style>{`@media(min-width:761px){.hero-widget{background:transparent!important;box-shadow:none!important;border:none!important;padding:0!important}.hero-widget .hero-searchbar{background:#fff;border-radius:16px;padding:14px 16px 16px;box-shadow:0 12px 34px rgba(9,20,15,.16)}}@media(max-width:760px){.hero-pills{gap:6px!important}.hero-pill{padding:8px 14px!important;font-size:13px!important;gap:6px!important}}`}</style>
       {/* main tabs — pills, centered */}
-      <div style={{ display: "flex", justifyContent: "center", gap: 12, padding: "4px 0 6px" }}>
+      <div className="hero-pills" style={{ display: "flex", justifyContent: "center", gap: 12, padding: "4px 0 6px", flexWrap: "wrap" }}>
         {tabs.map(([k, l, Ico, sz]) => {
           const on = tab === k;
           return (
-            <button key={k} onClick={() => setTab(k)} style={{ display: "inline-flex", alignItems: "center", gap: 8, background: on ? T.green : "#fff", border: `1px solid ${on ? T.green : "#fff"}`, boxShadow: on ? "none" : "0 2px 10px rgba(0,0,0,.14)", borderRadius: 999, cursor: "pointer", color: on ? "#fff" : "#111", fontWeight: on ? 700 : 600, fontSize: 14, padding: "9px 22px", fontFamily: "inherit", transition: "background .15s ease, color .15s ease, border-color .15s ease" }}>
+            <button key={k} className="hero-pill" onClick={() => setTab(k)} style={{ display: "inline-flex", alignItems: "center", gap: 8, background: on ? T.green : "#fff", border: `1px solid ${on ? T.green : "#fff"}`, boxShadow: on ? "none" : "0 2px 10px rgba(0,0,0,.14)", borderRadius: 999, cursor: "pointer", color: on ? "#fff" : "#111", fontWeight: on ? 700 : 600, fontSize: 14, padding: "9px 22px", fontFamily: "inherit", transition: "background .15s ease, color .15s ease, border-color .15s ease" }}>
               <Ico size={sz || 19} strokeWidth={1.9} />
               <span>{l}</span>
             </button>
