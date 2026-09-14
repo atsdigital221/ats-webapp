@@ -153,6 +153,44 @@ const btnGold = { background: T.gold, color: T.ink, border: "none", borderRadius
 const btnGreen = { ...btnGold, background: T.green, color: "#fff" };
 const input = { width: "100%", boxSizing: "border-box", padding: "11px 13px", borderRadius: 10, border: `1px solid ${T.line}`, background: "#fff", fontSize: 14.5, fontFamily: "inherit", color: T.ink };
 const label = { fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".07em", color: "#1A1A1A", display: "block", marginTop: 14, marginBottom: 7 };
+// Mobile: lift the focused search field near the top so its suggestion popover
+// isn't hidden behind the on-screen keyboard.
+const liftOnFocus = (e) => {
+  if (typeof window === "undefined" || window.innerWidth > 760) return;
+  const el = e.currentTarget;
+  setTimeout(() => { try { const top = el.getBoundingClientRect().top + window.scrollY - 74; window.scrollTo({ top: Math.max(0, top), behavior: "smooth" }); } catch { /* */ } }, 250);
+};
+
+// Viewport helper — true on phone-sized screens.
+function useIsMobile(bp = 760) {
+  const [m, setM] = useState(() => typeof window !== "undefined" && window.innerWidth <= bp);
+  useEffect(() => {
+    const on = () => setM(window.innerWidth <= bp);
+    window.addEventListener("resize", on);
+    return () => window.removeEventListener("resize", on);
+  }, [bp]);
+  return m;
+}
+
+// Full-screen mobile sheet (Expedia-style): X header, scrollable body, optional footer.
+function MobileSheet({ title, onClose, footer, children }) {
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, []);
+  return createPortal(
+    <div style={{ position: "fixed", inset: 0, zIndex: 200, background: "#fff", display: "flex", flexDirection: "column" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderBottom: `1px solid ${T.line}`, flexShrink: 0 }}>
+        <button onClick={onClose} aria-label="Close" style={{ width: 40, height: 40, borderRadius: "50%", border: `1px solid ${T.line}`, background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: T.ink, flexShrink: 0 }}><X size={20} /></button>
+        {title && <div className="disp" style={{ fontWeight: 700, fontSize: 17, color: T.ink }}>{title}</div>}
+      </div>
+      <div style={{ flex: 1, overflowY: "auto", WebkitOverflowScrolling: "touch" }}>{children}</div>
+      {footer && <div style={{ padding: 14, borderTop: `1px solid ${T.line}`, flexShrink: 0 }}>{footer}</div>}
+    </div>,
+    document.body
+  );
+}
 // ---------------- RANGE DATE PICKER (single calendar, from → to, past disabled) ----------------
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const WD = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
@@ -261,11 +299,52 @@ function AddressInput({ value, onChange, placeholder, bare }) {
   const preciseOf = (r) => r.name || (r.display_name || "").split(",")[0].trim();
   const contextOf = (r) => (r.display_name || "").split(",").slice(1).join(",").trim();
   const choose = (r) => { const p = preciseOf(r); onChange(p); setQ(p); setOpen(false); setResults([]); };
+  const mobile = useIsMobile();
+  if (mobile) {
+    return (
+      <>
+        <button type="button" onClick={() => setOpen(true)} style={bare
+          ? { border: "none", background: "transparent", padding: 0, width: "100%", textAlign: "left", cursor: "pointer", fontFamily: "inherit", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: value ? T.ink : "rgba(0,0,0,.45)", fontSize: 14.5 }
+          : { ...input, textAlign: "left", cursor: "pointer", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: value ? T.ink : "rgba(0,0,0,.45)" }}>
+          {value || placeholder}
+        </button>
+        {open && (
+          <MobileSheet title={placeholder || "Address"} onClose={() => setOpen(false)}>
+            <div style={{ padding: 14 }}>
+              <div style={{ ...input, display: "flex", alignItems: "center", gap: 9 }}>
+                <Search size={18} color={T.green} style={{ flexShrink: 0 }} />
+                <input autoFocus value={q} placeholder={placeholder} autoComplete="off" onChange={(e) => { setQ(e.target.value); onChange(e.target.value); }} style={{ border: "none", outline: "none", background: "transparent", width: "100%", fontSize: 16, fontFamily: "inherit", color: T.ink }} />
+                {q && <button onClick={() => { setQ(""); onChange(""); }} aria-label="Clear" style={{ background: "none", border: "none", cursor: "pointer", color: T.ink, flexShrink: 0, display: "flex" }}><X size={16} /></button>}
+              </div>
+            </div>
+            <div>
+              {q.trim().length < 3 ? (
+                <div style={{ padding: "34px 20px", textAlign: "center", color: "rgba(0,0,0,.6)" }}>
+                  <MapPin size={28} style={{ opacity: 0.5, marginBottom: 8 }} />
+                  <div style={{ fontSize: 14 }}>Type an address in Senegal</div>
+                </div>
+              ) : results.length ? results.map((r, i) => (
+                <button key={i} onClick={() => choose(r)} style={{ display: "flex", gap: 12, width: "100%", textAlign: "left", background: "none", border: "none", borderBottom: `1px solid ${T.line}`, padding: "15px 16px", cursor: "pointer", lineHeight: 1.4, color: T.ink, alignItems: "flex-start" }}>
+                  <MapPin size={18} style={{ flexShrink: 0, marginTop: 2, color: T.green }} />
+                  <span style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ fontSize: 15, fontWeight: 700 }}>{preciseOf(r)}</div>
+                    <div style={{ fontSize: 13, opacity: 0.6, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{contextOf(r)}</div>
+                  </span>
+                </button>
+              )) : (
+                <div style={{ padding: "24px 20px", textAlign: "center", color: "rgba(0,0,0,.6)", fontSize: 14 }}>No results</div>
+              )}
+            </div>
+          </MobileSheet>
+        )}
+      </>
+    );
+  }
   return (
     <div style={{ position: "relative" }}>
       <input style={bare ? { border: "none", outline: "none", background: "transparent", fontSize: 14.5, fontFamily: "inherit", color: T.ink, width: "100%", padding: 0 } : input} value={q} placeholder={placeholder} autoComplete="off"
         onChange={(e) => { setQ(e.target.value); onChange(e.target.value); }}
-        onFocus={() => results.length && setOpen(true)} />
+        onFocus={(e) => { if (results.length) setOpen(true); liftOnFocus(e); }} />
       {open && results.length > 0 && (
         <>
           <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 40 }} />
@@ -307,11 +386,56 @@ function AirportInput({ value, onChange, placeholder, wide, Icon }) {
   const contextOf = (r) => [r.name && r.name !== r.city_name ? r.name : null, r.country_name].filter(Boolean).join(" · ");
   const choose = (r) => { const p = labelOf(r); onChange(p); setQ(p); setOpen(false); setResults([]); };
   const short = !q || q.trim().length < 2;
+  const mobile = useIsMobile();
+  if (mobile) {
+    const trigger = Icon ? (
+      <button type="button" onClick={() => setOpen(true)} style={{ ...input, display: "flex", alignItems: "center", gap: 9, padding: "0 13px", textAlign: "left", cursor: "pointer", width: "100%" }}>
+        <Icon size={18} color={T.green} strokeWidth={2} style={{ flexShrink: 0 }} />
+        <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: value ? T.ink : "rgba(0,0,0,.45)", padding: "12px 0" }}>{value || placeholder}</span>
+      </button>
+    ) : (
+      <button type="button" onClick={() => setOpen(true)} style={{ ...input, textAlign: "left", cursor: "pointer", width: "100%", color: value ? T.ink : "rgba(0,0,0,.45)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{value || placeholder}</button>
+    );
+    return (
+      <>
+        {trigger}
+        {open && (
+          <MobileSheet title={placeholder || "Search"} onClose={() => setOpen(false)}>
+            <div style={{ padding: 14 }}>
+              <div style={{ ...input, display: "flex", alignItems: "center", gap: 9 }}>
+                <Search size={18} color={T.green} style={{ flexShrink: 0 }} />
+                <input autoFocus value={q} placeholder={placeholder} autoComplete="off" onChange={(e) => { setQ(e.target.value); onChange(e.target.value); setOpen(true); }} style={{ border: "none", outline: "none", background: "transparent", width: "100%", fontSize: 16, fontFamily: "inherit", color: T.ink }} />
+                {q && <button onClick={() => { setQ(""); onChange(""); }} aria-label="Clear" style={{ background: "none", border: "none", cursor: "pointer", color: T.ink, flexShrink: 0, display: "flex" }}><X size={16} /></button>}
+              </div>
+            </div>
+            <div>
+              {short ? (
+                <div style={{ padding: "34px 20px", textAlign: "center", color: "rgba(0,0,0,.6)" }}>
+                  <Search size={28} style={{ opacity: 0.5, marginBottom: 8 }} />
+                  <div style={{ fontSize: 14 }}>Search by city or airport</div>
+                </div>
+              ) : results.length > 0 ? results.map((r, i) => (
+                <button key={i} onClick={() => choose(r)} style={{ display: "flex", gap: 12, width: "100%", textAlign: "left", background: "none", border: "none", borderBottom: `1px solid ${T.line}`, padding: "15px 16px", cursor: "pointer", lineHeight: 1.4, color: T.ink, alignItems: "flex-start" }}>
+                  <Plane size={18} style={{ flexShrink: 0, marginTop: 2, color: T.ink }} />
+                  <span style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ fontSize: 15, fontWeight: 700 }}>{r.city_name || r.name} <span style={{ color: T.ink }}>({r.code})</span></div>
+                    <div style={{ fontSize: 13, opacity: 0.65, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{contextOf(r)}</div>
+                  </span>
+                </button>
+              )) : (
+                <div style={{ padding: "24px 20px", textAlign: "center", color: "rgba(0,0,0,.6)", fontSize: 14 }}>No results</div>
+              )}
+            </div>
+          </MobileSheet>
+        )}
+      </>
+    );
+  }
   const inputEl = (
     <input value={q} placeholder={placeholder} autoComplete="off"
       style={Icon ? { border: "none", outline: "none", background: "transparent", width: "100%", fontSize: 14.5, fontFamily: "inherit", color: T.ink, padding: "11px 0" } : input}
       onChange={(e) => { setQ(e.target.value); onChange(e.target.value); setOpen(true); }}
-      onFocus={() => setOpen(true)} />
+      onFocus={(e) => { setOpen(true); liftOnFocus(e); }} />
   );
   return (
     <div style={{ position: "relative" }}>
@@ -1905,7 +2029,7 @@ function TourSearch({ go }) {
           <div style={heroLab}>Experience</div>
           <input style={heroInp} value={expQ} placeholder="Search an experience" autoComplete="off" aria-label="Experience"
             onChange={(e) => { setExpQ(e.target.value); setExpSel(null); setExpOpen(true); }}
-            onFocus={() => setExpOpen(true)} />
+            onFocus={(e) => { setExpOpen(true); liftOnFocus(e); }} />
         </div>
         {expQ && (
           <button onClick={() => { setExpQ(""); setExpSel(null); }} aria-label="Clear" style={{ background: T.ink, color: "#fff", border: "none", borderRadius: "50%", width: 20, height: 20, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0, flexShrink: 0 }}><X size={12} strokeWidth={3} /></button>
