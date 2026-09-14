@@ -1375,7 +1375,7 @@ function Nav({ go, page, user, setSignin, bookings, currency, setCurrency, setCh
           </button>
         );
         return (
-        <div style={{ position: "fixed", inset: 0, zIndex: 100 }}>
+        <div style={{ position: "fixed", inset: 0, zIndex: 100, overflow: "hidden" }}>
           <div className="ats-overlay" onClick={() => setOpen(false)} style={{ position: "absolute", inset: 0, background: "rgba(9,20,15,.45)", backdropFilter: "blur(2px)", WebkitBackdropFilter: "blur(2px)" }} />
           <aside className="ats-drawer" style={{ position: "absolute", top: 0, right: 0, bottom: 0, width: "min(384px, 90vw)", background: "#fff", boxShadow: "-18px 0 50px rgba(9,20,15,.22)", display: "flex", flexDirection: "column" }}>
             {/* Header */}
