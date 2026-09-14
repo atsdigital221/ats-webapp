@@ -892,6 +892,7 @@ export default function ATSPlatformPreview() {
           {page.name === "tour" && <TourDetail {...ctx} tourId={page.id} initialDate={page.date} initialPax={page.pax} />}
           {page.name === "builder" && <TripBuilder {...ctx} />}
           {page.name === "flights" && <FlightsPage {...ctx} initial={page.fp} initialLegs={page.flegs} />}
+          {page.name === "flightQuote" && <FlightQuotePage {...ctx} initial={page.fp} initialLegs={page.flegs} />}
           {page.name === "transport" && <TransportPage addBooking={confirmBooking} notify={notify} user={user} go={go} initialRental={page.rental} />}
           {page.name === "transferCheckout" && <TransferCheckoutPage detail={page.detail} user={user} go={go} onConfirm={confirmBooking} />}
           {page.name === "vehicle" && <VehicleDetailPage mode={page.mode} id={page.id} go={go} user={user} />}
@@ -972,10 +973,10 @@ const NineDots = ({ color = "#111", size = 22 }) => (
   </svg>
 );
 
-function Nav({ go, page, user, setSignin, bookings, currency, setCurrency, setChat, overHero }) {
+function Nav({ go, page, user, setSignin, bookings, currency, setCurrency, setChat, setFilters, overHero }) {
   const [open, setOpen] = useState(false);
   const [prefOpen, setPrefOpen] = useState(false);
-  const [servOpen, setServOpen] = useState(false);
+  const [openMenu, setOpenMenu] = useState(null);
   const [scrolled, setScrolled] = useState(false);
   const [logoOk, setLogoOk] = useState(true);
   const logoDark = supabase.storage.from(PHOTO_BUCKET).getPublicUrl("site/logo.png").data.publicUrl;
@@ -1021,14 +1022,63 @@ function Nav({ go, page, user, setSignin, bookings, currency, setCurrency, setCh
     );
   };
 
+  const REGIONS = ["Dakar", "Petite Côte", "Sine Saloum", "Casamance", "Saint-Louis", "Kédougou"];
+  const goItem = (k) => { nav(k); setOpenMenu(null); };
+  const goRegion = (r) => { if (setFilters) setFilters((f) => ({ ...f, pole: r })); nav("tours"); setOpenMenu(null); };
+  const goAllTours = () => { if (setFilters) setFilters((f) => ({ ...f, pole: "All" })); nav("tours"); setOpenMenu(null); };
+  const openChat = () => { setChat(true); setOpenMenu(null); setOpen(false); };
+  const MEGA = [
+    { key: "services", label: "Travel Services", title: "Travel Services", desc: "All our Africa travel solutions in one platform", cols: [
+      { title: "Book", items: [
+        { Ico: Compass, label: "Tours & Experiences", sub: "Experiences across Senegal", act: () => goItem("tours") },
+        { Ico: Car, label: "Cars", sub: "Airport transfers & car rental", act: () => goItem("transport") },
+        { Ico: Plane, label: "Flights", sub: "Search & book flights", act: () => goItem("flights") },
+        { Ico: Hotel, label: "Hotels", sub: "Hotel booking", soon: true },
+      ] },
+      { title: "Tailor-made", items: [
+        { Ico: Sparkles, label: "Trip Builder", sub: "Create your own trip", act: () => goItem("builder") },
+        { Ico: Mic, label: "MICE & Events", sub: "Seminars, congresses, incentives", act: () => goItem("events") },
+        { Ico: Building2, label: "Business Travel", sub: "Corporate solutions", act: () => goItem("corporate") },
+      ] },
+    ] },
+    { key: "destinations", label: "Destinations", title: "Destinations", desc: "Explore destinations across Africa", cols: [
+      { title: "Senegal regions", items: REGIONS.map((r) => ({ Ico: MapPin, label: r, act: () => goRegion(r) })) },
+      { title: "Explore", items: [
+        { Ico: Compass, label: "See all tours", sub: "All regions", act: goAllTours },
+        { Ico: Globe, label: "Other countries", sub: "Coming soon", soon: true },
+      ] },
+    ] },
+    { key: "resources", label: "Resources", title: "Resources", desc: "Everything you need to plan your trip", cols: [
+      { title: "Plan", items: [
+        { Ico: Newspaper, label: "Blog", sub: "News & inspiration", act: () => goItem("blog") },
+        { Ico: MapIcon, label: "Travel guides", sub: "By destination", soon: true },
+      ] },
+      { title: "Support", items: [
+        { Ico: MessageCircle, label: "FAQ / Help", sub: "Online assistant", act: openChat },
+        { Ico: Shield, label: "Terms & cancellation", act: () => goItem("terms") },
+      ] },
+    ] },
+    { key: "company", label: "Company", title: "Company", desc: "Learn more about Africa Tourism Solutions", cols: [
+      { title: "About", items: [
+        { Ico: Info, label: "About Us", sub: "Our story & mission", act: () => goItem("about") },
+        { Ico: Users, label: "Agents", sub: "B2B partner access", act: () => goItem("agents") },
+      ] },
+      { title: "Contact", items: [
+        { Ico: MessageCircle, label: "Contact Us", sub: "We reply quickly", act: openChat },
+      ] },
+      { title: "Follow us", social: true, items: [] },
+    ] },
+  ];
+
   return (
-    <nav style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 50, background: transparent ? "linear-gradient(to bottom, rgba(0,0,0,.42) 0%, rgba(0,0,0,.12) 65%, rgba(0,0,0,0) 100%)" : "#fff", borderBottom: transparent ? "none" : `1px solid ${T.line}`, boxShadow: transparent ? "none" : "0 4px 18px rgba(11,46,27,.06)", transition: "background .25s ease" }}>
+    <nav style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 50, background: transparent ? "linear-gradient(to bottom, rgba(0,0,0,.42) 0%, rgba(0,0,0,.12) 65%, rgba(0,0,0,0) 100%)" : "#fff", borderBottom: transparent ? "none" : `1px solid ${T.line}`, boxShadow: transparent ? "none" : "0 4px 18px rgba(11,46,27,.06)", transition: "background .25s ease" }} onMouseLeave={() => setOpenMenu(null)}>
       <style>{`
         .nav-desktop{display:flex}
         .nav-top-link{transition:background .15s ease}
         .nav-top-link:hover{background:rgba(11,46,27,.07) !important}
         .nav-top-link--hero:hover{background:rgba(255,255,255,.20) !important}
-        @media(max-width:980px){ .nav-desktop{display:none !important} }
+        @media(max-width:980px){ .nav-desktop{display:none !important} .mega-nav{display:none !important} .mega-panel{display:none !important} }
+        @media(min-width:981px){ .nav-burger{display:none !important} }
         @media(max-width:760px){ .nav-hide-sm{display:none !important} }
         .nav-menu-link{position:relative;transition:background .18s ease,transform .18s ease}
         .nav-menu-link:hover{background:rgba(0,146,69,.10) !important;transform:translateX(4px)}
@@ -1045,39 +1095,30 @@ function Nav({ go, page, user, setSignin, bookings, currency, setCurrency, setCh
         @media(prefers-reduced-motion:reduce){.ats-drawer,.ats-overlay{animation:none}}
       `}</style>
       <div style={{ padding: "10px 20px" }}>
-      <div style={{ maxWidth: 1280, margin: "0 auto", display: "flex", alignItems: "center", gap: 12 }}>
+      <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", alignItems: "center", gap: 12 }}>
         {/* Left: logo */}
-        <button onClick={() => nav("home")} aria-label="Africa Tourism Solutions — home" style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", padding: 0 }}>
+        <button onClick={() => nav("home")} onMouseEnter={() => setOpenMenu(null)} aria-label="Africa Tourism Solutions — home" style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", padding: 0 }}>
           {logoOk
             ? <img src={transparent ? logoWhite : logoDark} alt="Africa Tourism Solutions" onError={() => setLogoOk(false)} style={{ height: 40, display: "block" }} />
             : <span className="disp" style={{ fontWeight: 800, fontSize: 20, color: ink }}>ATS</span>}
         </button>
 
-        {/* Other services — dropdown next to the logo */}
-        <div className="nav-hide-sm" style={{ position: "relative" }}>
-          <button onClick={() => setServOpen((o) => !o)} aria-haspopup="menu" aria-expanded={servOpen}
-            style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "none", border: "none", cursor: "pointer", color: ink, fontFamily: "inherit", fontSize: 15, fontWeight: 700, padding: "8px 4px", whiteSpace: "nowrap" }}>
-            Other services
-            <ChevronDown size={17} style={{ transition: "transform .2s ease", transform: servOpen ? "rotate(180deg)" : "none" }} />
-          </button>
-          {servOpen && (
-            <>
-              <div onClick={() => setServOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 41 }} />
-              <div role="menu" style={{ position: "absolute", top: "calc(100% + 10px)", left: 0, zIndex: 42, background: "#fff", color: T.ink, border: `1px solid ${T.line}`, borderRadius: 18, boxShadow: "0 20px 48px rgba(0,0,0,.18)", padding: "10px", width: 320, animation: "ats-fadein .18s ease" }}>
-                {[[Plane, "Flights", "flights"], [Compass, "Tours & Experiences", "tours"], [Car, "Vehicles", "transport"], [Sparkles, "Trip Builder", "builder"], [Mic, "MICE", "events"], [Users, "Agents", "agents"], [Building2, "Corporate", "corporate"]].map(([Ico, label, route]) => (
-                  <button key={route} role="menuitem" onClick={() => { nav(route); setServOpen(false); }} className="ats-row"
-                    style={{ display: "flex", alignItems: "center", gap: 14, width: "100%", background: "transparent", border: "1px solid transparent", cursor: "pointer", padding: "11px 12px", borderRadius: 14, textAlign: "left", fontFamily: "inherit" }}>
-                    <span className="ats-ico" style={{ width: 40, height: 40, borderRadius: 12, background: "#F2F5F3", color: T.green, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "background .16s ease, color .16s ease" }}><Ico size={20} strokeWidth={2} /></span>
-                    <span style={{ fontWeight: 700, fontSize: 15.5, color: T.ink }}>{label}</span>
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
+        {/* Mega-menu triggers — full-width panel opens on hover (desktop) */}
+        <div className="mega-nav" style={{ display: "flex", alignItems: "center", gap: 2 }}>
+          {MEGA.map((m) => {
+            const on = openMenu === m.key;
+            return (
+              <button key={m.key} aria-haspopup="true" aria-expanded={on} onMouseEnter={() => setOpenMenu(m.key)} onClick={() => setOpenMenu(on ? null : m.key)}
+                style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "none", border: "none", cursor: "pointer", color: ink, fontFamily: "inherit", fontSize: 15, fontWeight: 700, padding: "8px 12px", whiteSpace: "nowrap" }}>
+                {m.label}
+                <ChevronDown size={16} style={{ transition: "transform .2s ease", transform: on ? "rotate(180deg)" : "none" }} />
+              </button>
+            );
+          })}
         </div>
 
         {/* Right cluster (Skyscanner-style) */}
-        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 16 }}>
+        <div onMouseEnter={() => setOpenMenu(null)} style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 16 }}>
           <button className="nav-hide-sm" onClick={() => setChat(true)} style={{ background: "none", border: "none", cursor: "pointer", color: ink, fontWeight: 600, fontSize: 14, fontFamily: "inherit" }}>Help</button>
 
           {/* Language + currency pill */}
@@ -1110,11 +1151,6 @@ function Nav({ go, page, user, setSignin, bookings, currency, setCurrency, setCh
             )}
           </div>
 
-          {/* Favorites heart */}
-          <button onClick={() => { if (user) nav("account"); else setSignin(true); }} aria-label="Favorites" style={{ background: "none", border: "none", cursor: "pointer", color: ink, display: "flex", alignItems: "center", padding: 4 }}>
-            <Heart size={21} strokeWidth={2} />
-          </button>
-
           {/* Sign in */}
           <button onClick={() => { if (user) nav("account"); else { setSignin(true); setOpen(false); } }}
             style={{ background: transparent ? "#fff" : T.green, color: transparent ? T.ink : "#fff", border: "none", borderRadius: 8, padding: "9px 16px", fontWeight: 700, fontSize: 13.5, cursor: "pointer", fontFamily: "inherit", display: "inline-flex", alignItems: "center", gap: 7, whiteSpace: "nowrap" }}>
@@ -1122,7 +1158,7 @@ function Nav({ go, page, user, setSignin, bookings, currency, setCurrency, setCh
           </button>
 
           {/* Full menu */}
-          <button aria-label={open ? "Close menu" : "Open menu"} aria-expanded={open} onClick={() => setOpen((o) => !o)}
+          <button className="nav-burger" aria-label={open ? "Close menu" : "Open menu"} aria-expanded={open} onClick={() => setOpen((o) => !o)}
             style={{ background: "none", border: "none", cursor: "pointer", color: ink, display: "flex", alignItems: "center", justifyContent: "center", padding: 6 }}>
             {open ? <X size={24} /> : <NineDots color={ink} size={22} />}
           </button>
@@ -1130,11 +1166,54 @@ function Nav({ go, page, user, setSignin, bookings, currency, setCurrency, setCh
       </div>
       </div>
 
+      {/* Mega-menu full-width panel */}
+      {openMenu && (() => {
+        const m = MEGA.find((x) => x.key === openMenu);
+        if (!m) return null;
+        return (
+          <div className="mega-panel" onMouseEnter={() => setOpenMenu(m.key)} style={{ position: "absolute", top: "100%", left: 0, right: 0, zIndex: 42, display: "flex", justifyContent: "center", padding: "0 20px", boxSizing: "border-box" }}>
+            <div style={{ width: "100%", maxWidth: 1200, boxSizing: "border-box", marginTop: 8, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 20, boxShadow: "0 24px 60px rgba(0,0,0,.16)", padding: "22px 24px 28px", animation: "ats-fadein .16s ease" }}>
+              <div className="disp" style={{ fontWeight: 800, fontSize: 22, color: T.ink }}>{m.title}</div>
+              {m.desc && <div style={{ fontSize: 14, color: "#6B7A72", margin: "4px 0 20px" }}>{m.desc}</div>}
+              <div style={{ display: "grid", gridTemplateColumns: `repeat(${m.cols.length}, minmax(220px, 330px))`, gap: 40, justifyContent: "start" }}>
+                {m.cols.map((col) => (
+                  <div key={col.title}>
+                    <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: ".14em", textTransform: "uppercase", color: "rgba(0,0,0,.5)", margin: "0 0 10px 2px" }}>{col.title}</div>
+                    {col.social ? (
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, padding: "4px 2px" }}>
+                        {ATS_SOCIALS.map(([sName, url]) => (
+                          <a key={sName} href={url} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", background: "#F2F5F3", color: T.ink, borderRadius: 999, padding: "7px 14px", fontSize: 13, fontWeight: 600, textDecoration: "none" }}>{sName}</a>
+                        ))}
+                      </div>
+                    ) : col.items.map((it) => {
+                      const Ico = it.Ico;
+                      return (
+                        <button key={it.label} role="menuitem" disabled={it.soon} onClick={it.act} className={it.soon ? "" : "ats-row"}
+                          style={{ display: "flex", alignItems: "center", gap: 13, width: "100%", background: "transparent", border: "1px solid transparent", cursor: it.soon ? "default" : "pointer", padding: "9px 10px", borderRadius: 12, textAlign: "left", fontFamily: "inherit", opacity: it.soon ? 0.55 : 1 }}>
+                          <span className="ats-ico" style={{ width: 40, height: 40, borderRadius: 11, background: "#F2F5F3", color: T.green, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "background .16s ease, color .16s ease" }}><Ico size={20} strokeWidth={2} /></span>
+                          <span style={{ minWidth: 0 }}>
+                            <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                              <span style={{ fontWeight: 700, fontSize: 14, color: T.ink }}>{it.label}</span>
+                              {it.soon && <span style={{ fontSize: 10, fontWeight: 700, color: T.green, background: "rgba(0,146,69,.12)", borderRadius: 999, padding: "2px 8px" }}>Soon</span>}
+                            </span>
+                            {it.sub && <span style={{ display: "block", fontSize: 12.5, color: "#6B7A72", marginTop: 1 }}>{it.sub}</span>}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Full-height slide-in drawer */}
       {open && createPortal((() => {
         const mainMenu = [
           ["home", "Home", Compass], ["tours", "Tours", MapIcon], ["builder", "Trip Builder", Sparkles],
-          ["transport", "Transports", Car], ["flights", "Flights", Plane], ["events", "MICE", Mic],
+          ["transport", "Cars", Car], ["flights", "Flights", Plane], ["events", "MICE", Mic],
           ["corporate", "Corporate", Building2], ["agents", "Agents", Users],
         ];
         const resources = [
@@ -1568,8 +1647,7 @@ function HField({ Ico, label, children }) {
   );
 }
 
-const FLIGHT_CLS = ["Économique", "Premium", "Affaires", "Première"];
-const FLIGHT_CLS_MAP = { "Économique": "Economy", "Premium": "Premium", "Affaires": "Business", "Première": "First" };
+const FLIGHT_CLS = ["Economy", "Premium", "Business", "First"];
 
 // Times every 15 min, "10 h 30" style
 const TIME_OPTS = Array.from({ length: 96 }, (_, i) => `${String(Math.floor(i / 4)).padStart(2, "0")} h ${String((i % 4) * 15).padStart(2, "0")}`);
@@ -1729,9 +1807,9 @@ function CarSearch({ go }) {
                         <div style={{ fontSize: 12.5, color: "rgba(0,0,0,.8)" }}>Up to {veh.cap} for this vehicle</div>
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                        <button onClick={() => setPax((p) => Math.max(1, p - 1))} disabled={pax <= 1} aria-label="Moins" style={{ ...btnCircle, width: 44, height: 44, fontSize: 20, opacity: pax <= 1 ? 0.4 : 1, cursor: pax <= 1 ? "not-allowed" : "pointer" }}>−</button>
+                        <button onClick={() => setPax((p) => Math.max(1, p - 1))} disabled={pax <= 1} aria-label="Less" style={{ ...btnCircle, width: 44, height: 44, fontSize: 20, opacity: pax <= 1 ? 0.4 : 1, cursor: pax <= 1 ? "not-allowed" : "pointer" }}>−</button>
                         <span style={{ fontWeight: 600, minWidth: 20, textAlign: "center", fontSize: 15 }}>{pax}</span>
-                        <button onClick={() => setPax((p) => Math.min(50, p + 1))} aria-label="Plus" style={{ ...btnCircle, width: 44, height: 44, fontSize: 20 }}>+</button>
+                        <button onClick={() => setPax((p) => Math.min(50, p + 1))} aria-label="More" style={{ ...btnCircle, width: 44, height: 44, fontSize: 20 }}>+</button>
                       </div>
                     </div>
                     <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 16 }}>
@@ -1929,7 +2007,7 @@ function TourSearch({ go }) {
 
 function HeroSearch({ go }) {
   const [tab, setTab] = useState("tours");
-  const tabs = [["tours", "Tours", IconBeach, 16], ["cars", "Vehicles", IconCarFilled, 19]]; // Flights: on request only, removed from the wizard
+  const tabs = [["tours", "Tours", IconBeach, 16], ["cars", "Cars", IconCarFilled, 19], ["flights", "Flights", IconPlane2, 18]];
   const todayStr = new Date().toISOString().slice(0, 10);
 
   // Flights state
@@ -1941,7 +2019,7 @@ function HeroSearch({ go }) {
   const [ftrav, setFtrav] = useState({ adults: 1, children: 0, infants: 0, young: 0 });
   const ftotal = ftrav.adults + ftrav.children + ftrav.infants + ftrav.young;
   const setTrav = (k, d) => setFtrav((t) => ({ ...t, [k]: Math.max(k === "adults" ? 1 : 0, t[k] + d) }));
-  const [fcls, setFcls] = useState("Économique");
+  const [fcls, setFcls] = useState("Economy");
   const [vcOpen, setVcOpen] = useState(false);
   const [flegs, setFlegs] = useState([{ from: "", to: "", dep: "" }, { from: "", to: "", dep: "" }]);
   const swapMain = () => { setFfrom(fto); setFto(ffrom); };
@@ -1951,30 +2029,30 @@ function HeroSearch({ go }) {
   const doSearch = () => {
     if (tab === "cars") { go("transport"); return; }
     if (tab === "tours") { go("tours"); return; }
-    if (ftype === "multi") go("flights", { fp: { type: "Multi-city", pax: ftotal, cls: FLIGHT_CLS_MAP[fcls] }, flegs });
-    else go("flights", { fp: { type: ftype === "round" ? "Round trip" : "One way", from: ffrom, to: fto, dep: fdep, ret: ftype === "round" ? fret : "", pax: ftotal, cls: FLIGHT_CLS_MAP[fcls] } });
+    if (ftype === "multi") go("flightQuote", { fp: { type: "Multi-city", pax: ftotal, cls: fcls }, flegs });
+    else go("flightQuote", { fp: { type: ftype === "round" ? "Round trip" : "One way", from: ffrom, to: fto, dep: fdep, ret: ftype === "round" ? fret : "", pax: ftotal, cls: fcls } });
   };
 
   // Voyageurs + classe pill (flights) — full Skyscanner-style breakdown
   const travRows = [
-    ["adults", "Adultes", ""],
-    ["children", "Enfants", "De 2 à 17 ans"],
-    ["infants", "Bébés sur les genoux", "Moins de 2 ans"],
-    ["young", "Jeunes enfants sur siège", "Moins de 2 ans"],
+    ["adults", "Adults", ""],
+    ["children", "Children", "Aged 2–17"],
+    ["infants", "Lap infants", "Under 2"],
+    ["young", "Infants in seat", "Under 2"],
   ];
   const vcPill = (
     <div style={{ ...heroBox, position: "relative", cursor: "pointer", flex: "0 0 auto", minWidth: 214 }} onClick={() => setVcOpen((o) => !o)}>
       <Users size={19} color={T.green} strokeWidth={2} style={{ flexShrink: 0 }} />
       <div style={{ minWidth: 0, flex: 1 }}>
-        <div style={heroLab}>Voyageurs et classe</div>
-        <div style={{ fontSize: 14.5, color: T.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{ftotal} personne{ftotal > 1 ? "s" : ""}, {fcls}</div>
+        <div style={heroLab}>Travellers & class</div>
+        <div style={{ fontSize: 14.5, color: T.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{ftotal} traveller{ftotal > 1 ? "s" : ""}, {fcls}</div>
       </div>
       <ChevronDown size={15} style={{ opacity: 0.5, flexShrink: 0 }} />
       {vcOpen && (
         <>
           <div className="mpop-backdrop" onClick={(e) => { e.stopPropagation(); setVcOpen(false); }} style={{ position: "fixed", inset: 0, zIndex: 90 }} />
           <div onClick={(e) => e.stopPropagation()} className="mpop" style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, zIndex: 91, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 16, boxShadow: "0 18px 44px rgba(0,0,0,.22)", padding: 20, width: "min(360px, calc(100vw - 28px))", cursor: "default" }}>
-            <div style={{ fontSize: 16, fontWeight: 700, color: T.ink, marginBottom: 14 }}>Voyageurs et classe</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: T.ink, marginBottom: 14 }}>Travellers & class</div>
             {travRows.map(([k, l, sub]) => (
               <div key={k} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderTop: k === "adults" ? "none" : `1px solid ${T.line}` }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -1982,16 +2060,16 @@ function HeroSearch({ go }) {
                   {sub && <div style={{ fontSize: 12.5, color: "rgba(0,0,0,.8)" }}>{sub}</div>}
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <button onClick={() => setTrav(k, -1)} disabled={ftrav[k] <= (k === "adults" ? 1 : 0)} style={{ ...btnCircle, width: 36, height: 36, fontSize: 18, opacity: ftrav[k] <= (k === "adults" ? 1 : 0) ? 0.4 : 1, cursor: ftrav[k] <= (k === "adults" ? 1 : 0) ? "not-allowed" : "pointer" }} aria-label="Moins">−</button>
+                  <button onClick={() => setTrav(k, -1)} disabled={ftrav[k] <= (k === "adults" ? 1 : 0)} style={{ ...btnCircle, width: 36, height: 36, fontSize: 18, opacity: ftrav[k] <= (k === "adults" ? 1 : 0) ? 0.4 : 1, cursor: ftrav[k] <= (k === "adults" ? 1 : 0) ? "not-allowed" : "pointer" }} aria-label="Less">−</button>
                   <span style={{ fontWeight: 600, minWidth: 18, textAlign: "center", fontSize: 15 }}>{ftrav[k]}</span>
-                  <button onClick={() => setTrav(k, 1)} style={{ ...btnCircle, width: 36, height: 36, fontSize: 18 }} aria-label="Plus">+</button>
+                  <button onClick={() => setTrav(k, 1)} style={{ ...btnCircle, width: 36, height: 36, fontSize: 18 }} aria-label="More">+</button>
                 </div>
               </div>
             ))}
             <div style={{ marginTop: 14 }}>
               <div style={{ ...heroBox, cursor: "default", padding: "8px 14px" }}>
                 <div style={{ flex: 1 }}>
-                  <div style={heroLab}>Classe</div>
+                  <div style={heroLab}>Class</div>
                   <select value={fcls} onChange={(e) => setFcls(e.target.value)} style={{ ...heroInp, cursor: "pointer" }}>
                     {FLIGHT_CLS.map((c) => <option key={c} value={c}>{c}</option>)}
                   </select>
@@ -2010,7 +2088,7 @@ function HeroSearch({ go }) {
 
   const searchBtn = (
     <button onClick={doSearch} className="hero-search-btn" style={{ background: T.green, color: "#fff", border: "none", borderRadius: 12, padding: "0 28px", fontWeight: 700, fontSize: 15, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, flexShrink: 0, minHeight: 54 }}>
-      <Search size={18} /> Rechercher
+      <Search size={18} /> Get a quote
     </button>
   );
 
@@ -2036,7 +2114,7 @@ function HeroSearch({ go }) {
         <div style={{ marginTop: 14 }}>
           {/* flight sub-tabs */}
           <div style={{ display: "flex", gap: 22, borderBottom: `1px solid ${T.line}`, marginBottom: 16 }}>
-            {[["round", "Aller-retour"], ["one", "Aller simple"], ["multi", "Multidestination"]].map(([k, l]) => {
+            {[["round", "Round trip"], ["one", "One way"], ["multi", "Multi-city"]].map(([k, l]) => {
               const on = ftype === k;
               return <button key={k} onClick={() => setFtype(k)} style={{ background: "none", border: "none", borderBottom: `2px solid ${on ? T.green : "transparent"}`, marginBottom: -1, padding: "4px 2px 9px", cursor: "pointer", color: on ? T.green : "rgba(0,0,0,.8)", fontWeight: on ? 700 : 600, fontSize: 14, fontFamily: "inherit" }}>{l}</button>;
             })}
@@ -2047,23 +2125,23 @@ function HeroSearch({ go }) {
               <div style={{ maxWidth: 280, marginBottom: 16 }}>{vcPill}</div>
               {flegs.map((l, i) => (
                 <div key={i} style={{ marginBottom: 14 }}>
-                  <div style={{ fontWeight: 700, fontSize: 14, color: T.ink, marginBottom: 6 }}>Vol {i + 1}</div>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: T.ink, marginBottom: 6 }}>Flight {i + 1}</div>
                   <div className="hero-fields" style={{ display: "flex", gap: 10, alignItems: "stretch" }}>
                     <div style={{ flex: 2, display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-                      <div style={{ flex: 1, minWidth: 0 }}><AirportInput value={l.from} onChange={(v) => setLeg(i, "from", v)} placeholder="Lieu de départ" wide Icon={MapPin} /></div>
-                      <button onClick={() => swapLeg(i)} style={heroSwapBtn} aria-label="Inverser"><SwapIcon /></button>
-                      <div style={{ flex: 1, minWidth: 0 }}><AirportInput value={l.to} onChange={(v) => setLeg(i, "to", v)} placeholder="Destination" wide Icon={MapPin} /></div>
+                      <div style={{ flex: 1, minWidth: 0 }}><AirportInput value={l.from} onChange={(v) => setLeg(i, "from", v)} placeholder="From" wide Icon={MapPin} /></div>
+                      <button onClick={() => swapLeg(i)} style={heroSwapBtn} aria-label="Swap"><SwapIcon /></button>
+                      <div style={{ flex: 1, minWidth: 0 }}><AirportInput value={l.to} onChange={(v) => setLeg(i, "to", v)} placeholder="To" wide Icon={MapPin} /></div>
                     </div>
                     <HField Ico={Calendar} label="Date">
-                      <input type="date" min={todayStr} style={heroInp} value={l.dep} onChange={(e) => setLeg(i, "dep", e.target.value)} />
+                      <RangeDate from={l.dep} to={l.dep} onChange={(f) => setLeg(i, "dep", f)} triggerStyle={{ background: "transparent", border: "none", padding: 0 }} wide single minDate={todayStr} />
                     </HField>
-                    {flegs.length > 2 ? <button onClick={() => setFlegs((ls) => ls.filter((_, j) => j !== i))} style={{ ...btnCircle, alignSelf: "center", flexShrink: 0 }} aria-label="Retirer ce vol"><X size={14} /></button> : null}
+                    {flegs.length > 2 ? <button onClick={() => setFlegs((ls) => ls.filter((_, j) => j !== i))} style={{ ...btnCircle, alignSelf: "center", flexShrink: 0 }} aria-label="Remove flight"><X size={14} /></button> : null}
                   </div>
                 </div>
               ))}
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, marginTop: 4 }}>
                 {flegs.length < 6
-                  ? <button onClick={() => setFlegs((ls) => [...ls, { from: ls[ls.length - 1].to || "", to: "", dep: "" }])} style={{ background: "none", border: "none", color: T.green, fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "inherit", display: "inline-flex", alignItems: "center", gap: 6 }}><Plane size={16} /> Ajouter un autre vol</button>
+                  ? <button onClick={() => setFlegs((ls) => [...ls, { from: ls[ls.length - 1].to || "", to: "", dep: "" }])} style={{ background: "none", border: "none", color: T.green, fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "inherit", display: "inline-flex", alignItems: "center", gap: 6 }}><Plane size={16} /> Add another flight</button>
                   : <span />}
                 {searchBtn}
               </div>
@@ -2071,17 +2149,22 @@ function HeroSearch({ go }) {
           ) : (
             <div className="hero-fields" style={{ display: "flex", gap: 10, alignItems: "stretch" }}>
               <div style={{ flex: 2, display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-                <div style={{ flex: 1, minWidth: 0 }}><AirportInput value={ffrom} onChange={setFfrom} placeholder="Lieu de départ" wide Icon={MapPin} /></div>
-                <button onClick={swapMain} style={heroSwapBtn} aria-label="Inverser"><SwapIcon /></button>
-                <div style={{ flex: 1, minWidth: 0 }}><AirportInput value={fto} onChange={setFto} placeholder="Destination" wide Icon={MapPin} /></div>
+                <div style={{ flex: 1, minWidth: 0 }}><AirportInput value={ffrom} onChange={setFfrom} placeholder="From" wide Icon={MapPin} /></div>
+                <button onClick={swapMain} style={heroSwapBtn} aria-label="Swap"><SwapIcon /></button>
+                <div style={{ flex: 1, minWidth: 0 }}><AirportInput value={fto} onChange={setFto} placeholder="To" wide Icon={MapPin} /></div>
               </div>
               {ftype === "round" ? (
-                <HField Ico={Calendar} label="Dates">
-                  <RangeDate from={fdep} to={fret} onChange={(f, t) => { setFdep(f); setFret(t); }} triggerStyle={{ background: "transparent", border: "none", padding: 0 }} wide align="right" />
-                </HField>
+                <>
+                  <HField Ico={Calendar} label="Departure">
+                    <RangeDate from={fdep} to={fdep} onChange={(f) => { setFdep(f); if (fret && fret < f) setFret(""); }} triggerStyle={{ background: "transparent", border: "none", padding: 0 }} wide single minDate={todayStr} />
+                  </HField>
+                  <HField Ico={Calendar} label="Return">
+                    <RangeDate from={fret} to={fret} onChange={(f) => setFret(f)} triggerStyle={{ background: "transparent", border: "none", padding: 0 }} wide single align="right" minDate={fdep || todayStr} />
+                  </HField>
+                </>
               ) : (
-                <HField Ico={Calendar} label="Date">
-                  <input type="date" min={todayStr} style={heroInp} value={fdep} onChange={(e) => setFdep(e.target.value)} />
+                <HField Ico={Calendar} label="Departure">
+                  <RangeDate from={fdep} to={fdep} onChange={(f) => setFdep(f)} triggerStyle={{ background: "transparent", border: "none", padding: 0 }} wide single minDate={todayStr} />
                 </HField>
               )}
               {vcPill}
@@ -3506,6 +3589,105 @@ function FlightsPage({ notify, user, initial, initialLegs }) {
         {/* Right 1/3 — image */}
         <div className="flights-img" style={{ borderRadius: 16, overflow: "hidden", minHeight: 380, background: `linear-gradient(160deg, rgba(0,50,25,.25), rgba(0,107,51,.15)), url("${heroFlight}") center/cover no-repeat, linear-gradient(140deg, ${T.green}, ${T.indigo})` }} />
       </div>
+    </Wrap>
+  );
+}
+
+const RecapRow = ({ l, v }) => (
+  <div style={{ display: "flex", justifyContent: "space-between", gap: 12, borderBottom: `1px solid ${T.line}`, paddingBottom: 8 }}>
+    <span style={{ fontSize: 13, color: "rgba(0,0,0,.6)" }}>{l}</span>
+    <span style={{ fontSize: 14, fontWeight: 600, color: T.ink, textAlign: "right" }}>{v || "—"}</span>
+  </div>
+);
+
+// Flight quote recap — catches the wizard inputs, adds contact details, submits the request.
+function FlightQuotePage({ notify, user, go, initial, initialLegs }) {
+  const fp = initial || {};
+  const legs = initialLegs || [];
+  const multi = fp.type === "Multi-city";
+  const [contact, setContact] = useState({ name: user?.name || "", email: user?.email || "", phone: "", notes: "" });
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+  useEffect(() => { window.scrollTo({ top: 0 }); }, []);
+  useEffect(() => { if (user) setContact((c) => ({ ...c, name: c.name || user.name || "", email: c.email || user.email || "" })); }, [user]);
+
+  const itinerary = multi
+    ? legs.map((l, i) => `Leg ${i + 1}: ${l.from} → ${l.to} on ${l.dep}`).join(" | ")
+    : `${fp.from} → ${fp.to} · dep ${fp.dep}${fp.type === "Round trip" ? ` · ret ${fp.ret}` : ""}`;
+  const canSend = contact.name.trim() && contact.email.trim();
+
+  const submit = async () => {
+    if (!canSend || sending) return;
+    setSending(true);
+    try {
+      const res = await fetch("https://api.web3forms.com/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({
+          access_key: WEB3FORMS_KEY_FLIGHTS,
+          subject: `Flight request — ${fp.type} · ${multi ? `${legs.length} legs` : `${fp.from} → ${fp.to}`} · ${fp.pax} pax ${fp.cls}`,
+          from_name: "ATS Flights",
+          name: contact.name, email: contact.email, phone: contact.phone,
+          Trip_type: fp.type, Itinerary: itinerary, Passengers: fp.pax, Class: fp.cls,
+          Customer_notes: contact.notes || "—",
+          Account: user ? `Signed in (${user.email})` : "Guest",
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSent(true);
+        notify("Flight request sent — our ticketing team will reply with fares.");
+        supabase.functions.invoke("send-confirmation", { body: { to: contact.email, name: contact.name, kind: "flight", summary: [["Trip type", fp.type], ["Itinerary", itinerary], ["Passengers", String(fp.pax)], ["Class", fp.cls]] } }).catch(() => {});
+      } else notify("Could not send the request. Please try again.");
+    } catch { notify("Network error — please try again."); }
+    finally { setSending(false); }
+  };
+
+  return (
+    <Wrap>
+      <button onClick={() => (window.history.length > 1 ? window.history.back() : go("home"))} style={{ background: "none", border: "none", cursor: "pointer", color: T.ink, opacity: 0.8, padding: 0, marginBottom: 8, display: "inline-flex", alignItems: "center", gap: 6, fontFamily: "inherit", fontSize: 14 }}><ChevronLeft size={17} /> Back</button>
+      <Eyebrow>ATS Travel · IATA-accredited</Eyebrow><H2>Your flight quote request</H2>
+
+      {sent ? (
+        <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 16, padding: 30, textAlign: "center", maxWidth: 560 }}>
+          <div style={{ width: 64, height: 64, borderRadius: "50%", margin: "0 auto 14px", display: "flex", alignItems: "center", justifyContent: "center", background: "#E9F7EE", color: T.green }}><Check size={32} /></div>
+          <h3 className="disp" style={{ fontWeight: 700, fontSize: 20, margin: "0 0 8px" }}>Request received</h3>
+          <p style={{ fontSize: 14.5, lineHeight: 1.6, color: "rgba(0,0,0,.8)", maxWidth: 420, margin: "0 auto" }}>Our ticketing team is searching the best available fares and will reply to <strong>{contact.email}</strong> shortly.</p>
+          <button style={{ ...btnGreen, marginTop: 18 }} onClick={() => go("home")}>Back to home</button>
+        </div>
+      ) : (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, alignItems: "start" }} className="fq-grid">
+          <style>{`@media(max-width:800px){.fq-grid{grid-template-columns:1fr !important}}`}</style>
+
+          <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 16, padding: 22 }}>
+            <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 14 }}>Your request</div>
+            <div style={{ display: "grid", gap: 10 }}>
+              <RecapRow l="Trip type" v={fp.type} />
+              {multi
+                ? legs.map((l, i) => <RecapRow key={i} l={`Flight ${i + 1}`} v={`${l.from} → ${l.to} · ${l.dep}`} />)
+                : (<>
+                    <RecapRow l="Route" v={`${fp.from} → ${fp.to}`} />
+                    <RecapRow l="Departure" v={fp.dep} />
+                    {fp.type === "Round trip" && <RecapRow l="Return" v={fp.ret} />}
+                  </>)}
+              <RecapRow l="Passengers" v={fp.pax} />
+              <RecapRow l="Class" v={fp.cls} />
+            </div>
+          </div>
+
+          <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 16, padding: 22 }}>
+            <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 14 }}>Your contact details</div>
+            <div style={{ display: "grid", gap: 12 }}>
+              <div><label style={label}>Full name *</label><input style={input} value={contact.name} onChange={(e) => setContact({ ...contact, name: e.target.value })} placeholder="e.g. Awa Diop" /></div>
+              <div><label style={label}>Email *</label><input type="email" style={input} value={contact.email} onChange={(e) => setContact({ ...contact, email: e.target.value })} placeholder="you@example.com" /></div>
+              <div><label style={label}>Phone / WhatsApp</label><input style={input} value={contact.phone} onChange={(e) => setContact({ ...contact, phone: e.target.value })} placeholder="+221 …" /></div>
+              <div><label style={label}>Notes (optional)</label><textarea style={{ ...input, minHeight: 60, resize: "vertical" }} value={contact.notes} onChange={(e) => setContact({ ...contact, notes: e.target.value })} placeholder="Flexible dates, baggage, preferred airline…" /></div>
+            </div>
+            <button disabled={!canSend || sending} style={{ ...btnGold, marginTop: 14, opacity: canSend && !sending ? 1 : 0.5, cursor: canSend ? "pointer" : "not-allowed" }} onClick={submit}>{sending ? "Sending…" : "Submit quote request"}</button>
+            {!canSend && <div style={{ fontSize: 12.5, color: T.laterite, marginTop: 6 }}>Add your name and email to submit.</div>}
+          </div>
+        </div>
+      )}
     </Wrap>
   );
 }
@@ -7365,7 +7547,7 @@ function Footer({ go, notify }) {
         </div>
         <div>
           <div style={head}>Explore</div>
-          {[["tours", "Tours & experiences"], ["builder", "Trip Builder"], ["transport", "Transfers & car hire"], ["flights", "Flights"], ["events", "Events & MICE"], ["blog", "Blog"], ["about", "About Us"], ["terms", "Terms & cancellation policy"]].map(([k, l]) => (
+          {[["tours", "Tours & experiences"], ["builder", "Trip Builder"], ["transport", "Transfers & car hire"], ["flights", "Flights"], ["events", "Events & MICE"], ["corporate", "Corporate travel"], ["agents", "Agents / B2B"], ["blog", "Blog"], ["about", "About Us"], ["terms", "Terms & cancellation policy"]].map(([k, l]) => (
             <button key={k} onClick={() => go(k)} className="foot-link" style={{ display: "block", background: "none", border: "none", color: "rgba(255,255,255,.74)", cursor: "pointer", padding: "4px 0", fontSize: 14, fontFamily: "inherit", textAlign: "left" }}>{l}</button>
           ))}
         </div>
