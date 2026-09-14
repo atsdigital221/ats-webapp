@@ -180,7 +180,7 @@ function MobileSheet({ title, onClose, footer, children }) {
     return () => { document.body.style.overflow = prev; };
   }, []);
   return createPortal(
-    <div style={{ position: "fixed", inset: 0, zIndex: 200, background: "#fff", display: "flex", flexDirection: "column" }}>
+    <div onClick={(e) => e.stopPropagation()} style={{ position: "fixed", inset: 0, zIndex: 200, background: "#fff", display: "flex", flexDirection: "column" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderBottom: `1px solid ${T.line}`, flexShrink: 0 }}>
         <button onClick={onClose} aria-label="Close" style={{ width: 40, height: 40, borderRadius: "50%", border: `1px solid ${T.line}`, background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: T.ink, flexShrink: 0 }}><X size={20} /></button>
         {title && <div className="disp" style={{ fontWeight: 700, fontSize: 17, color: T.ink }}>{title}</div>}
@@ -198,6 +198,7 @@ const iso = (y, m, d) => `${y}-${String(m + 1).padStart(2, "0")}-${String(d).pad
 
 function RangeDate({ from, to, onChange, triggerStyle, minDate, wide, align = "left", single, up }) {
   const [open, setOpen] = useState(false);
+  const mobile = useIsMobile();
   const now = new Date();
   const todayStr = iso(now.getFullYear(), now.getMonth(), now.getDate());
   const minStr = minDate || todayStr; // earliest selectable day
@@ -214,7 +215,7 @@ function RangeDate({ from, to, onChange, triggerStyle, minDate, wide, align = "l
   };
   const label = single ? (from || "dd/mm/yyyy") : from ? (to ? `${from} → ${to}` : `${from} → …`) : "dd/mm/yyyy";
 
-  const renderMonth = (y, m) => {
+  const renderMonth = (y, m, big) => {
     const daysInMonth = new Date(y, m + 1, 0).getDate();
     const firstDow = (new Date(y, m, 1).getDay() + 6) % 7; // Mon=0
     const cells = [];
@@ -222,11 +223,11 @@ function RangeDate({ from, to, onChange, triggerStyle, minDate, wide, align = "l
     for (let d = 1; d <= daysInMonth; d++) cells.push(d);
     return (
       <div key={`${y}-${m}`} style={{ flex: 1, minWidth: wide ? 244 : 0 }}>
-        <div style={{ textAlign: "center", fontWeight: 700, fontSize: wide ? 15 : 14, marginBottom: 8, textTransform: "capitalize" }}>{MONTHS[m]} {y}</div>
+        <div style={{ textAlign: "center", fontWeight: 700, fontSize: big ? 17 : wide ? 15 : 14, marginBottom: 10, textTransform: "capitalize" }}>{MONTHS[m]} {y}</div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 2, fontSize: 11.5, opacity: 0.55, marginBottom: 6 }}>
           {WD.map((w) => <div key={w} style={{ textAlign: "center" }}>{w}</div>)}
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: wide ? 3 : 2 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: big ? 4 : wide ? 3 : 2 }}>
           {cells.map((d, i) => {
             if (!d) return <div key={i} />;
             const ds = iso(y, m, d);
@@ -236,7 +237,7 @@ function RangeDate({ from, to, onChange, triggerStyle, minDate, wide, align = "l
             const sel = isFrom || isTo;
             return (
               <button key={i} type="button" disabled={past} onClick={() => pick(ds)}
-                style={{ border: "none", borderRadius: 9, padding: wide ? "11px 0" : "7px 0", fontSize: wide ? 14 : 13, cursor: past ? "not-allowed" : "pointer",
+                style={{ border: "none", borderRadius: 9, padding: big ? "14px 0" : wide ? "11px 0" : "7px 0", fontSize: big ? 16 : wide ? 14 : 13, cursor: past ? "not-allowed" : "pointer",
                   background: sel ? T.green : inRange ? "#E3F3E9" : "transparent", color: past ? "#C7CFCA" : sel ? "#fff" : T.ink, fontWeight: sel ? 700 : 500 }}>
                 {d}
               </button>
@@ -254,7 +255,23 @@ function RangeDate({ from, to, onChange, triggerStyle, minDate, wide, align = "l
         <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: from ? T.ink : "rgba(0,0,0,.8)" }}>{label}</span>
         <Calendar size={15} style={{ opacity: 0.6, flexShrink: 0 }} />
       </button>
-      {open && (
+      {open && (mobile ? (
+        <MobileSheet title={single ? "Select a date" : "Select dates"} onClose={() => setOpen(false)} footer={
+          <div style={{ display: "flex", gap: 8 }}>
+            <button type="button" onClick={() => onChange("", "")} style={{ flex: 1, background: "none", border: `1px solid ${T.line}`, borderRadius: 12, padding: "13px", cursor: "pointer", fontSize: 15, fontWeight: 700, fontFamily: "inherit", color: T.ink }}>Clear</button>
+            <button type="button" onClick={() => setOpen(false)} style={{ flex: 2, background: T.green, color: "#fff", border: "none", borderRadius: 12, padding: "13px", cursor: "pointer", fontSize: 15, fontWeight: 700, fontFamily: "inherit" }}>Valider</button>
+          </div>
+        }>
+          <div style={{ padding: 16 }}>
+            <div style={{ display: "flex", alignItems: "center", marginBottom: 14 }}>
+              <button type="button" disabled={!canPrev} onClick={() => setView((v) => ({ y: v.m === 0 ? v.y - 1 : v.y, m: v.m === 0 ? 11 : v.m - 1 }))} style={{ ...btnCircle, opacity: canPrev ? 1 : 0.3, cursor: canPrev ? "pointer" : "not-allowed" }}>‹</button>
+              <span style={{ flex: 1 }} />
+              <button type="button" onClick={() => setView((v) => ({ y: v.m === 11 ? v.y + 1 : v.y, m: v.m === 11 ? 0 : v.m + 1 }))} style={btnCircle}>›</button>
+            </div>
+            {renderMonth(view.y, view.m, true)}
+          </div>
+        </MobileSheet>
+      ) : (
         <>
           <div className="mpop-backdrop" onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 90 }} />
           <div className="mpop" style={{ position: "absolute", top: up ? "auto" : "calc(100% + 6px)", bottom: up ? "calc(100% + 6px)" : "auto", left: align === "right" ? "auto" : 0, right: align === "right" ? 0 : "auto", zIndex: 91, background: "#fff", color: T.ink, border: `1px solid ${T.line}`, borderRadius: 16, boxShadow: "0 18px 40px rgba(0,0,0,.22)", padding: wide ? 20 : 14, width: wide ? "min(346px, calc(100vw - 28px))" : "min(290px, calc(100vw - 32px))", maxWidth: "94vw" }}>
@@ -273,7 +290,7 @@ function RangeDate({ from, to, onChange, triggerStyle, minDate, wide, align = "l
             </div>
           </div>
         </>
-      )}
+      ))}
     </div>
   );
 }
@@ -1784,6 +1801,7 @@ const heroSearchBtnStyle = { background: T.green, color: "#fff", border: "none",
 // Custom white-popover select (replaces native selects so every field shares the same UI)
 function HSelect({ Ico, label, value, options, onChange, flex = 1, minWidth = 0, popWidth = 300 }) {
   const [open, setOpen] = useState(false);
+  const mobile = useIsMobile();
   const sel = options.find((o) => o.v === value);
   return (
     <div style={{ ...heroBox, position: "relative", cursor: "pointer", flex, minWidth }} onClick={() => setOpen((o) => !o)} role="button" aria-haspopup="listbox" aria-expanded={open}>
@@ -1793,7 +1811,21 @@ function HSelect({ Ico, label, value, options, onChange, flex = 1, minWidth = 0,
         <div style={{ fontSize: 14.5, color: T.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{sel ? sel.label : "—"}</div>
       </div>
       <ChevronDown size={15} style={{ opacity: 0.5, flexShrink: 0 }} />
-      {open && (
+      {open && (mobile ? (
+        <MobileSheet title={label} onClose={() => setOpen(false)}>
+          <div style={{ padding: "4px 0" }}>
+            {options.map((o) => (
+              <button key={o.v} onClick={() => { onChange(o.v); setOpen(false); }} role="option" aria-selected={o.v === value} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", textAlign: "left", background: o.v === value ? "rgba(0,146,69,.06)" : "none", border: "none", borderBottom: `1px solid ${T.line}`, padding: "15px 18px", cursor: "pointer", color: T.ink, fontFamily: "inherit" }}>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 15.5, fontWeight: o.v === value ? 700 : 500 }}>{o.label}</div>
+                  {o.sub && <div style={{ fontSize: 13, color: "rgba(0,0,0,.7)" }}>{o.sub}</div>}
+                </span>
+                {o.v === value && <Check size={18} color={T.green} style={{ flexShrink: 0 }} />}
+              </button>
+            ))}
+          </div>
+        </MobileSheet>
+      ) : (
         <>
           <div className="mpop-backdrop" onClick={(e) => { e.stopPropagation(); setOpen(false); }} style={{ position: "fixed", inset: 0, zIndex: 90 }} />
           <div onClick={(e) => e.stopPropagation()} role="listbox" className="mpop" style={{ position: "absolute", top: "calc(100% + 8px)", left: 0, zIndex: 91, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 16, boxShadow: "0 18px 44px rgba(0,0,0,.22)", overflow: "hidden auto", maxHeight: 330, width: `min(${popWidth}px, calc(100vw - 28px))`, padding: "6px 0", cursor: "default" }}>
@@ -1808,7 +1840,7 @@ function HSelect({ Ico, label, value, options, onChange, flex = 1, minWidth = 0,
             ))}
           </div>
         </>
-      )}
+      ))}
     </div>
   );
 }
@@ -1820,6 +1852,7 @@ function TimeField({ label, value, onChange }) {
 // ---------------- CAR / TRANSFER SEARCH (Voitures module: location + transfert) ----------------
 function CarSearch({ go }) {
   const [sub, setSub] = useState("rental"); // rental | transfer
+  const mobile = useIsMobile();
   const todayStr = new Date().toISOString().slice(0, 10);
   // rental
   const [pickup, setPickup] = useState("");
@@ -1922,7 +1955,23 @@ function CarSearch({ go }) {
                 <div style={{ fontSize: 14.5, color: T.ink }}>{pax} passenger{pax > 1 ? "s" : ""}</div>
               </div>
               <ChevronDown size={15} style={{ opacity: 0.5, flexShrink: 0 }} />
-              {paxOpen && (
+              {paxOpen && (mobile ? (
+                <MobileSheet title="Passengers" onClose={() => setPaxOpen(false)} footer={<button onClick={() => setPaxOpen(false)} style={{ width: "100%", background: T.green, color: "#fff", border: "none", borderRadius: 12, padding: "14px", fontWeight: 700, fontSize: 15, cursor: "pointer", fontFamily: "inherit" }}>Valider</button>}>
+                  <div style={{ padding: 18 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 15, color: T.ink }}>Passengers</div>
+                        <div style={{ fontSize: 12.5, color: "rgba(0,0,0,.8)" }}>Up to {veh.cap} for this vehicle</div>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                        <button onClick={() => setPax((p) => Math.max(1, p - 1))} disabled={pax <= 1} aria-label="Less" style={{ ...btnCircle, width: 44, height: 44, fontSize: 20, opacity: pax <= 1 ? 0.4 : 1, cursor: pax <= 1 ? "not-allowed" : "pointer" }}>−</button>
+                        <span style={{ fontWeight: 600, minWidth: 20, textAlign: "center", fontSize: 15 }}>{pax}</span>
+                        <button onClick={() => setPax((p) => Math.min(50, p + 1))} aria-label="More" style={{ ...btnCircle, width: 44, height: 44, fontSize: 20 }}>+</button>
+                      </div>
+                    </div>
+                  </div>
+                </MobileSheet>
+              ) : (
                 <>
                   <div className="mpop-backdrop" onClick={(e) => { e.stopPropagation(); setPaxOpen(false); }} style={{ position: "fixed", inset: 0, zIndex: 90 }} />
                   <div onClick={(e) => e.stopPropagation()} role="dialog" className="mpop" style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, zIndex: 91, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 16, boxShadow: "0 18px 44px rgba(0,0,0,.22)", padding: 20, width: "min(300px, calc(100vw - 28px))", cursor: "default" }}>
@@ -1942,7 +1991,7 @@ function CarSearch({ go }) {
                     </div>
                   </div>
                 </>
-              )}
+              ))}
             </div>
             <button onClick={bookTransfer} className="hero-search-btn" style={{ ...heroSearchBtnStyle, opacity: transferReady ? 1 : 0.55, cursor: transferReady ? "pointer" : "not-allowed" }}><Search size={18} /> Book</button>
           </div>
@@ -1987,6 +2036,41 @@ function TourSearch({ go }) {
     : [];
   const pickTour = (t) => { setExpQ(t.name); setExpSel(t.id); setExpOpen(false); addRecent(t.id); };
   const doSearch = () => { if (expSel) go("tour", { id: expSel, date, pax: total }); else go("tours"); };
+  const mobile = useIsMobile();
+  const expList = (
+    q ? (
+    matches.length ? matches.map((t) => (
+      <button key={t.id} onClick={() => pickTour(t)} style={heroRow} role="option" aria-selected={expSel === t.id}>
+        <Compass size={20} color={T.ink} strokeWidth={2} style={{ flexShrink: 0, marginTop: 2 }} />
+        <span style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 14, fontWeight: 700 }}>{t.name}</div>
+          <div style={{ fontSize: 13, color: "rgba(0,0,0,.8)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{[t.pole, t.tag, t.dur].filter(Boolean).join(" · ")}</div>
+        </span>
+      </button>
+    )) : (
+      <div style={{ padding: "24px 18px", color: "rgba(0,0,0,.8)", fontSize: 13.5 }}>No activity found for “{expQ}”</div>
+    )
+  ) : recentTours.length ? (
+    <>
+      <div style={{ fontSize: 11, fontWeight: 700, padding: "14px 18px 4px", color: "rgba(0,0,0,.5)", textTransform: "uppercase", letterSpacing: ".1em" }}>Recent searches</div>
+      {recentTours.map((t) => (
+        <button key={t.id} onClick={() => pickTour(t)} style={heroRow} role="option" aria-selected={expSel === t.id}>
+          <Clock size={20} color={T.ink} strokeWidth={2} style={{ flexShrink: 0, marginTop: 2 }} />
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 14, fontWeight: 700 }}>{t.name}</div>
+            <div style={{ fontSize: 13, color: "rgba(0,0,0,.8)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{[t.pole, t.tag, t.dur].filter(Boolean).join(" · ")}</div>
+          </span>
+          <span role="button" tabIndex={0} aria-label={`Remove ${t.name}`} onClick={(e) => { e.stopPropagation(); removeRecent(t.id); }} style={{ flexShrink: 0, marginTop: 4, color: T.ink, display: "flex", cursor: "pointer" }}><X size={17} /></span>
+        </button>
+      ))}
+    </>
+  ) : (
+    <div style={{ padding: "16px 18px", display: "flex", alignItems: "center", gap: 10, color: "rgba(0,0,0,.6)" }}>
+      <Search size={18} style={{ flexShrink: 0, opacity: 0.7 }} />
+      <span style={{ fontSize: 14 }}>Search activities</span>
+    </div>
+  )
+  );
 
   return (
     <div className="hero-fields" style={{ display: "flex", gap: 10, marginTop: 16, alignItems: "stretch" }}>
@@ -1998,7 +2082,27 @@ function TourSearch({ go }) {
           <div style={{ fontSize: 14.5, color: T.ink }}>{dest}</div>
         </div>
         <ChevronDown size={15} style={{ opacity: 0.5, flexShrink: 0 }} />
-        {destOpen && (
+        {destOpen && (mobile ? (
+          <MobileSheet title="Destination" onClose={() => setDestOpen(false)}>
+            <div style={{ padding: "4px 0" }}>
+              <button onClick={() => { setDest("Senegal"); setDestOpen(false); }} style={{ ...heroRow, borderBottom: `1px solid ${T.line}` }} role="option" aria-selected={dest === "Senegal"}>
+                <MapPin size={20} color={T.green} strokeWidth={2} style={{ flexShrink: 0, marginTop: 2 }} />
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 15, fontWeight: 700 }}>Senegal</div>
+                  <div style={{ fontSize: 13, color: "rgba(0,0,0,.8)" }}>Available · 35+ experiences</div>
+                </span>
+                {dest === "Senegal" && <Check size={18} color={T.green} style={{ flexShrink: 0, marginTop: 4 }} />}
+              </button>
+              <div style={{ ...heroRow, cursor: "not-allowed", opacity: 0.45, borderBottom: `1px solid ${T.line}` }} role="option" aria-disabled="true" aria-selected="false">
+                <MapPin size={20} color={T.ink} strokeWidth={2} style={{ flexShrink: 0, marginTop: 2 }} />
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 15, fontWeight: 700 }}>Rwanda</div>
+                  <div style={{ fontSize: 13, color: "rgba(0,0,0,.8)" }}>Coming soon</div>
+                </span>
+              </div>
+            </div>
+          </MobileSheet>
+        ) : (
           <>
             <div className="mpop-backdrop" onClick={(e) => { e.stopPropagation(); setDestOpen(false); }} style={{ position: "fixed", inset: 0, zIndex: 90 }} />
             <div onClick={(e) => e.stopPropagation()} role="listbox" className="mpop" style={{ ...heroPop, width: "min(340px, calc(100vw - 28px))", padding: "8px 0" }}>
@@ -2019,61 +2123,53 @@ function TourSearch({ go }) {
               </div>
             </div>
           </>
-        )}
+        ))}
       </div>
 
-      {/* Expérience — autosuggest over the tours catalogue */}
-      <div style={{ ...heroBox, position: "relative", flex: 1.3 }}>
-        <Search size={19} color={T.green} strokeWidth={2} style={{ flexShrink: 0 }} />
-        <div style={{ minWidth: 0, flex: 1 }}>
-          <div style={heroLab}>Experience</div>
-          <input style={heroInp} value={expQ} placeholder="Search an experience" autoComplete="off" aria-label="Experience"
-            onChange={(e) => { setExpQ(e.target.value); setExpSel(null); setExpOpen(true); }}
-            onFocus={(e) => { setExpOpen(true); liftOnFocus(e); }} />
-        </div>
-        {expQ && (
-          <button onClick={() => { setExpQ(""); setExpSel(null); }} aria-label="Clear" style={{ background: T.ink, color: "#fff", border: "none", borderRadius: "50%", width: 20, height: 20, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0, flexShrink: 0 }}><X size={12} strokeWidth={3} /></button>
-        )}
-        {expOpen && (
-          <>
-            <div className="mpop-backdrop" onClick={() => setExpOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 90 }} />
-            <div role="listbox" className="mpop" style={{ ...heroPop, width: "min(460px, calc(100vw - 28px))", maxHeight: 400, overflowY: "auto" }}>
-              {q ? (
-                matches.length ? matches.map((t) => (
-                  <button key={t.id} onClick={() => pickTour(t)} style={heroRow} role="option" aria-selected={expSel === t.id}>
-                    <Compass size={20} color={T.ink} strokeWidth={2} style={{ flexShrink: 0, marginTop: 2 }} />
-                    <span style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 14, fontWeight: 700 }}>{t.name}</div>
-                      <div style={{ fontSize: 13, color: "rgba(0,0,0,.8)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{[t.pole, t.tag, t.dur].filter(Boolean).join(" · ")}</div>
-                    </span>
-                  </button>
-                )) : (
-                  <div style={{ padding: "24px 18px", color: "rgba(0,0,0,.8)", fontSize: 13.5 }}>No experience found for “{expQ}”</div>
-                )
-              ) : recentTours.length ? (
-                <>
-                  <div style={{ fontSize: 11, fontWeight: 700, padding: "14px 18px 4px", color: "rgba(0,0,0,.5)", textTransform: "uppercase", letterSpacing: ".1em" }}>Recent searches</div>
-                  {recentTours.map((t) => (
-                    <button key={t.id} onClick={() => pickTour(t)} style={heroRow} role="option" aria-selected={expSel === t.id}>
-                      <Clock size={20} color={T.ink} strokeWidth={2} style={{ flexShrink: 0, marginTop: 2 }} />
-                      <span style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 14, fontWeight: 700 }}>{t.name}</div>
-                        <div style={{ fontSize: 13, color: "rgba(0,0,0,.8)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{[t.pole, t.tag, t.dur].filter(Boolean).join(" · ")}</div>
-                      </span>
-                      <span role="button" tabIndex={0} aria-label={`Remove ${t.name}`} onClick={(e) => { e.stopPropagation(); removeRecent(t.id); }} style={{ flexShrink: 0, marginTop: 4, color: T.ink, display: "flex", cursor: "pointer" }}><X size={17} /></span>
-                    </button>
-                  ))}
-                </>
-              ) : (
-                <div style={{ padding: "16px 18px", display: "flex", alignItems: "center", gap: 10, color: "rgba(0,0,0,.6)" }}>
-                  <Search size={18} style={{ flexShrink: 0, opacity: 0.7 }} />
-                  <span style={{ fontSize: 14 }}>Search activities</span>
+      {/* Experience — autosuggest over the activities catalogue */}
+      {mobile ? (
+        <div style={{ ...heroBox, flex: 1.3, cursor: "pointer" }} onClick={() => setExpOpen(true)}>
+          <Search size={19} color={T.green} strokeWidth={2} style={{ flexShrink: 0 }} />
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div style={heroLab}>Experience</div>
+            <div style={{ fontSize: 14.5, color: expQ ? T.ink : "rgba(0,0,0,.5)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{expQ || "Search an activity"}</div>
+          </div>
+          {expQ && <button onClick={(e) => { e.stopPropagation(); setExpQ(""); setExpSel(null); }} aria-label="Clear" style={{ background: T.ink, color: "#fff", border: "none", borderRadius: "50%", width: 20, height: 20, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0, flexShrink: 0 }}><X size={12} strokeWidth={3} /></button>}
+          {expOpen && (
+            <MobileSheet title="Search activities" onClose={() => setExpOpen(false)}>
+              <div style={{ padding: 14 }}>
+                <div style={{ ...input, display: "flex", alignItems: "center", gap: 9 }}>
+                  <Search size={18} color={T.green} style={{ flexShrink: 0 }} />
+                  <input autoFocus value={expQ} placeholder="Search an activity" autoComplete="off" onChange={(e) => { setExpQ(e.target.value); setExpSel(null); }} style={{ border: "none", outline: "none", background: "transparent", width: "100%", fontSize: 16, fontFamily: "inherit", color: T.ink }} />
+                  {expQ && <button onClick={() => { setExpQ(""); setExpSel(null); }} aria-label="Clear" style={{ background: "none", border: "none", cursor: "pointer", color: T.ink, flexShrink: 0, display: "flex" }}><X size={16} /></button>}
                 </div>
-              )}
-            </div>
-          </>
-        )}
-      </div>
+              </div>
+              <div>{expList}</div>
+            </MobileSheet>
+          )}
+        </div>
+      ) : (
+        <div style={{ ...heroBox, position: "relative", flex: 1.3 }}>
+          <Search size={19} color={T.green} strokeWidth={2} style={{ flexShrink: 0 }} />
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div style={heroLab}>Experience</div>
+            <input style={heroInp} value={expQ} placeholder="Search an experience" autoComplete="off" aria-label="Experience"
+              onChange={(e) => { setExpQ(e.target.value); setExpSel(null); setExpOpen(true); }}
+              onFocus={(e) => { setExpOpen(true); liftOnFocus(e); }} />
+          </div>
+          {expQ && (
+            <button onClick={() => { setExpQ(""); setExpSel(null); }} aria-label="Clear" style={{ background: T.ink, color: "#fff", border: "none", borderRadius: "50%", width: 20, height: 20, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0, flexShrink: 0 }}><X size={12} strokeWidth={3} /></button>
+          )}
+          {expOpen && (
+            <>
+              <div className="mpop-backdrop" onClick={() => setExpOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 90 }} />
+              <div role="listbox" className="mpop" style={{ ...heroPop, width: "min(460px, calc(100vw - 28px))", maxHeight: 400, overflowY: "auto" }}>
+                {expList}
+              </div>
+            </>
+          )}
+        </div>
+      )}
 
       {/* Date — single date, dual-month calendar popover */}
       <HField Ico={Calendar} label="Date">
@@ -2088,7 +2184,30 @@ function TourSearch({ go }) {
           <div style={{ fontSize: 14.5, color: T.ink }}>{total} traveler{total > 1 ? "s" : ""}</div>
         </div>
         <ChevronDown size={15} style={{ opacity: 0.5, flexShrink: 0 }} />
-        {travOpen && (
+        {travOpen && (mobile ? (
+          <MobileSheet title="Travelers" onClose={() => setTravOpen(false)} footer={
+            <button onClick={() => setTravOpen(false)} style={{ width: "100%", background: T.green, color: "#fff", border: "none", borderRadius: 12, padding: "14px", fontWeight: 700, fontSize: 15, cursor: "pointer", fontFamily: "inherit" }}>Valider</button>
+          }>
+            <div style={{ padding: "6px 18px" }}>
+              {[["adults", "Adults", ""], ["children", "Children", "Ages 0 to 17"]].map(([k, l, sub], i) => {
+                const min = k === "adults" ? 1 : 0;
+                return (
+                  <div key={k} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 0", borderTop: i === 0 ? "none" : `1px solid ${T.line}` }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 14, color: T.ink }}>{l}</div>
+                      {sub && <div style={{ fontSize: 12.5, color: "rgba(0,0,0,.8)" }}>{sub}</div>}
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                      <button onClick={() => setT(k, -1)} disabled={trav[k] <= min} aria-label={`Fewer ${l}`} style={{ ...btnCircle, width: 44, height: 44, fontSize: 20, opacity: trav[k] <= min ? 0.4 : 1, cursor: trav[k] <= min ? "not-allowed" : "pointer" }}>−</button>
+                      <span style={{ fontWeight: 600, minWidth: 20, textAlign: "center", fontSize: 15 }}>{trav[k]}</span>
+                      <button onClick={() => setT(k, 1)} aria-label={`More ${l}`} style={{ ...btnCircle, width: 44, height: 44, fontSize: 20 }}>+</button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </MobileSheet>
+        ) : (
           <>
             <div className="mpop-backdrop" onClick={(e) => { e.stopPropagation(); setTravOpen(false); }} style={{ position: "fixed", inset: 0, zIndex: 90 }} />
             <div onClick={(e) => e.stopPropagation()} role="dialog" className="mpop" style={{ ...heroPop, left: "auto", right: 0, width: "min(340px, calc(100vw - 28px))", padding: 20 }}>
@@ -2113,7 +2232,7 @@ function TourSearch({ go }) {
               </div>
             </div>
           </>
-        )}
+        ))}
       </div>
 
       <button onClick={doSearch} className="hero-search-btn" style={{ ...heroSearchBtnStyle, background: T.gold, color: T.ink }}><Search size={18} /> Search</button>
@@ -2123,6 +2242,7 @@ function TourSearch({ go }) {
 
 function HeroSearch({ go }) {
   const [tab, setTab] = useState("tours");
+  const mobile = useIsMobile();
   const tabs = [["tours", "Activities", IconBeach, 16], ["cars", "Cars", IconCarFilled, 19], ["flights", "Flights", IconPlane2, 18]];
   const todayStr = new Date().toISOString().slice(0, 10);
 
@@ -2156,6 +2276,34 @@ function HeroSearch({ go }) {
     ["infants", "Lap infants", "Under 2"],
     ["young", "Infants in seat", "Under 2"],
   ];
+  const vcBody = (
+    <>
+      {travRows.map(([k, l, sub]) => (
+        <div key={k} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderTop: k === "adults" ? "none" : `1px solid ${T.line}` }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 14, color: T.ink }}>{l}</div>
+            {sub && <div style={{ fontSize: 12.5, color: "rgba(0,0,0,.8)" }}>{sub}</div>}
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <button onClick={() => setTrav(k, -1)} disabled={ftrav[k] <= (k === "adults" ? 1 : 0)} style={{ ...btnCircle, width: 36, height: 36, fontSize: 18, opacity: ftrav[k] <= (k === "adults" ? 1 : 0) ? 0.4 : 1, cursor: ftrav[k] <= (k === "adults" ? 1 : 0) ? "not-allowed" : "pointer" }} aria-label="Less">−</button>
+            <span style={{ fontWeight: 600, minWidth: 18, textAlign: "center", fontSize: 15 }}>{ftrav[k]}</span>
+            <button onClick={() => setTrav(k, 1)} style={{ ...btnCircle, width: 36, height: 36, fontSize: 18 }} aria-label="More">+</button>
+          </div>
+        </div>
+      ))}
+      <div style={{ marginTop: 14 }}>
+        <div style={{ ...heroBox, cursor: "default", padding: "8px 14px" }}>
+          <div style={{ flex: 1 }}>
+            <div style={heroLab}>Class</div>
+            <select value={fcls} onChange={(e) => setFcls(e.target.value)} style={{ ...heroInp, cursor: "pointer" }}>
+              {FLIGHT_CLS.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+          <ChevronDown size={15} style={{ opacity: 0.5 }} />
+        </div>
+      </div>
+    </>
+  );
   const vcPill = (
     <div style={{ ...heroBox, position: "relative", cursor: "pointer", flex: "0 0 auto", minWidth: 214 }} onClick={() => setVcOpen((o) => !o)}>
       <Users size={19} color={T.green} strokeWidth={2} style={{ flexShrink: 0 }} />
@@ -2164,41 +2312,24 @@ function HeroSearch({ go }) {
         <div style={{ fontSize: 14.5, color: T.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{ftotal} traveller{ftotal > 1 ? "s" : ""}, {fcls}</div>
       </div>
       <ChevronDown size={15} style={{ opacity: 0.5, flexShrink: 0 }} />
-      {vcOpen && (
+      {vcOpen && (mobile ? (
+        <MobileSheet title="Travellers & class" onClose={() => setVcOpen(false)} footer={
+          <button onClick={() => setVcOpen(false)} style={{ width: "100%", background: T.green, color: "#fff", border: "none", borderRadius: 12, padding: "14px", fontWeight: 700, fontSize: 15, cursor: "pointer", fontFamily: "inherit" }}>Valider</button>
+        }>
+          <div style={{ padding: "6px 18px" }}>{vcBody}</div>
+        </MobileSheet>
+      ) : (
         <>
           <div className="mpop-backdrop" onClick={(e) => { e.stopPropagation(); setVcOpen(false); }} style={{ position: "fixed", inset: 0, zIndex: 90 }} />
           <div onClick={(e) => e.stopPropagation()} className="mpop" style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, zIndex: 91, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 16, boxShadow: "0 18px 44px rgba(0,0,0,.22)", padding: 20, width: "min(360px, calc(100vw - 28px))", cursor: "default" }}>
             <div style={{ fontSize: 16, fontWeight: 700, color: T.ink, marginBottom: 14 }}>Travellers & class</div>
-            {travRows.map(([k, l, sub]) => (
-              <div key={k} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderTop: k === "adults" ? "none" : `1px solid ${T.line}` }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 14, color: T.ink }}>{l}</div>
-                  {sub && <div style={{ fontSize: 12.5, color: "rgba(0,0,0,.8)" }}>{sub}</div>}
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <button onClick={() => setTrav(k, -1)} disabled={ftrav[k] <= (k === "adults" ? 1 : 0)} style={{ ...btnCircle, width: 36, height: 36, fontSize: 18, opacity: ftrav[k] <= (k === "adults" ? 1 : 0) ? 0.4 : 1, cursor: ftrav[k] <= (k === "adults" ? 1 : 0) ? "not-allowed" : "pointer" }} aria-label="Less">−</button>
-                  <span style={{ fontWeight: 600, minWidth: 18, textAlign: "center", fontSize: 15 }}>{ftrav[k]}</span>
-                  <button onClick={() => setTrav(k, 1)} style={{ ...btnCircle, width: 36, height: 36, fontSize: 18 }} aria-label="More">+</button>
-                </div>
-              </div>
-            ))}
-            <div style={{ marginTop: 14 }}>
-              <div style={{ ...heroBox, cursor: "default", padding: "8px 14px" }}>
-                <div style={{ flex: 1 }}>
-                  <div style={heroLab}>Class</div>
-                  <select value={fcls} onChange={(e) => setFcls(e.target.value)} style={{ ...heroInp, cursor: "pointer" }}>
-                    {FLIGHT_CLS.map((c) => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                </div>
-                <ChevronDown size={15} style={{ opacity: 0.5 }} />
-              </div>
-            </div>
+            {vcBody}
             <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 16 }}>
               <button onClick={() => setVcOpen(false)} style={{ background: T.green, color: "#fff", border: "none", borderRadius: 999, padding: "10px 26px", fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}>Done</button>
             </div>
           </div>
         </>
-      )}
+      ))}
     </div>
   );
 
@@ -6912,6 +7043,7 @@ function HomeTransportPicker({ go }) {
 function VehicleDetailPage({ mode, id, go, user }) {
   const vmap = useVehiclePhotoMap();
   const cmap = usePhotoMap("rentals");
+  const mobile = useIsMobile();
   const todayStr = new Date().toISOString().slice(0, 10);
   const minRental = new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10);
   useEffect(() => { window.scrollTo({ top: 0 }); }, []);
@@ -6997,7 +7129,20 @@ function VehicleDetailPage({ mode, id, go, user }) {
                   <Users size={19} color={T.green} strokeWidth={2} style={{ flexShrink: 0 }} />
                   <div style={{ minWidth: 0, flex: 1 }}><div style={heroLab}>Passengers</div><div style={{ fontSize: 14.5, color: T.ink }}>{pax} passenger{pax > 1 ? "s" : ""}</div></div>
                   <ChevronDown size={15} style={{ opacity: 0.5, flexShrink: 0 }} />
-                  {paxOpen && (
+                  {paxOpen && (mobile ? (
+                    <MobileSheet title="Passengers" onClose={() => setPaxOpen(false)} footer={<button onClick={() => setPaxOpen(false)} style={{ width: "100%", background: T.green, color: "#fff", border: "none", borderRadius: 12, padding: "14px", fontWeight: 700, fontSize: 15, cursor: "pointer", fontFamily: "inherit" }}>Valider</button>}>
+                      <div style={{ padding: 18 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                          <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontSize: 15, color: T.ink }}>Passengers</div><div style={{ fontSize: 12.5, color: "rgba(0,0,0,.8)" }}>Up to {veh.cap} for this vehicle</div></div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                            <button onClick={() => setPax((x) => Math.max(1, x - 1))} disabled={pax <= 1} aria-label="Less" style={{ ...btnCircle, width: 44, height: 44, fontSize: 20, opacity: pax <= 1 ? 0.4 : 1 }}>−</button>
+                            <span style={{ fontWeight: 600, minWidth: 20, textAlign: "center", fontSize: 15 }}>{pax}</span>
+                            <button onClick={() => setPax((x) => Math.min(50, x + 1))} aria-label="More" style={{ ...btnCircle, width: 44, height: 44, fontSize: 20 }}>+</button>
+                          </div>
+                        </div>
+                      </div>
+                    </MobileSheet>
+                  ) : (
                     <>
                       <div className="mpop-backdrop" onClick={(e) => { e.stopPropagation(); setPaxOpen(false); }} style={{ position: "fixed", inset: 0, zIndex: 90 }} />
                       <div className="mpop" onClick={(e) => e.stopPropagation()} role="dialog" style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, zIndex: 91, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 16, boxShadow: "0 18px 44px rgba(0,0,0,.22)", padding: 20, width: "min(300px, calc(100vw - 28px))", cursor: "default" }}>
@@ -7012,7 +7157,7 @@ function VehicleDetailPage({ mode, id, go, user }) {
                         <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 16 }}><button onClick={(e) => { e.stopPropagation(); setPaxOpen(false); }} style={{ background: T.green, color: "#fff", border: "none", borderRadius: 999, padding: "11px 28px", fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}>Done</button></div>
                       </div>
                     </>
-                  )}
+                  ))}
                 </div>
               </div>
             </div>
@@ -7107,6 +7252,7 @@ const backBtn = { display: "inline-flex", alignItems: "center", gap: 6, backgrou
 
 function TransferWidget({ addBooking, compact, user, go }) {
   const [dirI, setDirI] = useState(0);
+  const mobile = useIsMobile();
   const [vehicle, setVehicle] = useState(0);
   const [pax, setPax] = useState(2);
   const [paxOpen, setPaxOpen] = useState(false);
@@ -7172,7 +7318,23 @@ function TransferWidget({ addBooking, compact, user, go }) {
             <div style={{ fontSize: 14.5, color: T.ink }}>{pax} passenger{pax > 1 ? "s" : ""}</div>
           </div>
           <ChevronDown size={15} style={{ opacity: 0.5, flexShrink: 0 }} />
-          {paxOpen && (
+          {paxOpen && (mobile ? (
+            <MobileSheet title="Passengers" onClose={() => setPaxOpen(false)} footer={<button onClick={() => setPaxOpen(false)} style={{ width: "100%", background: T.green, color: "#fff", border: "none", borderRadius: 12, padding: "14px", fontWeight: 700, fontSize: 15, cursor: "pointer", fontFamily: "inherit" }}>Valider</button>}>
+              <div style={{ padding: 18 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 15, color: T.ink }}>Passengers</div>
+                    <div style={{ fontSize: 12.5, color: "rgba(0,0,0,.8)" }}>Up to {veh.cap} for this vehicle</div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                    <button onClick={() => setPax((p) => Math.max(1, p - 1))} disabled={pax <= 1} aria-label="Less" style={{ ...btnCircle, width: 44, height: 44, fontSize: 20, opacity: pax <= 1 ? 0.4 : 1, cursor: pax <= 1 ? "not-allowed" : "pointer" }}>−</button>
+                    <span style={{ fontWeight: 600, minWidth: 20, textAlign: "center", fontSize: 15 }}>{pax}</span>
+                    <button onClick={() => setPax((p) => Math.min(50, p + 1))} aria-label="More" style={{ ...btnCircle, width: 44, height: 44, fontSize: 20 }}>+</button>
+                  </div>
+                </div>
+              </div>
+            </MobileSheet>
+          ) : (
             <>
               <div onClick={(e) => { e.stopPropagation(); setPaxOpen(false); }} style={{ position: "fixed", inset: 0, zIndex: 90 }} />
               <div onClick={(e) => e.stopPropagation()} role="dialog" style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, zIndex: 91, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 16, boxShadow: "0 18px 44px rgba(0,0,0,.22)", padding: 20, width: "min(300px, calc(100vw - 28px))", cursor: "default" }}>
@@ -7192,7 +7354,7 @@ function TransferWidget({ addBooking, compact, user, go }) {
                 </div>
               </div>
             </>
-          )}
+          ))}
         </div>
         <button disabled={!complete} className="hero-search-btn" style={{ ...heroSearchBtnStyle, opacity: complete ? 1 : 0.55, cursor: complete ? "pointer" : "not-allowed" }} onClick={() => complete && openCheckout()}>
           <Search size={18} /> Book
