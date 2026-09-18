@@ -662,12 +662,82 @@ function PrefPrice({ base, prefix = "from ", pp = true }) {
 }
 
 // ============================================================
+// ---- URL routing: page state <-> path/query (shareable deep links) ----
+function pageToUrl(page, filters) {
+  const p = page || {};
+  let path = "/";
+  switch (p.name) {
+    case "tours": path = "/tours"; break;
+    case "tour": path = `/tours/${p.id || ""}`; break;
+    case "builder": path = "/trip-builder"; break;
+    case "transport": path = "/transport"; break;
+    case "vehicle": path = `/vehicle/${p.mode || "transfer"}/${p.id || ""}`; break;
+    case "flights": path = "/flights"; break;
+    case "flightQuote": path = "/flights/quote"; break;
+    case "events": path = "/mice"; break;
+    case "micework": path = `/mice/${p.service || ""}`; break;
+    case "corporate": path = "/corporate"; break;
+    case "agents": path = "/agents"; break;
+    case "agent": path = "/agent"; break;
+    case "admin": path = "/admin"; break;
+    case "blog": path = "/blog"; break;
+    case "article": path = `/blog/${p.slug || ""}`; break;
+    case "about": path = "/about"; break;
+    case "terms": path = "/terms"; break;
+    case "account": path = "/account"; break;
+    default: path = "/";
+  }
+  const qs = new URLSearchParams();
+  if (p.name === "tours" && filters) {
+    if (filters.pole && filters.pole !== "All") qs.set("region", filters.pole);
+    if (filters.tag && filters.tag !== "All") qs.set("theme", filters.tag);
+    if (filters.q) qs.set("q", filters.q);
+  }
+  if (p.name === "transport" && p.rental) qs.set("tab", "rental");
+  const str = qs.toString();
+  return path + (str ? `?${str}` : "");
+}
+
+function urlToPage(pathname, search) {
+  const seg = (pathname || "/").replace(/^\/+|\/+$/g, "").split("/").filter(Boolean);
+  const q = new URLSearchParams(search || "");
+  if (seg.length === 0) return { name: "home" };
+  const [a, b, c] = seg;
+  switch (a) {
+    case "tours": return b ? { name: "tour", id: b } : { name: "tours" };
+    case "trip-builder": return { name: "builder" };
+    case "transport": return { name: "transport", ...(q.get("tab") === "rental" ? { rental: true } : {}) };
+    case "vehicle": return { name: "vehicle", mode: b || "transfer", id: c || "" };
+    case "flights": return b === "quote" ? { name: "flightQuote" } : { name: "flights" };
+    case "mice": return b ? { name: "micework", service: b } : { name: "events" };
+    case "corporate": return { name: "corporate" };
+    case "agents": return { name: "agents" };
+    case "agent": return { name: "agent" };
+    case "admin": return { name: "admin" };
+    case "blog": return b ? { name: "article", slug: b } : { name: "blog" };
+    case "about": return { name: "about" };
+    case "terms": return { name: "terms" };
+    case "account": return { name: "account" };
+    default: return { name: "home" };
+  }
+}
+
+function filtersFromUrl(pathname, search) {
+  const seg = (pathname || "/").replace(/^\/+|\/+$/g, "").split("/").filter(Boolean);
+  if (seg[0] !== "tours" || seg[1]) return null; // only the tours list carries filters
+  const q = new URLSearchParams(search || "");
+  const f = { pole: "All", tag: "All", q: "" };
+  const region = q.get("region"); if (region && POLES.includes(region)) f.pole = region;
+  const theme = q.get("theme"); if (theme) f.tag = theme;
+  const qq = q.get("q"); if (qq) f.q = qq;
+  return f;
+}
+
 export default function ATSPlatformPreview() {
   const [page, setPage] = useState(() => {
-    try { const s = sessionStorage.getItem("ats_page"); if (s) return JSON.parse(s); } catch { /* ignore */ }
+    try { return urlToPage(window.location.pathname, window.location.search); } catch { /* ignore */ }
     return { name: "home" };
   });
-  useEffect(() => { try { sessionStorage.setItem("ats_page", JSON.stringify(page)); } catch { /* ignore */ } }, [page]);
   const [toast, setToast] = useState(null);
   const [user, setUser] = useState(null);
   const [bookings, setBookings] = useState([]);
@@ -675,7 +745,9 @@ export default function ATSPlatformPreview() {
   const [booking, setBooking] = useState(null);
   const [signin, setSignin] = useState(false);
   const [chat, setChat] = useState(false);
-  const [filters, setFilters] = useState({ pole: "All", tag: "All" });
+  const [filters, setFilters] = useState(() => {
+    try { return filtersFromUrl(window.location.pathname, window.location.search) || { pole: "All", tag: "All", q: "" }; } catch { return { pole: "All", tag: "All", q: "" }; }
+  });
 
   // ---- Display currency (XOF | USD | EUR). Prices are stored in XOF. ----
   const [currency, setCurrency] = useState(() => { try { return localStorage.getItem("ats_cur") || null; } catch { return null; } });
@@ -897,7 +969,7 @@ export default function ATSPlatformPreview() {
   const go = (name, params = {}) => {
     const p = { name, ...params };
     setBooking(null); // close the checkout modal if it's open, so the new page is visible
-    try { window.history.pushState({ atsPage: p }, ""); } catch { /* ignore */ }
+    try { window.history.pushState({ atsPage: p }, "", pageToUrl(p, filters)); } catch { /* ignore */ }
     setPage(p);
     window.scrollTo({ top: 0 });
   };
@@ -907,14 +979,27 @@ export default function ATSPlatformPreview() {
   useEffect(() => {
     try { window.history.replaceState({ atsPage: page }, ""); } catch { /* ignore */ }
     const onPop = (e) => {
-      const p = (e.state && e.state.atsPage) || { name: "home" };
+      const p = (e.state && e.state.atsPage) || urlToPage(window.location.pathname, window.location.search);
       setBooking(null); // never leave the checkout modal stuck over a changed page
+      const f = filtersFromUrl(window.location.pathname, window.location.search);
+      if (f) setFilters(f);
       setPage(p);
       window.scrollTo({ top: 0 });
     };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
   }, []);
+
+  // Keep the address bar in sync with the current page and the active tours
+  // filters/search, so any in-app state can be copied and shared as a direct link.
+  useEffect(() => {
+    try {
+      const url = pageToUrl(page, filters);
+      if (url !== window.location.pathname + window.location.search) {
+        window.history.replaceState({ atsPage: page }, "", url);
+      }
+    } catch { /* ignore */ }
+  }, [page, filters]);
   // Corporate "Book now, pay later": record the booking as an invoice (owed), no payment now.
   const bookCorporate = async (b) => {
     const { data, error } = await supabase.functions.invoke("corporate-booking", { body: { data: { ...b, status: "invoiced" } } });
@@ -2834,7 +2919,8 @@ function TourGrid({ tours, go, setBooking, slider, favorites = [], toggleFavorit
 const pill = () => ({ fontSize: 10, fontWeight: 500, color: "#1A1A1A", background: "#F2F2F2", border: "none", padding: "3px 9px", borderRadius: 999, whiteSpace: "nowrap", flexShrink: 0 });
 
 function ToursPage({ go, setBooking, filters, setFilters, favorites, toggleFavorite }) {
-  const [q, setQ] = useState("");
+  const q = filters.q || "";
+  const setQ = (v) => setFilters((prev) => ({ ...prev, q: typeof v === "function" ? v(prev.q || "") : v }));
   const tags = ["All", ...new Set(TOURS.map((t) => t.tag))];
   const query = q.trim().toLowerCase();
   const tours = TOURS.filter((t) =>
