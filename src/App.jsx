@@ -758,6 +758,14 @@ export default function ATSPlatformPreview() {
   const removeFromCart = (id) => setCart((c) => c.filter((x) => x._cartId !== id));
   const clearCart = () => setCart([]);
   const [checkingOut, setCheckingOut] = useState(false);
+  // If the browser restores this page from bfcache (e.g. Back from the payment gateway),
+  // dismiss the redirect overlay so it doesn't stay stuck.
+  useEffect(() => {
+    const clear = () => setCheckingOut(false);
+    window.addEventListener("pageshow", clear);
+    window.addEventListener("popstate", clear);
+    return () => { window.removeEventListener("pageshow", clear); window.removeEventListener("popstate", clear); };
+  }, []);
   const [signin, setSignin] = useState(false);
   const [chat, setChat] = useState(false);
   const [filters, setFilters] = useState(() => {
@@ -1068,11 +1076,11 @@ export default function ATSPlatformPreview() {
 
   // Cart via Ma Tontine Voyage: 20% deposit now on the aggregated booking, balance in
   // instalments. Schedule is bounded by the NEAREST departure in the cart.
-  const payCartTontine = (contact, opt) => {
+  const payCartTontine = (contact, opt, months) => {
     if (!cart.length || !opt) return;
     if (!user) { setSignin(true); notify("Sign in (free account) to reserve with Ma Tontine Voyage — it lets us track your instalments."); return; }
     const total = cart.reduce((s, it) => s + (Number(it.lineTotal != null ? it.lineTotal : it.total) || 0), 0);
-    const agg = { cart: true, items: cart, tour: { name: `Cart — ${cart.length} ${cart.length > 1 ? "tours" : "tour"}`, pole: "ATS", dur: "" }, plan: "deposit", total, deposit: Math.round(total * 0.2), months: opt.n, schedule: opt.label, contact: contact || (cart[0] && cart[0].contact) || {}, payMethod: (cart[0] && cart[0].payMethod) || "stripe", addons: [] };
+    const agg = { cart: true, items: cart, tour: { name: `Cart — ${cart.length} ${cart.length > 1 ? "tours" : "tour"}`, pole: "ATS", dur: "" }, plan: "deposit", total, deposit: Math.round(total * 0.2), months: Math.max(1, months || opt.n), schedule: opt.label, contact: contact || (cart[0] && cart[0].contact) || {}, payMethod: (cart[0] && cart[0].payMethod) || "stripe", addons: [] };
     setCheckingOut(true);
     try { sessionStorage.setItem("ats_cart_paying", "1"); } catch { /* ignore */ }
     startPayment(agg);
@@ -6381,10 +6389,17 @@ function CartPage({ cart = [], removeFromCart, clearCart, payCart, payCartTontin
   const earliest = dates[0] || "";
   const todayStr = new Date().toISOString().slice(0, 10);
   const daysUntil = earliest ? Math.ceil((new Date(earliest + "T00:00:00") - new Date(todayStr + "T00:00:00")) / 86400000) : null;
-  const tOpt = daysUntil != null ? [...TONTINE_OPTIONS].reverse().find((o) => o.days <= daysUntil) : null;
-  const tontineOK = !!tOpt && daysUntil >= 15;
+  const tAvail = TONTINE_OPTIONS.filter((o) => daysUntil != null && daysUntil >= o.days);
+  const tontineOK = tAvail.length > 0 && daysUntil >= 15;
+  const [sched, setSched] = useState(null);
+  const [tranches, setTranches] = useState(null);
+  const selOpt = (sched && TONTINE_OPTIONS.find((o) => o.key === sched)) || (tAvail.length ? tAvail[tAvail.length - 1] : null);
+  const baseN = selOpt ? selOpt.n : 1;
+  const maxTr = baseN + 2;
+  const months = Math.min(Math.max(1, tranches || baseN), maxTr);
   const deposit = Math.round(total * 0.2);
   const balance = total - deposit;
+  const instal = months ? Math.round(balance / months) : 0;
   const field = (k, ph) => (<input style={input} value={bill[k]} onChange={(e) => setBill((b) => ({ ...b, [k]: e.target.value }))} placeholder={ph} />);
   if (!cart.length) return (
     <Wrap>
@@ -6443,11 +6458,29 @@ function CartPage({ cart = [], removeFromCart, clearCart, payCart, payCartTontin
             <div style={{ fontWeight: 800, fontSize: 14, marginBottom: 8, display: "inline-flex", alignItems: "center", gap: 7 }}><CalendarCheck size={16} color={T.green} /> Ma Tontine Voyage</div>
             {tontineOK ? (
               <>
-                <div style={{ background: "#F4F6F5", border: `1px solid ${T.line}`, borderRadius: 10, padding: "10px 12px", fontSize: 12.5, color: "rgba(0,0,0,.75)", lineHeight: 1.5, display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 10 }}>
-                  <Info size={15} color={T.green} style={{ flexShrink: 0, marginTop: 1 }} />
-                  <span>Pay <strong>20% now</strong> ({fmtXOF(deposit)}) and settle the balance ({fmtXOF(balance)}) in up to {tOpt.n} instalment{tOpt.n > 1 ? "s" : ""}. Your nearest departure is <strong>{earliest}</strong> — the full amount must be paid <strong>before that date</strong>.</span>
+                <div style={{ fontSize: 12, opacity: 0.75, marginBottom: 6 }}>Instalment period (fully paid before your nearest departure, {earliest}):</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {TONTINE_OPTIONS.map((o) => {
+                    const ok = daysUntil != null && daysUntil >= o.days;
+                    const on = selOpt && selOpt.key === o.key && ok;
+                    return (
+                      <button key={o.key} disabled={!ok} onClick={() => { setSched(o.key); setTranches(null); }} title={ok ? "" : `Needs the nearest departure at least ${o.days} days away`}
+                        style={{ border: `1.5px solid ${on ? T.green : T.line}`, borderRadius: 999, padding: "5px 13px", fontWeight: 600, fontSize: 12.5, cursor: ok ? "pointer" : "not-allowed", background: on ? T.green : "#fff", color: on ? "#fff" : T.ink, opacity: ok ? 1 : 0.4, fontFamily: "inherit" }}>{o.label}</button>
+                    );
+                  })}
                 </div>
-                <button onClick={() => { if (ready) payCartTontine({ ...bill, name: `${bill.firstName} ${bill.lastName}`.trim() }, tOpt); }} disabled={!ready}
+                <div style={{ fontSize: 12, opacity: 0.75, margin: "12px 0 6px" }}>Number of instalments for the balance:</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {Array.from({ length: maxTr }, (_, i) => i + 1).map((n) => (
+                    <button key={n} onClick={() => setTranches(n)}
+                      style={{ border: `1.5px solid ${months === n ? T.green : T.line}`, borderRadius: 999, padding: "5px 13px", fontWeight: 600, fontSize: 12.5, cursor: "pointer", background: months === n ? T.green : "#fff", color: months === n ? "#fff" : T.ink, fontFamily: "inherit" }}>{n}×</button>
+                  ))}
+                </div>
+                <div style={{ background: "#F4F6F5", border: `1px solid ${T.line}`, borderRadius: 10, padding: "10px 12px", fontSize: 12.5, color: "rgba(0,0,0,.75)", lineHeight: 1.5, display: "flex", gap: 8, alignItems: "flex-start", margin: "12px 0 10px" }}>
+                  <Info size={15} color={T.green} style={{ flexShrink: 0, marginTop: 1 }} />
+                  <span><strong>Due today: {fmtXOF(deposit)}</strong> (20%). Then {fmtXOF(balance)} in <strong>{months} instalment{months > 1 ? "s" : ""}</strong> — minimum {fmtXOF(instal)} each, and you can always pay more. Fully settled <strong>before {earliest}</strong>.</span>
+                </div>
+                <button onClick={() => { if (ready) payCartTontine({ ...bill, name: `${bill.firstName} ${bill.lastName}`.trim() }, selOpt, months); }} disabled={!ready}
                   style={{ width: "100%", background: "#1A1A1A", color: "#fff", border: "none", borderRadius: 12, padding: 13, fontWeight: 800, fontSize: 15, cursor: ready ? "pointer" : "not-allowed", opacity: ready ? 1 : 0.55 }}>
                   Reserve with Ma Tontine — {fmtXOF(deposit)} now
                 </button>
