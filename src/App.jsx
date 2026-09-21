@@ -757,6 +757,7 @@ export default function ATSPlatformPreview() {
   };
   const removeFromCart = (id) => setCart((c) => c.filter((x) => x._cartId !== id));
   const clearCart = () => setCart([]);
+  const [checkingOut, setCheckingOut] = useState(false);
   const [signin, setSignin] = useState(false);
   const [chat, setChat] = useState(false);
   const [filters, setFilters] = useState(() => {
@@ -922,7 +923,7 @@ export default function ATSPlatformPreview() {
         promoCode: b.promoCode || "",
       },
     });
-    if (error || !data?.url) { notify("Payment could not be started. Please try again."); return; }
+    if (error || !data?.url) { notify("Payment could not be started. Please try again."); setCheckingOut(false); try { sessionStorage.removeItem("ats_cart_paying"); } catch { /* ignore */ } return; }
     window.location.href = data.url;
   };
 
@@ -1060,7 +1061,8 @@ export default function ATSPlatformPreview() {
     if (!cart.length) return;
     const total = cart.reduce((s, it) => s + (Number(it.lineTotal != null ? it.lineTotal : it.total) || 0), 0);
     const agg = { cart: true, items: cart, tour: { name: `Cart — ${cart.length} ${cart.length > 1 ? "tours" : "tour"}`, pole: "ATS", dur: "" }, plan: "full", total, deposit: 0, contact: contact || (cart[0] && cart[0].contact) || {}, payMethod: (cart[0] && cart[0].payMethod) || "stripe", addons: [] };
-    clearCart();
+    setCheckingOut(true);
+    try { sessionStorage.setItem("ats_cart_paying", "1"); } catch { /* ignore */ }
     startPayment(agg);
   };
 
@@ -1071,7 +1073,8 @@ export default function ATSPlatformPreview() {
     if (!user) { setSignin(true); notify("Sign in (free account) to reserve with Ma Tontine Voyage — it lets us track your instalments."); return; }
     const total = cart.reduce((s, it) => s + (Number(it.lineTotal != null ? it.lineTotal : it.total) || 0), 0);
     const agg = { cart: true, items: cart, tour: { name: `Cart — ${cart.length} ${cart.length > 1 ? "tours" : "tour"}`, pole: "ATS", dur: "" }, plan: "deposit", total, deposit: Math.round(total * 0.2), months: opt.n, schedule: opt.label, contact: contact || (cart[0] && cart[0].contact) || {}, payMethod: (cart[0] && cart[0].payMethod) || "stripe", addons: [] };
-    clearCart();
+    setCheckingOut(true);
+    try { sessionStorage.setItem("ats_cart_paying", "1"); } catch { /* ignore */ }
     startPayment(agg);
   };
 
@@ -1111,6 +1114,13 @@ export default function ATSPlatformPreview() {
     const token = params.get("token");
     const provider = params.get("provider");
     if (!p) return;
+    // Cart checkout returned: clear the cart only on a completed payment; keep it otherwise.
+    try {
+      if (sessionStorage.getItem("ats_cart_paying")) {
+        if (p === "success") setCart([]);
+        sessionStorage.removeItem("ats_cart_paying");
+      }
+    } catch { /* ignore */ }
     // Leave a "home" entry behind the payment page and push the payment page on top,
     // so the browser back button returns to the app instead of bouncing to the payment provider.
     window.history.replaceState({ atsPage: { name: "home" } }, "", window.location.pathname);
@@ -1190,6 +1200,16 @@ export default function ATSPlatformPreview() {
         <button onClick={() => setChat(true)} aria-label="AI assistant" style={{ width: 42, height: 42, borderRadius: "50%", border: "none", background: T.indigo, color: "#fff", cursor: "pointer", boxShadow: "0 8px 20px rgba(0,0,0,.25)", display: "flex", alignItems: "center", justifyContent: "center" }}><Bot size={20} /></button>
       </div>
 
+      {checkingOut && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(11,46,27,.55)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <style>{"@keyframes ats-spin{to{transform:rotate(360deg)}}"}</style>
+          <div style={{ background: "#fff", borderRadius: 16, padding: "26px 30px", maxWidth: 340, textAlign: "center", boxShadow: "0 20px 50px rgba(0,0,0,.3)" }}>
+            <div style={{ width: 38, height: 38, border: `3px solid ${T.line}`, borderTopColor: T.green, borderRadius: "50%", margin: "0 auto 16px", animation: "ats-spin .8s linear infinite" }} />
+            <div style={{ fontWeight: 800, fontSize: 16, color: T.ink, marginBottom: 6 }}>Redirecting to secure payment…</div>
+            <div style={{ fontSize: 13, color: "#6B7A72", lineHeight: 1.5 }}>Please wait, do not close this window. Your cart is saved.</div>
+          </div>
+        </div>
+      )}
       {toast && (
         <div className="toast" role="status" style={{ position: "fixed", bottom: 20, left: "50%", transform: "translateX(-50%)", background: T.ink, color: T.paper, padding: "12px 20px", borderRadius: 12, fontSize: 14, zIndex: 90, maxWidth: "90vw", boxShadow: "0 10px 26px rgba(0,0,0,.3)" }}>
           {toast}
