@@ -924,7 +924,7 @@ export default function ATSPlatformPreview() {
     const { data, error } = await supabase.functions.invoke(fn, {
       body: {
         amount,
-        description: `${b.tour?.name || "ATS booking"}${b.plan === "deposit" ? " — 20% deposit" : ""}`,
+        description: `${b.tour?.name || "ATS booking"}${b.plan === "deposit" ? " — 30% deposit" : ""}`,
         bookingId: rec?._id || null,
         customer: b.contact || {},
         siteUrl: window.location.origin,
@@ -1076,13 +1076,13 @@ export default function ATSPlatformPreview() {
     startPayment(agg);
   };
 
-  // Cart via Ma Tontine Voyage: 20% deposit now on the aggregated booking, balance in
+  // Cart via Ma Tontine Voyage: 30% deposit now on the aggregated booking, balance in
   // instalments. Schedule is bounded by the NEAREST departure in the cart.
   const payCartTontine = (contact, opt, months) => {
     if (!cart.length || !opt) return;
     if (!user) { setSignin(true); notify("Sign in (free account) to reserve with Ma Tontine Voyage — it lets us track your instalments."); return; }
     const total = cart.reduce((s, it) => s + (Number(it.lineTotal != null ? it.lineTotal : it.total) || 0), 0);
-    const agg = { cart: true, items: cart, tour: { name: `Cart — ${cart.length} ${cart.length > 1 ? "tours" : "tour"}`, pole: "ATS", dur: "" }, plan: "deposit", total, deposit: Math.round(total * 0.2), months: Math.max(1, months || opt.n), schedule: opt.label, contact: contact || (cart[0] && cart[0].contact) || {}, payMethod: (cart[0] && cart[0].payMethod) || "stripe", addons: [] };
+    const agg = { cart: true, items: cart, tour: { name: `Cart — ${cart.length} ${cart.length > 1 ? "tours" : "tour"}`, pole: "ATS", dur: "" }, plan: "deposit", total, deposit: Math.round(total * 0.3), months: Math.max(1, months || opt.n), schedule: opt.label, contact: contact || (cart[0] && cart[0].contact) || {}, payMethod: (cart[0] && cart[0].payMethod) || "stripe", addons: [] };
     setCheckingOut(true);
     try { sessionStorage.setItem("ats_cart_paying", "1"); } catch { /* ignore */ }
     startPayment(agg);
@@ -1819,7 +1819,7 @@ function CategoryCard({ id, label, dest, desc, go, offset, mobile }) {
 function ServicesFan({ go }) {
   const items = [
     ["transport", "Transport", "transport", "Airport transfers or vehicle hire at fixed rates. Pick your dates and pay instantly — no quote needed."],
-    ["trip-builder", "Trip Builder", "builder", "Assemble your own trip — destination, hotel, transport, experiences — then reserve with a 20% deposit."],
+    ["trip-builder", "Trip Builder", "builder", "Assemble your own trip — destination, hotel, transport, experiences — then reserve with a 30% deposit."],
     ["tour", "Activities", "tours", "Browse 35+ guided experiences. Pick a date, pay in full or via Ma Tontine, and you're booked."],
     ["flights", "Flights", "flights", "Domestic & international flights. Our IATA-accredited team handles booking, changes and group fares."],
     ["mice", "MICE", "events", "Conferences, incentives, team building and events — send your brief, ATS handles logistics end to end."],
@@ -1856,7 +1856,7 @@ function PlanTripSection({ go }) {
   const grad = `linear-gradient(150deg, ${T.green}, ${T.indigo})`;
   const features = [
     [Sparkles, "Tailor-made trips", "Design your own itinerary from ATS's real catalogue of experiences."],
-    [CalendarCheck, "Reserve with 20%", "Secure your trip now and pay the balance in instalments — Ma Tontine Voyage."],
+    [CalendarCheck, "Reserve with 30%", "Secure your trip now and pay the balance in instalments — Ma Tontine Voyage."],
   ];
   return (
     <section style={{ background: "#fff", position: "relative", overflow: "hidden", minHeight: "60vh", display: "flex", alignItems: "center", paddingBottom: 48 }}>
@@ -1884,7 +1884,7 @@ function PlanTripSection({ go }) {
             <div className="about-script" style={{ fontSize: 26, fontWeight: 600, color: T.green, lineHeight: 1 }}>Let's go together</div>
             <h2 className="disp" style={{ fontSize: "clamp(30px,4vw,44px)", fontWeight: 800, letterSpacing: "-0.02em", color: T.ink, lineHeight: 1.08, margin: "4px 0 16px" }}>Plan your trip with us</h2>
             <p style={{ color: "rgba(0,0,0,.8)", lineHeight: 1.7, fontSize: 15.5, maxWidth: 460, margin: "0 0 26px" }}>
-              Build a fully custom trip — destination, hotel, transport and experiences — then confirm it with just a 20% deposit and pay the balance in instalments before departure.
+              Build a fully custom trip — destination, hotel, transport and experiences — then confirm it with just a 30% deposit and pay the balance in instalments before departure.
             </p>
             <div style={{ display: "flex", flexDirection: "column", gap: 20, marginBottom: 30 }}>
               {features.map(([Ico, title, desc]) => (
@@ -2773,7 +2773,7 @@ function PortalTabs({ go }) {
       img: "site/Hero.webp",
       steps: [
         ["Browse & pick", "Explore 35+ Senegal experiences, filter by theme, then choose your dates and travellers — prices adjust with your group size."],
-        ["Book your way", "Pay in full as a guest, or create a free account to reserve with a 20% Ma Tontine Voyage deposit and settle the balance in instalments before departure."],
+        ["Book your way", "Pay in full as a guest, or create a free account to reserve with a 30% Ma Tontine Voyage deposit and settle the balance in instalments before departure."],
         ["Manage everything", "Track your bookings, change your date or number of travellers, cancel if plans shift, download invoices, and chat with ATS on WhatsApp."],
       ],
     },
@@ -2783,7 +2783,7 @@ function PortalTabs({ go }) {
       img: "site/Hero.webp",
       steps: [
         ["Design your trip", "Set your destination, dates and travellers, then assemble your own itinerary — hotels, transport and experiences picked from the ATS catalogue."],
-        ["Reserve with 20%", "Lock it in with just a 20% deposit through Ma Tontine Voyage, and spread the balance in instalments before departure."],
+        ["Reserve with 30%", "Lock it in with just a 30% deposit through Ma Tontine Voyage, and spread the balance in instalments before departure."],
         ["We handle the rest", "Your dedicated ATS team confirms every service, and you follow and manage the whole trip from your account."],
       ],
     },
@@ -3110,7 +3110,7 @@ function TourDetail({ tourId, go, setBooking, addToCart, removeFromCart, favorit
   const addTourToCart = () => {
     if (!dateOk || t.quote) return;
     const chosen = t.addons.filter((a) => extras.includes(a.name)).map((a) => ({ name: a.name, per: a.per, price: a.price, amount: a.price ? (a.per === "person" ? a.price * pax : a.price) : null }));
-    addToCart && addToCart({ tour: t, date: dateFrom, dateFrom, dateTo: dateFrom, adults: pax, children: 0, infants: 0, plan: "full", months: 3, schedule: "", total: estTotal, lineTotal: estTotal, deposit: estTotal * 0.2, contact: {}, addons: chosen, vehicle, promoCode: "", payMethod: "stripe", _cartId: editCartId });
+    addToCart && addToCart({ tour: t, date: dateFrom, dateFrom, dateTo: dateFrom, adults: pax, children: 0, infants: 0, plan: "full", months: 3, schedule: "", total: estTotal, lineTotal: estTotal, deposit: estTotal * 0.3, contact: {}, addons: chosen, vehicle, promoCode: "", payMethod: "stripe", _cartId: editCartId });
     if (editCartId) go("cart");
   };
   const removeTourFromCart = () => { if (removeFromCart && editCartId) removeFromCart(editCartId); go("cart"); };
@@ -3274,7 +3274,7 @@ function TourDetail({ tourId, go, setBooking, addToCart, removeFromCart, favorit
             <div style={{ display: "flex", flexDirection: "column", gap: 12, fontSize: 14.5, lineHeight: 1.6 }}>
               <div><strong>Why do prices change with group size?</strong><br />ATS prices per person by basis — Private 1–2, Private 3–4, or Group 5+ — so bigger groups pay less per person.</div>
               <div><strong>Is transport included?</strong><br />No. Choose your vehicle category at booking (Sedan, SUV, Minivan or coach), priced per vehicle from the ATS Logistics rate card.</div>
-              <div><strong>Can I pay in instalments?</strong><br />Yes — Ma Tontine Voyage: 20% deposit confirms your booking, balance in scheduled instalments before departure.</div>
+              <div><strong>Can I pay in instalments?</strong><br />Yes — Ma Tontine Voyage: 30% deposit confirms your booking, balance in scheduled instalments before departure.</div>
             </div>
           </Section>
 
@@ -3350,7 +3350,7 @@ function TourDetail({ tourId, go, setBooking, addToCart, removeFromCart, favorit
                   </strong>
                 </div>
                 <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 10, padding: "10px 12px", fontSize: 12.5, lineHeight: 1.6, marginTop: 10, color: "rgba(0,0,0,.8)" }}>
-                  <strong style={{ color: "#1A1A1A" }}>Ma Tontine Voyage:</strong> reserve with {fmtXOF(estTotal * 0.2)} (20%), balance in instalments before departure{CORP_DISCOUNT > 0 ? " (corporate rate applies to full payment)" : ""}.
+                  <strong style={{ color: "#1A1A1A" }}>Ma Tontine Voyage:</strong> reserve with {fmtXOF(estTotal * 0.3)} (30%), balance in instalments before departure{CORP_DISCOUNT > 0 ? " (corporate rate applies to full payment)" : ""}.
                 </div>
               </>
             )}
@@ -3369,7 +3369,7 @@ function TourDetail({ tourId, go, setBooking, addToCart, removeFromCart, favorit
                     <button disabled={!dateOk} style={{ flex: 1, background: T.green, color: "#fff", border: "none", borderRadius: 12, padding: "12px 8px", fontWeight: 800, fontSize: 14.5, cursor: dateOk ? "pointer" : "not-allowed", opacity: dateOk ? 1 : 0.5, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 7, fontFamily: "inherit" }} onClick={() => dateOk && addTourToCart()}><ShoppingBag size={16} strokeWidth={2.2} /> Add to cart</button>
                     <button disabled={!dateOk} style={{ ...btnGold, flex: 1, marginTop: 0, borderRadius: 12, padding: "12px 8px", fontSize: 14.5, opacity: dateOk ? 1 : 0.5, cursor: dateOk ? "pointer" : "not-allowed" }} onClick={() => dateOk && openBooking("full")}>Pay in full</button>
                   </div>
-                  <button disabled={!tontinePossible} style={{ width: "100%", marginTop: 8, background: "#1A1A1A", color: "#fff", border: "none", borderRadius: 12, padding: "12px 14px", fontWeight: 800, cursor: tontinePossible ? "pointer" : "not-allowed", fontSize: 15, opacity: tontinePossible ? 1 : 0.5 }} onClick={() => tontinePossible && startTontine()}>Pay with Ma Tontine (20%)</button>
+                  <button disabled={!tontinePossible} style={{ width: "100%", marginTop: 8, background: "#1A1A1A", color: "#fff", border: "none", borderRadius: 12, padding: "12px 14px", fontWeight: 800, cursor: tontinePossible ? "pointer" : "not-allowed", fontSize: 15, opacity: tontinePossible ? 1 : 0.5 }} onClick={() => tontinePossible && startTontine()}>Pay with Ma Tontine (30%)</button>
                 </>)}
                 {!dateOk && <div style={{ fontSize: 12.5, color: "#8A968E", marginTop: 8, textAlign: "center" }}>Choose a travel date to book.</div>}
               </>
@@ -3606,7 +3606,7 @@ function TripBuilder({ notify, go, user, saveRecord }) {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 18 }}>
           {[
             [Compass, "Choose your experience", "Browse 35+ tours, transfers and flights — or build a fully custom trip."],
-            [CalendarCheck, "Reserve with 20%", "Secure any trip with a small deposit through Ma Tontine Voyage."],
+            [CalendarCheck, "Reserve with 30%", "Secure any trip with a small deposit through Ma Tontine Voyage."],
             [Clock, "Pay in instalments", "Spread the balance until departure — card, Wave, Orange Money, PayPal…"],
             [Plane, "Travel with ATS", "Meet your local team on the ground and enjoy Senegal, worry-free."],
           ].map(([Ico, title, body], i) => (
@@ -3750,7 +3750,7 @@ function TripBuilder({ notify, go, user, saveRecord }) {
             <Row l="Transport" v={fmtXOF(transCost)} />
             <div style={{ fontSize: 11.5, color: "#8A968E", marginTop: 6 }}>Experiences at group per-person rates; 'on request' items excluded from the estimate.</div>
             <div style={{ borderTop: `1px solid ${T.line}`, marginTop: 10, paddingTop: 10, fontSize: 13.5, lineHeight: 1.6, color: "rgba(0,0,0,.8)" }}>
-              <strong style={{ color: T.green }}>Ma Tontine Voyage:</strong> reserve today with {fmtXOF(total * 0.2)} (20%), balance in instalments before departure.
+              <strong style={{ color: T.green }}>Ma Tontine Voyage:</strong> reserve today with {fmtXOF(total * 0.3)} (30%), balance in instalments before departure.
             </div>
           </div>
         </aside>
@@ -6386,7 +6386,7 @@ function Overlay({ children, onClose }) {
   );
 }
 
-// n = number of instalments for the 80% balance (AFTER the 20% deposit).
+// n = number of instalments for the 70% balance (AFTER the 30% deposit).
 // Total payments = 1 deposit + n instalments.
 const TONTINE_OPTIONS = [
   { key: "15d", label: "15 days", days: 15, n: 1 },
@@ -6415,7 +6415,7 @@ function CartPage({ cart = [], removeFromCart, clearCart, payCart, payCartTontin
   const baseN = selOpt ? selOpt.n : 1;
   const maxTr = baseN + 2;
   const months = Math.min(Math.max(1, tranches || baseN), maxTr);
-  const deposit = Math.round(total * 0.2);
+  const deposit = Math.round(total * 0.3);
   const balance = total - deposit;
   const instal = months ? Math.round(balance / months) : 0;
   const field = (k, ph) => (<input style={input} value={bill[k]} onChange={(e) => setBill((b) => ({ ...b, [k]: e.target.value }))} placeholder={ph} />);
@@ -6496,7 +6496,7 @@ function CartPage({ cart = [], removeFromCart, clearCart, payCart, payCartTontin
                 </div>
                 <div style={{ background: "#F4F6F5", border: `1px solid ${T.line}`, borderRadius: 10, padding: "10px 12px", fontSize: 12.5, color: "rgba(0,0,0,.75)", lineHeight: 1.5, display: "flex", gap: 8, alignItems: "flex-start", margin: "12px 0 10px" }}>
                   <Info size={15} color={T.green} style={{ flexShrink: 0, marginTop: 1 }} />
-                  <span><strong>Due today: {fmtXOF(deposit)}</strong> (20%). Then {fmtXOF(balance)} in <strong>{months} instalment{months > 1 ? "s" : ""}</strong> — minimum {fmtXOF(instal)} each, and you can always pay more. Fully settled <strong>before {earliest}</strong>.</span>
+                  <span><strong>Due today: {fmtXOF(deposit)}</strong> (30%). Then {fmtXOF(balance)} in <strong>{months} instalment{months > 1 ? "s" : ""}</strong> — minimum {fmtXOF(instal)} each, and you can always pay more. Fully settled <strong>before {earliest}</strong>.</span>
                 </div>
                 <button onClick={() => { if (ready) payCartTontine({ ...bill, name: `${bill.firstName} ${bill.lastName}`.trim() }, selOpt, months); }} disabled={!ready}
                   style={{ width: "100%", background: "#1A1A1A", color: "#fff", border: "none", borderRadius: 12, padding: 13, fontWeight: 800, fontSize: 15, cursor: ready ? "pointer" : "not-allowed", opacity: ready ? 1 : 0.55 }}>
@@ -6532,7 +6532,7 @@ function BookingModal({ tour, user, onClose, onConfirm, onAddToCart }) {
   const [vehicle, setVehicle] = useState(tour.initialVehicle ?? -1); // -1 = no transport
   const [plan, setPlan] = useState(tour.initialPlan === "deposit" ? "deposit" : "full");
   const [sched, setSched] = useState("3m");
-  const [tranches, setTranches] = useState(3); // client-chosen number of instalments for the 80% balance
+  const [tranches, setTranches] = useState(3); // client-chosen number of instalments for the 70% balance
   const [accepted, setAccepted] = useState(false); // mandatory T&C acceptance for paid bookings
   const [payMethod, setPayMethod] = useState("stripe"); // PayDunya temporarily disabled — Stripe only
   const [promoCode, setPromoCode] = useState(() => { try { return (tour.initialPromo || localStorage.getItem("ats_ref") || "").toUpperCase(); } catch { return (tour.initialPromo || "").toUpperCase(); } });
@@ -6588,7 +6588,7 @@ function BookingModal({ tour, user, onClose, onConfirm, onAddToCart }) {
     const addonTotal = paidAddons.reduce((s, x) => s + (x.per === "person" ? x.price * pax : x.price), 0);
     const transport = vehicle >= 0 && rates ? rates[vehicle] : 0;
     const total = base + addonTotal + transport;
-    return { base, addonTotal, transport, total, deposit: total * 0.2, installment: (total * 0.8) / months };
+    return { base, addonTotal, transport, total, deposit: total * 0.3, installment: (total * 0.7) / months };
   }, [tour, adults, children, addons, vehicle, months, pax, tg, rates]);
 
   const onRequestAddons = tour.addons.filter((x) => addons.includes(x.name) && !x.price);
@@ -6687,7 +6687,7 @@ function BookingModal({ tour, user, onClose, onConfirm, onAddToCart }) {
               <button onClick={() => setPlan("full")} style={{ flex: 1, border: `1.5px solid ${plan === "full" ? T.green : T.line}`, background: plan === "full" ? T.green : "#fff", borderRadius: 12, padding: "10px 8px", fontWeight: 600, fontSize: 13, cursor: "pointer", color: plan === "full" ? "#fff" : T.ink }}>Pay in full</button>
               <button onClick={() => tontineAllowed && setPlan("deposit")} disabled={!tontineAllowed} title={!user ? "A free account is required for Ma Tontine Voyage" : !tontineAvailable ? "Choose a travel date further away to pay in instalments" : ""}
                 style={{ flex: 1, border: `1.5px solid ${plan === "deposit" ? T.green : T.line}`, background: plan === "deposit" ? T.green : "#fff", borderRadius: 12, padding: "10px 8px", fontWeight: 600, fontSize: 13, cursor: tontineAllowed ? "pointer" : "not-allowed", color: plan === "deposit" ? "#fff" : T.ink, opacity: tontineAllowed ? 1 : 0.45 }}>
-                Ma Tontine Voyage · 20% deposit
+                Ma Tontine Voyage · 30% deposit
               </button>
             </div>
             {tontineAvailable && !user && (
@@ -6753,7 +6753,7 @@ function BookingModal({ tour, user, onClose, onConfirm, onAddToCart }) {
             )}
             {plan === "deposit" && tontineAvailable && (
               <div style={{ marginTop: 10, background: "#f8f8f8", border: "1px solid #ECECEC", borderRadius: 10, padding: "10px 12px", fontSize: 13.5, lineHeight: 1.6, color: "rgba(0,0,0,.8)" }}>
-                <strong style={{ color: "#1A1A1A" }}>Due today: {fmtXOF(calc.deposit)}</strong> (20% deposit)<br />
+                <strong style={{ color: "#1A1A1A" }}>Due today: {fmtXOF(calc.deposit)}</strong> (30% deposit)<br />
                 Then the balance of {fmtXOF(calc.total - calc.deposit)} split into <strong>{months} instalment{months > 1 ? "s" : ""}</strong>, so a minimum of <strong>{fmtXOF(calc.installment)}</strong> per payment.<br />
                 <span style={{ display: "flex", gap: 7, marginTop: 6, alignItems: "flex-start" }}><Info size={15} color={T.green} style={{ flexShrink: 0, marginTop: 2 }} /><span>That amount is only a <strong>minimum</strong>: at each payment you're free to pay <strong>more</strong> — even the whole remaining balance at once — to finish sooner. You never pay less than the minimum.</span></span>
                 <span style={{ display: "block", marginTop: 6 }}>Fully settled before your travel date{date ? ` (${date})` : ""}. Reminders by email, SMS and WhatsApp.</span>
