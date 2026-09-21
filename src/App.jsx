@@ -2589,7 +2589,7 @@ function HeroSearch({ go }) {
   );
 }
 
-function Home({ go, notify, setBooking, filters, setFilters, setChat, addBookingHome, user, favorites, toggleFavorite }) {
+function Home({ go, notify, setBooking, filters, setFilters, setChat, addBookingHome, user, setSignin, favorites, toggleFavorite }) {
   const [country, setCountry] = useState(COUNTRIES[0]);
   const [search, setSearch] = useState({ dest: "Senegal", exp: "All", dateFrom: "", dateTo: "", pax: 2 });
   const featured = ["goree","bandia","lacrose","toubacouta","stlouis","lompoul","food","boat"].map((id) => TOURS.find((t) => t.id === id));
@@ -2626,7 +2626,7 @@ function Home({ go, notify, setBooking, filters, setFilters, setChat, addBooking
 
       {/* PORTALS — right after the hero */}
       <Wrap>
-        <PortalTabs go={go} />
+        <PortalTabs go={go} user={user} setSignin={setSignin} />
       </Wrap>
 
       {/* CHOOSE YOUR AFRICA */}
@@ -2762,19 +2762,22 @@ function SearchField({ label: l, children }) {
     <div style={{ fontSize: 11, fontWeight: 600, color: T.laterite, textTransform: "uppercase", letterSpacing: ".08em" }}>{l}</div>{children}
   </div>;
 }
-function PortalTabs({ go }) {
-  const [tab, setTab] = useState("traveler");
+function PortalTabs({ go, user, setSignin }) {
+  const [tab, setTab] = useState(user ? "tripbuilder" : "traveler");
   const [step, setStep] = useState(0);
-  const TABS = { traveler: "Travelers", tripbuilder: "Trip Builder", corporate: "Corporate & NGO", agent: "Travel agents" };
+  useEffect(() => { if (user && tab === "traveler") { setTab("tripbuilder"); setStep(0); } }, [user]);
+  const TABS = user
+    ? { tripbuilder: "Trip Builder", corporate: "Corporate & NGO", agent: "Travel agents" }
+    : { traveler: "Travelers", tripbuilder: "Trip Builder", corporate: "Corporate & NGO", agent: "Travel agents" };
   const PORTALS = {
     traveler: {
-      title: "Plan, book and manage — all in one place",
-      cta: ["Open my account", "account"],
+      title: "Create your free ATS account",
+      cta: ["Create my free account", "account"],
       img: "site/Hero.webp",
       steps: [
-        ["Browse & pick", "Explore 35+ Senegal experiences, filter by theme, then choose your dates and travellers — prices adjust with your group size."],
-        ["Book your way", "Pay in full as a guest, or create a free account to reserve with a 30% Ma Tontine Voyage deposit and settle the balance in instalments before departure."],
-        ["Manage everything", "Track your bookings, change your date or number of travellers, cancel if plans shift, download invoices, and chat with ATS on WhatsApp."],
+        ["Book faster", "Save your details once and check out in a tap — no re-typing for every trip, with your saved cart and favourites in one place."],
+        ["Pay in instalments", "A free account unlocks Ma Tontine Voyage: reserve with a 30% deposit and spread the balance in instalments before departure."],
+        ["Manage everything", "Track and change your bookings, cancel if plans shift, download invoices, and chat with ATS on WhatsApp — all from your account."],
       ],
     },
     tripbuilder: {
@@ -2816,24 +2819,24 @@ function PortalTabs({ go }) {
   const imgUrl = supabase.storage.from(PHOTO_BUCKET).getPublicUrl(p.img).data.publicUrl;
 
   return (
-    <div className="portal-card" style={{ background: "#F6F1E6", borderRadius: 24, overflow: "hidden", display: "grid", gridTemplateColumns: "1.05fr 0.95fr", alignItems: "stretch" }}>
+    <div className="portal-card" style={{ background: "#F6F1E6", borderRadius: 24, overflow: "hidden", display: "grid", gridTemplateColumns: "2fr 1fr", alignItems: "stretch" }}>
       <style>{`@media(max-width:860px){.portal-card{grid-template-columns:1fr !important}.portal-card .portal-media{min-height:220px !important;order:-1}}@media(max-width:560px){.portal-card{margin-top:280px}}`}</style>
       {/* LEFT — content */}
-      <div style={{ padding: "clamp(24px,4vw,44px)" }}>
+      <div style={{ padding: "clamp(16px,2.4vw,26px)" }}>
         <span style={{ display: "inline-block", background: T.green, color: "#fff", fontSize: 11.5, fontWeight: 700, letterSpacing: ".04em", textTransform: "uppercase", borderRadius: 8, padding: "5px 12px" }}>How it works</span>
 
         {/* Tab pills */}
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", margin: "16px 0 6px" }}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", margin: "10px 0 4px" }}>
           {Object.entries(TABS).map(([k, l]) => {
             const on = tab === k;
             return <button key={k} onClick={() => go2(k)} style={{ border: `1.5px solid ${on ? T.green : "rgba(0,0,0,.18)"}`, background: on ? T.green : "transparent", color: on ? "#fff" : T.ink, borderRadius: 999, padding: "8px 16px", fontWeight: 700, cursor: "pointer", fontSize: 13.5, fontFamily: "inherit" }}>{l}</button>;
           })}
         </div>
 
-        <h2 className="disp" style={{ fontSize: "clamp(20px,2.5vw,27px)", fontWeight: 800, color: T.ink, letterSpacing: "-0.02em", lineHeight: 1.15, margin: "14px 0 18px", maxWidth: 440, minHeight: 62, display: "flex", alignItems: "flex-end" }}>{p.title}</h2>
+        <h2 className="disp" style={{ fontSize: "clamp(20px,2.4vw,26px)", fontWeight: 800, color: T.ink, letterSpacing: "-0.02em", lineHeight: 1.15, margin: "10px 0 12px", maxWidth: 440 }}>{p.title}</h2>
 
         {/* Step */}
-        <div style={{ display: "flex", gap: 16, minHeight: 132 }}>
+        <div style={{ display: "flex", gap: 16, minHeight: 92 }}>
           <div style={{ flexShrink: 0, width: 44, height: 44, borderRadius: "50%", background: "#fff", border: `1.5px solid ${T.green}`, color: T.green, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 18, fontFamily: "'Century Gothic','Poppins',sans-serif" }}>{step + 1}</div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div className="disp" style={{ fontWeight: 800, fontSize: 18, color: T.ink, marginBottom: 5 }}>{p.steps[step][0]}</div>
@@ -2842,7 +2845,7 @@ function PortalTabs({ go }) {
         </div>
 
         {/* Stepper controls */}
-        <div style={{ display: "flex", alignItems: "center", gap: 14, marginTop: 18 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14, marginTop: 12 }}>
           <button onClick={prev} aria-label="Previous step" style={portalArrow}><ChevronLeft size={18} /></button>
           <button onClick={next} aria-label="Next step" style={portalArrow}><ChevronRight size={18} /></button>
           <div style={{ display: "flex", gap: 6, marginLeft: 4 }}>
@@ -2853,11 +2856,11 @@ function PortalTabs({ go }) {
           <span style={{ marginLeft: "auto", fontSize: 12.5, color: "rgba(0,0,0,.55)", fontWeight: 600 }}>{step + 1} / {n}</span>
         </div>
 
-        <button style={{ ...btnGold, marginTop: 24, fontSize: 14.5, padding: "12px 24px" }} onClick={() => go(p.cta[1])}>{p.cta[0]} →</button>
+        <button style={{ ...btnGold, marginTop: 16, fontSize: 14.5, padding: "11px 22px" }} onClick={() => { if (tab === "traveler" && !user && setSignin) setSignin(true); else go(p.cta[1]); }}>{p.cta[0]} →</button>
       </div>
 
       {/* RIGHT — image */}
-      <div className="portal-media" style={{ position: "relative", minHeight: 380, background: `linear-gradient(160deg, rgba(0,0,0,.10), rgba(0,0,0,.10)), url("${imgUrl}") center/cover no-repeat, linear-gradient(150deg, ${T.green}, ${T.indigo})`, margin: 10, borderRadius: 18 }} />
+      <div className="portal-media" style={{ position: "relative", minHeight: 200, background: `linear-gradient(160deg, rgba(0,0,0,.10), rgba(0,0,0,.10)), url("${imgUrl}") center/cover no-repeat, linear-gradient(150deg, ${T.green}, ${T.indigo})`, margin: 10, borderRadius: 18 }} />
     </div>
   );
 }
