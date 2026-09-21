@@ -39,7 +39,7 @@ const T = {
   gold: "#F8D815", indigo: "#006B33", laterite: "#006B33",
   green: "#009245", line: "rgba(11,46,27,0.14)",
 };
-const XOF_USD = 590;       // 1 USD ≈ 590 XOF
+const XOF_USD = 550;       // 1 USD ≈ 550 XOF (taux interne CFA→USD)
 const XOF_EUR = 655.957;   // fixed CFA peg
 // Active display currency — reassigned by the app on each render from state.
 let ACTIVE_CUR = "XOF";
