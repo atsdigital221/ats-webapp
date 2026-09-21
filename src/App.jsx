@@ -1057,6 +1057,17 @@ export default function ATSPlatformPreview() {
     startPayment(agg);
   };
 
+  // Cart via Ma Tontine Voyage: 20% deposit now on the aggregated booking, balance in
+  // instalments. Schedule is bounded by the NEAREST departure in the cart.
+  const payCartTontine = (contact, opt) => {
+    if (!cart.length || !opt) return;
+    if (!user) { setSignin(true); notify("Sign in (free account) to reserve with Ma Tontine Voyage — it lets us track your instalments."); return; }
+    const total = cart.reduce((s, it) => s + (Number(it.lineTotal != null ? it.lineTotal : it.total) || 0), 0);
+    const agg = { cart: true, items: cart, tour: { name: `Cart — ${cart.length} ${cart.length > 1 ? "tours" : "tour"}`, pole: "ATS", dur: "" }, plan: "deposit", total, deposit: Math.round(total * 0.2), months: opt.n, schedule: opt.label, contact: contact || (cart[0] && cart[0].contact) || {}, payMethod: (cart[0] && cart[0].payMethod) || "stripe", addons: [] };
+    clearCart();
+    startPayment(agg);
+  };
+
   // Resume payment right after the user signs in
   useEffect(() => {
     if (user && pendingPay) { const b = pendingPay; setPendingPay(null); startPayment(b); }
@@ -1111,7 +1122,7 @@ export default function ATSPlatformPreview() {
     }
   }, []);
 
-  const ctx = { go, notify, setBooking, user, setUser, role, isCorporate, corpDiscount: isCorporate ? corpDiscount : 0, isAdmin: role === "admin" || role === "super_admin", isSuper: role === "super_admin", bookings, favorites, toggleFavorite, filters, setFilters, setSignin, setChat, signOut, saveRecord, patchBooking, cancelBooking, manageBooking, payInstallment, cart, addToCart, removeFromCart, clearCart, payCart, currency, setCurrency };
+  const ctx = { go, notify, setBooking, user, setUser, role, isCorporate, corpDiscount: isCorporate ? corpDiscount : 0, isAdmin: role === "admin" || role === "super_admin", isSuper: role === "super_admin", bookings, favorites, toggleFavorite, filters, setFilters, setSignin, setChat, signOut, saveRecord, patchBooking, cancelBooking, manageBooking, payInstallment, cart, addToCart, removeFromCart, clearCart, payCart, payCartTontine, currency, setCurrency };
 
   return (
     <div style={{ background: T.paper, color: T.ink, fontFamily: "'Century Gothic','Poppins',system-ui,sans-serif", minHeight: "100vh" }}>
@@ -6334,11 +6345,19 @@ const TONTINE_OPTIONS = [
   { key: "1y", label: "1 year", days: 365, n: 12 },
 ];
 
-function CartPage({ cart = [], removeFromCart, clearCart, payCart, go, user }) {
+function CartPage({ cart = [], removeFromCart, clearCart, payCart, payCartTontine, go, user }) {
   const [bill, setBill] = useState(() => { const [fn, ...rn] = (user?.name || "").split(" "); return { firstName: fn || "", lastName: rn.join(" ") || "", email: user?.email || "", phone: "" }; });
   const [accepted, setAccepted] = useState(false);
   const total = cart.reduce((s, it) => s + (Number(it.lineTotal != null ? it.lineTotal : it.total) || 0), 0);
   const ready = cart.length > 0 && billValid(bill) && accepted;
+  const dates = cart.map((it) => it.dateFrom || it.date).filter(Boolean).sort();
+  const earliest = dates[0] || "";
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const daysUntil = earliest ? Math.ceil((new Date(earliest + "T00:00:00") - new Date(todayStr + "T00:00:00")) / 86400000) : null;
+  const tOpt = daysUntil != null ? [...TONTINE_OPTIONS].reverse().find((o) => o.days <= daysUntil) : null;
+  const tontineOK = !!tOpt && daysUntil >= 15;
+  const deposit = Math.round(total * 0.2);
+  const balance = total - deposit;
   const field = (k, ph) => (<input style={input} value={bill[k]} onChange={(e) => setBill((b) => ({ ...b, [k]: e.target.value }))} placeholder={ph} />);
   if (!cart.length) return (
     <Wrap>
@@ -6390,6 +6409,27 @@ function CartPage({ cart = [], removeFromCart, clearCart, payCart, go, user }) {
             Pay all — {fmtXOF(total)}
           </button>
           {!ready && <div style={{ fontSize: 12, color: "#6B7A72", marginTop: 8, textAlign: "center" }}>Fill your contact details and accept the terms to pay.</div>}
+          <div style={{ borderTop: `1px solid ${T.line}`, marginTop: 18, paddingTop: 16 }}>
+            <div style={{ fontWeight: 800, fontSize: 14, marginBottom: 8, display: "inline-flex", alignItems: "center", gap: 7 }}><CalendarCheck size={16} color={T.green} /> Ma Tontine Voyage</div>
+            {tontineOK ? (
+              <>
+                <div style={{ background: "#F4F6F5", border: `1px solid ${T.line}`, borderRadius: 10, padding: "10px 12px", fontSize: 12.5, color: "rgba(0,0,0,.75)", lineHeight: 1.5, display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 10 }}>
+                  <Info size={15} color={T.green} style={{ flexShrink: 0, marginTop: 1 }} />
+                  <span>Pay <strong>20% now</strong> ({fmtXOF(deposit)}) and settle the balance ({fmtXOF(balance)}) in up to {tOpt.n} instalment{tOpt.n > 1 ? "s" : ""}. Your nearest departure is <strong>{earliest}</strong> — the full amount must be paid <strong>before that date</strong>.</span>
+                </div>
+                <button onClick={() => { if (ready) payCartTontine({ ...bill, name: `${bill.firstName} ${bill.lastName}`.trim() }, tOpt); }} disabled={!ready}
+                  style={{ width: "100%", background: "#1A1A1A", color: "#fff", border: "none", borderRadius: 12, padding: 13, fontWeight: 800, fontSize: 15, cursor: ready ? "pointer" : "not-allowed", opacity: ready ? 1 : 0.55 }}>
+                  Reserve with Ma Tontine — {fmtXOF(deposit)} now
+                </button>
+                {!user && <div style={{ fontSize: 11.5, color: "#6B7A72", marginTop: 7, textAlign: "center" }}>You&apos;ll be asked to sign in — a free account is required to track instalments.</div>}
+              </>
+            ) : (
+              <div style={{ background: "#FFF7E6", border: "1px solid #F0DFB0", borderRadius: 10, padding: "10px 12px", fontSize: 12.5, color: "#7A5B00", lineHeight: 1.5, display: "flex", gap: 8, alignItems: "flex-start" }}>
+                <Info size={15} color="#B8860B" style={{ flexShrink: 0, marginTop: 1 }} />
+                <span>Ma Tontine Voyage needs your nearest departure to be <strong>at least 15 days away</strong>{earliest ? ` (yours is ${earliest}, in ${daysUntil} day${daysUntil === 1 ? "" : "s"})` : ""}, and the full amount paid before that date.</span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
       <style>{`@media(min-width:820px){.cart-grid{grid-template-columns:1fr 360px !important}}`}</style>
