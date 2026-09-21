@@ -12,7 +12,7 @@ import {
   Calendar, Check, X, Star, MessageCircle, Bot, ChevronLeft, ChevronRight, ChevronDown, Heart,
   Menu, Search, Shield, ArrowRight, Package, Globe, Sparkles, Hotel, UserRound, Gift, Trophy,
   Mic, Dumbbell, Languages, CircleCheck, Building2, Ship, Waves,
-  CalendarCheck, Newspaper, Video, ConciergeBell, PenTool, Info, Play, ShoppingBag, Trash2,
+  CalendarCheck, Newspaper, Video, ConciergeBell, PenTool, Info, Play, ShoppingBag, Trash2, Pencil,
 } from "lucide-react";
 
 // Category icon for a tour / booking record (replaces per-item emojis)
@@ -917,6 +917,7 @@ export default function ATSPlatformPreview() {
   const startPayment = async (b) => {
     const amount = b.plan === "deposit" ? Math.round(b.deposit) : Math.round(b.total);
     if (!amount || amount <= 0) { notify("Nothing to pay for this item."); return; }
+    setCheckingOut(true);
     notify("Redirecting to secure payment…");
     const rec = await saveRecord({ ...b, status: "pending" });
     const fn = b.payMethod === "stripe" ? "create-stripe-checkout" : "create-payment";
@@ -942,6 +943,7 @@ export default function ATSPlatformPreview() {
     const amount = Math.round(amountArg != null ? amountArg : st.minNext);
     if (!amount || amount <= 0) { notify("Nothing left to pay on this booking."); return; }
     const nextNo = st.payCount + 1;
+    setCheckingOut(true);
     notify("Redirecting to secure payment…");
     const fn = payMethod === "stripe" ? "create-stripe-checkout" : "create-payment";
     const { data, error } = await supabase.functions.invoke(fn, {
@@ -954,7 +956,7 @@ export default function ATSPlatformPreview() {
         meta: { kind: "installment", amount },
       },
     });
-    if (error || !data?.url) { notify("Payment could not be started. Please try again."); return; }
+    if (error || !data?.url) { notify("Payment could not be started. Please try again."); setCheckingOut(false); return; }
     window.location.href = data.url;
   };
 
@@ -1214,7 +1216,7 @@ export default function ATSPlatformPreview() {
           <div style={{ background: "#fff", borderRadius: 16, padding: "26px 30px", maxWidth: 340, textAlign: "center", boxShadow: "0 20px 50px rgba(0,0,0,.3)" }}>
             <div style={{ width: 38, height: 38, border: `3px solid ${T.line}`, borderTopColor: T.green, borderRadius: "50%", margin: "0 auto 16px", animation: "ats-spin .8s linear infinite" }} />
             <div style={{ fontWeight: 800, fontSize: 16, color: T.ink, marginBottom: 6 }}>Redirecting to secure payment…</div>
-            <div style={{ fontSize: 13, color: "#6B7A72", lineHeight: 1.5 }}>Please wait, do not close this window. Your cart is saved.</div>
+            <div style={{ fontSize: 13, color: "#6B7A72", lineHeight: 1.5 }}>Please wait, do not close this window.</div>
           </div>
         </div>
       )}
@@ -6445,9 +6447,9 @@ function CartPage({ cart = [], removeFromCart, clearCart, payCart, payCartTontin
                 </div>
                 <div style={{ textAlign: "right", flexShrink: 0 }}>
                   <div style={{ fontWeight: 800, fontSize: 15 }}>{fmtXOF(it.lineTotal != null ? it.lineTotal : it.total)}</div>
-                  <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6, marginTop: 8 }}>
-                    <button onClick={(e) => { e.stopPropagation(); go("tour", { id: it.tour.id, date: it.dateFrom, pax: (it.adults || 0) + (it.children || 0) || 1, extras: (it.addons || []).map((a) => a.name), vehicle: typeof it.vehicle === "number" ? it.vehicle : -1, editCartId: it._cartId }); }} aria-label="Edit" style={{ background: "none", border: "none", cursor: "pointer", color: T.green, display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12.5, fontWeight: 600, fontFamily: "inherit", padding: 0 }}><PenTool size={14} /> Edit</button>
-                    <button onClick={(e) => { e.stopPropagation(); removeFromCart(it._cartId); }} aria-label="Remove" style={{ background: "none", border: "none", cursor: "pointer", color: "#B3261E", display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12.5, fontWeight: 600, fontFamily: "inherit", padding: 0 }}><Trash2 size={15} /> Remove</button>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8, marginTop: 10 }}>
+                    <button onClick={(e) => { e.stopPropagation(); go("tour", { id: it.tour.id, date: it.dateFrom, pax: (it.adults || 0) + (it.children || 0) || 1, extras: (it.addons || []).map((a) => a.name), vehicle: typeof it.vehicle === "number" ? it.vehicle : -1, editCartId: it._cartId }); }} aria-label="Edit" style={{ background: "#fff", border: `1.5px solid ${T.green}`, cursor: "pointer", color: T.green, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 12.5, fontWeight: 700, fontFamily: "inherit", padding: "7px 14px", borderRadius: 9 }}><Pencil size={14} /> Edit</button>
+                    <button onClick={(e) => { e.stopPropagation(); removeFromCart(it._cartId); }} aria-label="Remove" style={{ background: "#fff", border: "1.5px solid #E7C4C0", cursor: "pointer", color: "#B3261E", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 12.5, fontWeight: 700, fontFamily: "inherit", padding: "7px 14px", borderRadius: 9 }}><Trash2 size={14} /> Remove</button>
                   </div>
                 </div>
               </div>
