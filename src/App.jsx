@@ -747,7 +747,14 @@ export default function ATSPlatformPreview() {
   const [booking, setBooking] = useState(null);
   const [cart, setCart] = useState(() => { try { return JSON.parse(localStorage.getItem("ats_cart") || "[]"); } catch { return []; } });
   useEffect(() => { try { localStorage.setItem("ats_cart", JSON.stringify(cart)); } catch { /* ignore */ } }, [cart]);
-  const addToCart = (item) => { setCart((c) => [...c, { ...item, _cartId: Date.now() + "-" + Math.random().toString(36).slice(2, 7) }]); setBooking(null); notify("Added to your cart"); };
+  const addToCart = (item) => {
+    setCart((c) => {
+      if (item._cartId && c.some((x) => x._cartId === item._cartId)) return c.map((x) => (x._cartId === item._cartId ? { ...item } : x));
+      return [...c, { ...item, _cartId: Date.now() + "-" + Math.random().toString(36).slice(2, 7) }];
+    });
+    setBooking(null);
+    notify(item._cartId ? "Cart updated" : "Added to your cart");
+  };
   const removeFromCart = (id) => setCart((c) => c.filter((x) => x._cartId !== id));
   const clearCart = () => setCart([]);
   const [signin, setSignin] = useState(false);
@@ -6345,7 +6352,7 @@ const TONTINE_OPTIONS = [
   { key: "1y", label: "1 year", days: 365, n: 12 },
 ];
 
-function CartPage({ cart = [], removeFromCart, clearCart, payCart, payCartTontine, go, user }) {
+function CartPage({ cart = [], removeFromCart, clearCart, payCart, payCartTontine, go, user, setBooking }) {
   const [bill, setBill] = useState(() => { const [fn, ...rn] = (user?.name || "").split(" "); return { firstName: fn || "", lastName: rn.join(" ") || "", email: user?.email || "", phone: "" }; });
   const [accepted, setAccepted] = useState(false);
   const total = cart.reduce((s, it) => s + (Number(it.lineTotal != null ? it.lineTotal : it.total) || 0), 0);
@@ -6387,7 +6394,10 @@ function CartPage({ cart = [], removeFromCart, clearCart, payCart, payCartTontin
                 </div>
                 <div style={{ textAlign: "right", flexShrink: 0 }}>
                   <div style={{ fontWeight: 800, fontSize: 15 }}>{fmtXOF(it.lineTotal != null ? it.lineTotal : it.total)}</div>
-                  <button onClick={(e) => { e.stopPropagation(); removeFromCart(it._cartId); }} aria-label="Remove" style={{ marginTop: 8, background: "none", border: "none", cursor: "pointer", color: "#B3261E", display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12.5, fontWeight: 600, fontFamily: "inherit" }}><Trash2 size={15} /> Remove</button>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6, marginTop: 8 }}>
+                    <button onClick={(e) => { e.stopPropagation(); setBooking && setBooking({ ...it.tour, initialPlan: "full", initialPax: it.adults || 2, initialExtras: (it.addons || []).map((a) => a.name), initialDateFrom: it.dateFrom, initialDateTo: it.dateFrom, initialVehicle: -1, _cartId: it._cartId }); }} aria-label="Edit" style={{ background: "none", border: "none", cursor: "pointer", color: T.green, display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12.5, fontWeight: 600, fontFamily: "inherit", padding: 0 }}><PenTool size={14} /> Edit</button>
+                    <button onClick={(e) => { e.stopPropagation(); removeFromCart(it._cartId); }} aria-label="Remove" style={{ background: "none", border: "none", cursor: "pointer", color: "#B3261E", display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12.5, fontWeight: 600, fontFamily: "inherit", padding: 0 }}><Trash2 size={15} /> Remove</button>
+                  </div>
                 </div>
               </div>
             );
@@ -6720,10 +6730,10 @@ function BookingModal({ tour, user, onClose, onConfirm, onAddToCart }) {
             </div>
 
             {!IS_CORPORATE && !tour.quote && plan === "full" && (
-              <button onClick={() => { if (!billValid(bill) || !dateFrom) { setMsg("Add your travel date and contact details first."); return; } onAddToCart && onAddToCart({ tour, date: dateFrom, dateFrom, dateTo: dateFrom, adults, children, infants, plan: "full", months, schedule: "", total: calc.total, lineTotal: payTotal, deposit: calc.deposit, contact: { ...bill, name: `${bill.firstName} ${bill.lastName}`.trim() }, addons: chosenAddons, promoCode: promoValid ? promo.code : "", payMethod }); }}
-                disabled={!billValid(bill) || !dateFrom}
-                style={{ width: "100%", marginTop: 14, background: T.green, color: "#fff", border: "none", borderRadius: 12, padding: 13, fontWeight: 800, fontSize: 15, cursor: (billValid(bill) && dateFrom) ? "pointer" : "not-allowed", opacity: (billValid(bill) && dateFrom) ? 1 : 0.55, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                <ShoppingBag size={17} strokeWidth={2.2} /> Add to cart — {fmtXOF(payTotal)}
+              <button onClick={() => { if (!dateFrom) { setMsg("Add your travel date first."); return; } onAddToCart && onAddToCart({ tour, date: dateFrom, dateFrom, dateTo: dateFrom, adults, children, infants, plan: "full", months, schedule: "", total: calc.total, lineTotal: payTotal, deposit: calc.deposit, contact: { ...bill, name: `${bill.firstName} ${bill.lastName}`.trim() }, addons: chosenAddons, promoCode: promoValid ? promo.code : "", payMethod, _cartId: tour._cartId }); }}
+                disabled={!dateFrom}
+                style={{ width: "100%", marginTop: 14, background: T.green, color: "#fff", border: "none", borderRadius: 12, padding: 13, fontWeight: 800, fontSize: 15, cursor: dateFrom ? "pointer" : "not-allowed", opacity: dateFrom ? 1 : 0.55, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                <ShoppingBag size={17} strokeWidth={2.2} /> {tour._cartId ? "Update cart" : "Add to cart"} — {fmtXOF(payTotal)}
               </button>
             )}
             <TermsCheck checked={accepted} onChange={setAccepted} />
