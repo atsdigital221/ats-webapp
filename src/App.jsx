@@ -12,7 +12,7 @@ import {
   Calendar, Check, X, Star, MessageCircle, Bot, ChevronLeft, ChevronRight, ChevronDown, Heart,
   Menu, Search, Shield, ArrowRight, Package, Globe, Sparkles, Hotel, UserRound, Gift, Trophy,
   Mic, Dumbbell, Languages, CircleCheck, Building2, Ship, Waves,
-  CalendarCheck, Newspaper, Video, ConciergeBell, PenTool, Info, Play,
+  CalendarCheck, Newspaper, Video, ConciergeBell, PenTool, Info, Play, ShoppingBag, Trash2,
 } from "lucide-react";
 
 // Category icon for a tour / booking record (replaces per-item emojis)
@@ -685,6 +685,7 @@ function pageToUrl(page, filters) {
     case "about": path = "/about"; break;
     case "terms": path = "/terms"; break;
     case "account": path = "/account"; break;
+    case "cart": path = "/cart"; break;
     default: path = "/";
   }
   const qs = new URLSearchParams();
@@ -718,6 +719,7 @@ function urlToPage(pathname, search) {
     case "about": return { name: "about" };
     case "terms": return { name: "terms" };
     case "account": return { name: "account" };
+    case "cart": return { name: "cart" };
     default: return { name: "home" };
   }
 }
@@ -743,6 +745,11 @@ export default function ATSPlatformPreview() {
   const [bookings, setBookings] = useState([]);
   const [favorites, setFavorites] = useState([]); // array of tour_id strings (per signed-in user)
   const [booking, setBooking] = useState(null);
+  const [cart, setCart] = useState(() => { try { return JSON.parse(localStorage.getItem("ats_cart") || "[]"); } catch { return []; } });
+  useEffect(() => { try { localStorage.setItem("ats_cart", JSON.stringify(cart)); } catch { /* ignore */ } }, [cart]);
+  const addToCart = (item) => { setCart((c) => [...c, { ...item, _cartId: Date.now() + "-" + Math.random().toString(36).slice(2, 7) }]); setBooking(null); notify("Added to your cart"); };
+  const removeFromCart = (id) => setCart((c) => c.filter((x) => x._cartId !== id));
+  const clearCart = () => setCart([]);
   const [signin, setSignin] = useState(false);
   const [chat, setChat] = useState(false);
   const [filters, setFilters] = useState(() => {
@@ -1041,6 +1048,15 @@ export default function ATSPlatformPreview() {
     startPayment(b);
   };
 
+  // Pay every full-payment tour in the cart in ONE transaction (single aggregated booking record)
+  const payCart = (contact) => {
+    if (!cart.length) return;
+    const total = cart.reduce((s, it) => s + (Number(it.lineTotal != null ? it.lineTotal : it.total) || 0), 0);
+    const agg = { cart: true, items: cart, tour: { name: `Cart — ${cart.length} ${cart.length > 1 ? "tours" : "tour"}`, pole: "ATS", dur: "" }, plan: "full", total, deposit: 0, contact: contact || (cart[0] && cart[0].contact) || {}, payMethod: (cart[0] && cart[0].payMethod) || "stripe", addons: [] };
+    clearCart();
+    startPayment(agg);
+  };
+
   // Resume payment right after the user signs in
   useEffect(() => {
     if (user && pendingPay) { const b = pendingPay; setPendingPay(null); startPayment(b); }
@@ -1095,7 +1111,7 @@ export default function ATSPlatformPreview() {
     }
   }, []);
 
-  const ctx = { go, notify, setBooking, user, setUser, role, isCorporate, corpDiscount: isCorporate ? corpDiscount : 0, isAdmin: role === "admin" || role === "super_admin", isSuper: role === "super_admin", bookings, favorites, toggleFavorite, filters, setFilters, setSignin, setChat, signOut, saveRecord, patchBooking, cancelBooking, manageBooking, payInstallment, currency, setCurrency };
+  const ctx = { go, notify, setBooking, user, setUser, role, isCorporate, corpDiscount: isCorporate ? corpDiscount : 0, isAdmin: role === "admin" || role === "super_admin", isSuper: role === "super_admin", bookings, favorites, toggleFavorite, filters, setFilters, setSignin, setChat, signOut, saveRecord, patchBooking, cancelBooking, manageBooking, payInstallment, cart, addToCart, removeFromCart, clearCart, payCart, currency, setCurrency };
 
   return (
     <div style={{ background: T.paper, color: T.ink, fontFamily: "'Century Gothic','Poppins',system-ui,sans-serif", minHeight: "100vh" }}>
@@ -1115,7 +1131,7 @@ export default function ATSPlatformPreview() {
       <Nav {...ctx} page={page} overHero={page.name === "home"} />
       {page.name !== "home" && <div style={{ height: 60 }} />}
       {booking ? (
-        <BookingModal tour={booking} user={user} onClose={() => setBooking(null)} onConfirm={confirmBooking} />
+        <BookingModal tour={booking} user={user} onClose={() => setBooking(null)} onConfirm={confirmBooking} onAddToCart={addToCart} />
       ) : (
         <>
           {page.name === "home" && <Home {...ctx} addBookingHome={confirmBooking} />}
@@ -1138,6 +1154,7 @@ export default function ATSPlatformPreview() {
           {page.name === "article" && <ArticlePage slug={page.slug} go={go} />}
           {page.name === "about" && <AboutPage {...ctx} />}
           {page.name === "account" && <AccountPage {...ctx} />}
+          {page.name === "cart" && <CartPage {...ctx} />}
           {page.name === "payment" && <PaymentResult status={page.status} {...ctx} />}
           {page.name === "manage" && <ManageBookingPage token={page.token} {...ctx} />}
           {page.name === "terms" && <TermsPage />}
@@ -1204,7 +1221,7 @@ const NineDots = ({ color = "#111", size = 22 }) => (
   </svg>
 );
 
-function Nav({ go, page, user, setSignin, bookings, currency, setCurrency, setChat, setFilters, overHero }) {
+function Nav({ go, page, user, setSignin, bookings, cart = [], currency, setCurrency, setChat, setFilters, overHero }) {
   const [open, setOpen] = useState(false);
   const [prefOpen, setPrefOpen] = useState(false);
   const [openMenu, setOpenMenu] = useState(null);
@@ -1381,6 +1398,12 @@ function Nav({ go, page, user, setSignin, bookings, currency, setCurrency, setCh
               </>
             )}
           </div>
+
+          {/* Cart */}
+          <button onClick={() => nav("cart")} aria-label="Cart" style={{ position: "relative", background: "none", border: "none", cursor: "pointer", color: ink, display: "inline-flex", alignItems: "center", padding: 6 }}>
+            <ShoppingBag size={21} strokeWidth={2} />
+            {cart.length > 0 && <span style={{ position: "absolute", top: -3, right: -6, background: T.gold, color: T.ink, borderRadius: 999, minWidth: 17, height: 17, fontSize: 11, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 4px", lineHeight: 1 }}>{cart.length}</span>}
+          </button>
 
           {/* Sign in */}
           <button onClick={() => { if (user) nav("account"); else { setSignin(true); setOpen(false); } }}
@@ -6302,7 +6325,70 @@ const TONTINE_OPTIONS = [
   { key: "1y", label: "1 year", days: 365, n: 12 },
 ];
 
-function BookingModal({ tour, user, onClose, onConfirm }) {
+function CartPage({ cart = [], removeFromCart, clearCart, payCart, go, user }) {
+  const [bill, setBill] = useState(() => { const [fn, ...rn] = (user?.name || "").split(" "); return { firstName: fn || "", lastName: rn.join(" ") || "", email: user?.email || "", phone: "" }; });
+  const [accepted, setAccepted] = useState(false);
+  const total = cart.reduce((s, it) => s + (Number(it.lineTotal != null ? it.lineTotal : it.total) || 0), 0);
+  const ready = cart.length > 0 && billValid(bill) && accepted;
+  const field = (k, ph) => (<input style={input} value={bill[k]} onChange={(e) => setBill((b) => ({ ...b, [k]: e.target.value }))} placeholder={ph} />);
+  if (!cart.length) return (
+    <Wrap>
+      <div style={{ textAlign: "center", padding: "40px 0" }}>
+        <ShoppingBag size={46} color={T.green} style={{ display: "block", margin: "0 auto 14px" }} />
+        <h2 className="disp" style={{ fontSize: 26, fontWeight: 800, margin: "0 0 8px" }}>Your cart is empty</h2>
+        <p style={{ color: "#6B7A72", margin: "0 0 20px" }}>Add tours to your cart and pay for all of them in one go.</p>
+        <button style={btnGold} onClick={() => go("tours")}>Browse activities</button>
+      </div>
+    </Wrap>
+  );
+  return (
+    <Wrap>
+      <h2 className="disp" style={{ fontSize: 28, fontWeight: 800, margin: "0 0 4px" }}>Your cart</h2>
+      <p style={{ color: "#6B7A72", margin: "0 0 22px" }}>{cart.length} {cart.length > 1 ? "tours" : "tour"} — pay everything in a single transaction.</p>
+      <div className="cart-grid" style={{ display: "grid", gridTemplateColumns: "1fr", gap: 22, alignItems: "start" }}>
+        <div style={{ display: "grid", gap: 12 }}>
+          {cart.map((it) => {
+            const pax = (it.adults || 0) + (it.children || 0) + (it.infants || 0);
+            return (
+              <div key={it._cartId} style={{ display: "flex", gap: 14, alignItems: "flex-start", background: "#fff", border: `1px solid ${T.line}`, borderRadius: 14, padding: 16 }}>
+                <div style={{ width: 42, height: 42, borderRadius: 10, background: "#EAF4EC", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><CatIcon tour={it.tour} size={22} color={T.green} /></div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, fontSize: 15 }}>{it.tour?.name}</div>
+                  <div style={{ fontSize: 12.5, color: "#6B7A72", marginTop: 3 }}>{it.dateFrom || it.date}{pax ? ` · ${pax} traveller${pax > 1 ? "s" : ""}` : ""}</div>
+                  {it.addons && it.addons.length > 0 && <div style={{ fontSize: 12, color: "#6B7A72", marginTop: 3 }}>+ {it.addons.map((a) => a.name).join(", ")}</div>}
+                </div>
+                <div style={{ textAlign: "right", flexShrink: 0 }}>
+                  <div style={{ fontWeight: 800, fontSize: 15 }}>{fmtXOF(it.lineTotal != null ? it.lineTotal : it.total)}</div>
+                  <button onClick={() => removeFromCart(it._cartId)} aria-label="Remove" style={{ marginTop: 8, background: "none", border: "none", cursor: "pointer", color: "#B3261E", display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12.5, fontWeight: 600, fontFamily: "inherit" }}><Trash2 size={15} /> Remove</button>
+                </div>
+              </div>
+            );
+          })}
+          <button onClick={() => clearCart()} style={{ justifySelf: "start", background: "none", border: "none", color: "#6B7A72", cursor: "pointer", fontSize: 13, fontFamily: "inherit", textDecoration: "underline" }}>Empty cart</button>
+        </div>
+        <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 16, padding: 20 }}>
+          <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 12 }}>Contact details</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>{field("firstName", "First name")}{field("lastName", "Last name")}</div>
+          <div style={{ marginTop: 10 }}>{field("email", "Email")}</div>
+          <div style={{ marginTop: 10 }}>{field("phone", "Phone")}</div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 18, paddingTop: 16, borderTop: `1px solid ${T.line}` }}>
+            <span style={{ fontWeight: 700 }}>Total</span>
+            <span style={{ fontWeight: 800, fontSize: 20 }}>{fmtXOF(total)}</span>
+          </div>
+          <TermsCheck checked={accepted} onChange={setAccepted} />
+          <button onClick={() => payCart({ ...bill, name: `${bill.firstName} ${bill.lastName}`.trim() })} disabled={!ready}
+            style={{ width: "100%", marginTop: 14, background: T.gold, color: T.ink, border: "none", borderRadius: 12, padding: 14, fontWeight: 800, fontSize: 16, cursor: ready ? "pointer" : "not-allowed", opacity: ready ? 1 : 0.55 }}>
+            Pay all — {fmtXOF(total)}
+          </button>
+          {!ready && <div style={{ fontSize: 12, color: "#6B7A72", marginTop: 8, textAlign: "center" }}>Fill your contact details and accept the terms to pay.</div>}
+        </div>
+      </div>
+      <style>{`@media(min-width:820px){.cart-grid{grid-template-columns:1fr 360px !important}}`}</style>
+    </Wrap>
+  );
+}
+
+function BookingModal({ tour, user, onClose, onConfirm, onAddToCart }) {
   const todayStr = new Date().toISOString().slice(0, 10);
   const minDate = new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10); // earliest = day after tomorrow
   const [dateFrom, setDateFrom] = useState(tour.initialDateFrom || tour.initialDate || "");
@@ -6584,6 +6670,13 @@ function BookingModal({ tour, user, onClose, onConfirm }) {
               )}
             </div>
 
+            {!IS_CORPORATE && !tour.quote && plan === "full" && (
+              <button onClick={() => { if (!billValid(bill) || !dateFrom) { setMsg("Add your travel date and contact details first."); return; } onAddToCart && onAddToCart({ tour, date: dateFrom, dateFrom, dateTo: dateFrom, adults, children, infants, plan: "full", months, schedule: "", total: calc.total, lineTotal: payTotal, deposit: calc.deposit, contact: { ...bill, name: `${bill.firstName} ${bill.lastName}`.trim() }, addons: chosenAddons, promoCode: promoValid ? promo.code : "", payMethod }); }}
+                disabled={!billValid(bill) || !dateFrom}
+                style={{ width: "100%", marginTop: 14, background: "#fff", color: T.ink, border: `1.5px solid ${T.green}`, borderRadius: 12, padding: 13, fontWeight: 800, fontSize: 15, cursor: (billValid(bill) && dateFrom) ? "pointer" : "not-allowed", opacity: (billValid(bill) && dateFrom) ? 1 : 0.55, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                <ShoppingBag size={17} strokeWidth={2.2} /> Add to cart — {fmtXOF(payTotal)}
+              </button>
+            )}
             <TermsCheck checked={accepted} onChange={setAccepted} />
             <button style={{ width: "100%", marginTop: 12, background: IS_CORPORATE ? T.indigo : T.gold, color: IS_CORPORATE ? "#fff" : T.ink, border: "none", borderRadius: 12, padding: 14, fontWeight: 800, fontSize: 16, cursor: (billValid(bill) && dateFrom && accepted) ? "pointer" : "not-allowed", opacity: (billValid(bill) && dateFrom && accepted) ? 1 : 0.55 }}
               disabled={!billValid(bill) || !dateFrom || !accepted}
