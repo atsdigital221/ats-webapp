@@ -2829,18 +2829,18 @@ function PortalTabs({ go, user, setSignin }) {
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", margin: "10px 0 4px" }}>
           {Object.entries(TABS).map(([k, l]) => {
             const on = tab === k;
-            return <button key={k} onClick={() => go2(k)} style={{ border: `1.5px solid ${on ? T.green : "rgba(0,0,0,.18)"}`, background: on ? T.green : "transparent", color: on ? "#fff" : T.ink, borderRadius: 999, padding: "8px 16px", fontWeight: 700, cursor: "pointer", fontSize: 13.5, fontFamily: "inherit" }}>{l}</button>;
+            return <button key={k} onClick={() => go2(k)} style={{ border: `1.5px solid ${on ? T.green : "rgba(0,0,0,.18)"}`, background: on ? T.green : "transparent", color: on ? "#fff" : T.ink, borderRadius: 999, padding: "6px 13px", fontWeight: 700, cursor: "pointer", fontSize: 12.5, fontFamily: "inherit" }}>{l}</button>;
           })}
         </div>
 
-        <h2 className="disp" style={{ fontSize: "clamp(20px,2.4vw,26px)", fontWeight: 800, color: T.ink, letterSpacing: "-0.02em", lineHeight: 1.15, margin: "10px 0 12px", maxWidth: 440 }}>{p.title}</h2>
+        <h2 className="disp" style={{ fontSize: "clamp(18px,2vw,22px)", fontWeight: 800, color: T.ink, letterSpacing: "-0.02em", lineHeight: 1.2, margin: "10px 0 12px", maxWidth: 440, minHeight: 52, display: "flex", alignItems: "flex-end" }}>{p.title}</h2>
 
         {/* Step */}
-        <div style={{ display: "flex", gap: 16, minHeight: 92 }}>
-          <div style={{ flexShrink: 0, width: 44, height: 44, borderRadius: "50%", background: "#fff", border: `1.5px solid ${T.green}`, color: T.green, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 18, fontFamily: "'Century Gothic','Poppins',sans-serif" }}>{step + 1}</div>
+        <div style={{ display: "flex", gap: 14, minHeight: 96, alignItems: "flex-start" }}>
+          <div style={{ flexShrink: 0, width: 34, height: 34, borderRadius: "50%", background: "#fff", border: `1.5px solid ${T.green}`, color: T.green, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 15, fontFamily: "'Century Gothic','Poppins',sans-serif" }}>{step + 1}</div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div className="disp" style={{ fontWeight: 800, fontSize: 18, color: T.ink, marginBottom: 5 }}>{p.steps[step][0]}</div>
-            <p style={{ margin: 0, fontSize: 14.5, lineHeight: 1.6, color: "rgba(0,0,0,.75)" }}>{p.steps[step][1]}</p>
+            <div className="disp" style={{ fontWeight: 800, fontSize: 16, color: T.ink, marginBottom: 4 }}>{p.steps[step][0]}</div>
+            <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.55, color: "rgba(0,0,0,.75)" }}>{p.steps[step][1]}</p>
           </div>
         </div>
 
