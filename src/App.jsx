@@ -1172,7 +1172,7 @@ export default function ATSPlatformPreview() {
         <>
           {page.name === "home" && <Home {...ctx} addBookingHome={confirmBooking} />}
           {page.name === "tours" && <ToursPage {...ctx} />}
-          {page.name === "tour" && <TourDetail {...ctx} tourId={page.id} initialDate={page.date} initialPax={page.pax} />}
+          {page.name === "tour" && <TourDetail {...ctx} tourId={page.id} initialDate={page.date} initialPax={page.pax} initialExtras={page.extras} initialVehicle={page.vehicle} editCartId={page.editCartId} />}
           {page.name === "builder" && <TripBuilder {...ctx} />}
           {page.name === "flights" && <FlightsPage {...ctx} initial={page.fp} initialLegs={page.flegs} />}
           {page.name === "flightQuote" && <FlightQuotePage {...ctx} initial={page.fp} initialLegs={page.flegs} />}
@@ -3081,15 +3081,15 @@ const ZONE_COORDS = {
 };
 const tourCoords = (t) => ZONE_COORDS[t.zone] || [14.4974, -14.4524];
 
-function TourDetail({ tourId, go, setBooking, addToCart, favorites = [], toggleFavorite, initialDate, initialPax, user, setSignin, notify }) {
+function TourDetail({ tourId, go, setBooking, addToCart, removeFromCart, favorites = [], toggleFavorite, initialDate, initialPax, initialExtras, initialVehicle, editCartId, user, setSignin, notify }) {
   const t = TOURS.find((x) => x.id === tourId) || TOURS[0];
   // Ma Tontine Voyage needs a free account; guests are sent to sign-in instead
   const startTontine = () => { if (!user) { setSignin && setSignin(true); notify && notify("Create a free account to book with Ma Tontine Voyage."); return; } openBooking("deposit"); };
   const [mlat, mlon] = tourCoords(t);
   const fav = favorites.includes(t.id);
   const [pax, setPax] = useState(initialPax || 2);
-  const [extras, setExtras] = useState([]);
-  const [vehicle, setVehicle] = useState(-1);      // -1 = no transport
+  const [extras, setExtras] = useState(initialExtras || []);
+  const [vehicle, setVehicle] = useState(typeof initialVehicle === "number" ? initialVehicle : -1);      // -1 = no transport
   const [preview, setPreview] = useState(null);   // gallery lightbox index
   const [flash, setFlash] = useState("");          // ephemeral alert on the mobile bar
   const flashTimer = useRef();
@@ -3108,8 +3108,10 @@ function TourDetail({ tourId, go, setBooking, addToCart, favorites = [], toggleF
   const addTourToCart = () => {
     if (!dateOk || t.quote) return;
     const chosen = t.addons.filter((a) => extras.includes(a.name)).map((a) => ({ name: a.name, per: a.per, price: a.price, amount: a.price ? (a.per === "person" ? a.price * pax : a.price) : null }));
-    addToCart && addToCart({ tour: t, date: dateFrom, dateFrom, dateTo: dateFrom, adults: pax, children: 0, infants: 0, plan: "full", months: 3, schedule: "", total: estTotal, lineTotal: estTotal, deposit: estTotal * 0.2, contact: {}, addons: chosen, promoCode: "", payMethod: "stripe" });
+    addToCart && addToCart({ tour: t, date: dateFrom, dateFrom, dateTo: dateFrom, adults: pax, children: 0, infants: 0, plan: "full", months: 3, schedule: "", total: estTotal, lineTotal: estTotal, deposit: estTotal * 0.2, contact: {}, addons: chosen, vehicle, promoCode: "", payMethod: "stripe", _cartId: editCartId });
+    if (editCartId) go("cart");
   };
+  const removeTourFromCart = () => { if (removeFromCart && editCartId) removeFromCart(editCartId); go("cart"); };
 
   const imgs = useTourPhotos(t.id);
   const galleryCount = Math.max(5, imgs.length);
@@ -3355,11 +3357,18 @@ function TourDetail({ tourId, go, setBooking, addToCart, favorites = [], toggleF
               <button style={{ ...btnGold, width: "100%", marginTop: 14, borderRadius: 12, background: T.indigo, color: "#fff" }} onClick={() => openBooking("quote")}>Request a quote</button>
             ) : (
               <>
-                <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
-                  <button disabled={!dateOk} style={{ flex: 1, background: T.green, color: "#fff", border: "none", borderRadius: 12, padding: "12px 8px", fontWeight: 800, fontSize: 14.5, cursor: dateOk ? "pointer" : "not-allowed", opacity: dateOk ? 1 : 0.5, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 7, fontFamily: "inherit" }} onClick={() => dateOk && addTourToCart()}><ShoppingBag size={16} strokeWidth={2.2} /> Add to cart</button>
-                  <button disabled={!dateOk} style={{ ...btnGold, flex: 1, marginTop: 0, borderRadius: 12, padding: "12px 8px", fontSize: 14.5, opacity: dateOk ? 1 : 0.5, cursor: dateOk ? "pointer" : "not-allowed" }} onClick={() => dateOk && openBooking("full")}>Pay in full</button>
-                </div>
-                <button disabled={!tontinePossible} style={{ width: "100%", marginTop: 8, background: "#1A1A1A", color: "#fff", border: "none", borderRadius: 12, padding: "12px 14px", fontWeight: 800, cursor: tontinePossible ? "pointer" : "not-allowed", fontSize: 15, opacity: tontinePossible ? 1 : 0.5 }} onClick={() => tontinePossible && startTontine()}>Pay with Ma Tontine (20%)</button>
+                {editCartId ? (
+                  <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+                    <button disabled={!dateOk} style={{ flex: 1, background: T.green, color: "#fff", border: "none", borderRadius: 12, padding: "12px 8px", fontWeight: 800, fontSize: 14.5, cursor: dateOk ? "pointer" : "not-allowed", opacity: dateOk ? 1 : 0.5, fontFamily: "inherit" }} onClick={() => dateOk && addTourToCart()}>Update cart</button>
+                    <button style={{ flex: 1, background: "#fff", color: "#B3261E", border: "1.5px solid #E7C4C0", borderRadius: 12, padding: "12px 8px", fontWeight: 800, fontSize: 14.5, cursor: "pointer", fontFamily: "inherit" }} onClick={removeTourFromCart}>Remove from cart</button>
+                  </div>
+                ) : (<>
+                  <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+                    <button disabled={!dateOk} style={{ flex: 1, background: T.green, color: "#fff", border: "none", borderRadius: 12, padding: "12px 8px", fontWeight: 800, fontSize: 14.5, cursor: dateOk ? "pointer" : "not-allowed", opacity: dateOk ? 1 : 0.5, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 7, fontFamily: "inherit" }} onClick={() => dateOk && addTourToCart()}><ShoppingBag size={16} strokeWidth={2.2} /> Add to cart</button>
+                    <button disabled={!dateOk} style={{ ...btnGold, flex: 1, marginTop: 0, borderRadius: 12, padding: "12px 8px", fontSize: 14.5, opacity: dateOk ? 1 : 0.5, cursor: dateOk ? "pointer" : "not-allowed" }} onClick={() => dateOk && openBooking("full")}>Pay in full</button>
+                  </div>
+                  <button disabled={!tontinePossible} style={{ width: "100%", marginTop: 8, background: "#1A1A1A", color: "#fff", border: "none", borderRadius: 12, padding: "12px 14px", fontWeight: 800, cursor: tontinePossible ? "pointer" : "not-allowed", fontSize: 15, opacity: tontinePossible ? 1 : 0.5 }} onClick={() => tontinePossible && startTontine()}>Pay with Ma Tontine (20%)</button>
+                </>)}
                 {!dateOk && <div style={{ fontSize: 12.5, color: "#8A968E", marginTop: 8, textAlign: "center" }}>Choose a travel date to book.</div>}
               </>
             )}
@@ -3405,11 +3414,18 @@ function TourDetail({ tourId, go, setBooking, addToCart, favorites = [], toggleF
                 </div>
               </div>
             </div>
+            {editCartId ? (
+              <div style={{ display: "flex", gap: 8 }}>
+                <button style={{ flex: 1, background: T.green, color: "#fff", border: "none", borderRadius: 12, padding: "11px 8px", fontWeight: 800, fontSize: 14, cursor: "pointer", opacity: dateOk ? 1 : 0.5, fontFamily: "inherit" }} onClick={() => dateOk ? addTourToCart() : showFlash("Choose a travel date above.")}>Update cart</button>
+                <button style={{ flex: 1, background: "#fff", color: "#B3261E", border: "1.5px solid #E7C4C0", borderRadius: 12, padding: "11px 8px", fontWeight: 800, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }} onClick={removeTourFromCart}>Remove</button>
+              </div>
+            ) : (<>
             <button style={{ width: "100%", marginBottom: 8, background: T.green, color: "#fff", border: "none", borderRadius: 12, padding: "11px 8px", fontWeight: 800, fontSize: 14, cursor: "pointer", opacity: dateOk ? 1 : 0.5, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 7, fontFamily: "inherit" }} onClick={() => dateOk ? addTourToCart() : showFlash("Choose a travel date above to add to cart.")}><ShoppingBag size={16} strokeWidth={2.2} /> Add to cart</button>
             <div style={{ display: "flex", gap: 8 }}>
               <button style={{ ...btnGold, flex: 1, borderRadius: 12, fontSize: 14, padding: "11px 8px", opacity: dateOk ? 1 : 0.5 }} onClick={() => dateOk ? openBooking("full") : showFlash("Choose a travel date above to book.")}>Pay in full</button>
               <button style={{ flex: 1, background: "#1A1A1A", color: "#fff", border: "none", borderRadius: 12, padding: "11px 8px", fontWeight: 800, cursor: "pointer", fontSize: 14, opacity: tontinePossible ? 1 : 0.5 }} onClick={() => tontinePossible ? startTontine() : showFlash(dateOk ? "Ma Tontine needs a travel date at least 15 days away." : "Choose a travel date above to book.")}>Ma Tontine</button>
             </div>
+            </>)}
             {!dateOk && <div style={{ fontSize: 11, color: "#8A968E", marginTop: 5, textAlign: "center" }}>Choose a travel date to book.</div>}
           </>
         )}
@@ -6430,7 +6446,7 @@ function CartPage({ cart = [], removeFromCart, clearCart, payCart, payCartTontin
                 <div style={{ textAlign: "right", flexShrink: 0 }}>
                   <div style={{ fontWeight: 800, fontSize: 15 }}>{fmtXOF(it.lineTotal != null ? it.lineTotal : it.total)}</div>
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6, marginTop: 8 }}>
-                    <button onClick={(e) => { e.stopPropagation(); setBooking && setBooking({ ...it.tour, initialPlan: "full", initialPax: it.adults || 2, initialExtras: (it.addons || []).map((a) => a.name), initialDateFrom: it.dateFrom, initialDateTo: it.dateFrom, initialVehicle: -1, _cartId: it._cartId }); }} aria-label="Edit" style={{ background: "none", border: "none", cursor: "pointer", color: T.green, display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12.5, fontWeight: 600, fontFamily: "inherit", padding: 0 }}><PenTool size={14} /> Edit</button>
+                    <button onClick={(e) => { e.stopPropagation(); go("tour", { id: it.tour.id, date: it.dateFrom, pax: (it.adults || 0) + (it.children || 0) || 1, extras: (it.addons || []).map((a) => a.name), vehicle: typeof it.vehicle === "number" ? it.vehicle : -1, editCartId: it._cartId }); }} aria-label="Edit" style={{ background: "none", border: "none", cursor: "pointer", color: T.green, display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12.5, fontWeight: 600, fontFamily: "inherit", padding: 0 }}><PenTool size={14} /> Edit</button>
                     <button onClick={(e) => { e.stopPropagation(); removeFromCart(it._cartId); }} aria-label="Remove" style={{ background: "none", border: "none", cursor: "pointer", color: "#B3261E", display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12.5, fontWeight: 600, fontFamily: "inherit", padding: 0 }}><Trash2 size={15} /> Remove</button>
                   </div>
                 </div>
@@ -6783,7 +6799,7 @@ function BookingModal({ tour, user, onClose, onConfirm, onAddToCart }) {
             </div>
 
             {!IS_CORPORATE && !tour.quote && plan === "full" && (
-              <button onClick={() => { if (!dateFrom) { setMsg("Add your travel date first."); return; } onAddToCart && onAddToCart({ tour, date: dateFrom, dateFrom, dateTo: dateFrom, adults, children, infants, plan: "full", months, schedule: "", total: calc.total, lineTotal: payTotal, deposit: calc.deposit, contact: { ...bill, name: `${bill.firstName} ${bill.lastName}`.trim() }, addons: chosenAddons, promoCode: promoValid ? promo.code : "", payMethod, _cartId: tour._cartId }); }}
+              <button onClick={() => { if (!dateFrom) { setMsg("Add your travel date first."); return; } onAddToCart && onAddToCart({ tour, date: dateFrom, dateFrom, dateTo: dateFrom, adults, children, infants, plan: "full", months, schedule: "", total: calc.total, lineTotal: payTotal, deposit: calc.deposit, contact: { ...bill, name: `${bill.firstName} ${bill.lastName}`.trim() }, addons: chosenAddons, vehicle, promoCode: promoValid ? promo.code : "", payMethod, _cartId: tour._cartId }); }}
                 disabled={!dateFrom}
                 style={{ width: "100%", marginTop: 14, background: T.green, color: "#fff", border: "none", borderRadius: 12, padding: 13, fontWeight: 800, fontSize: 15, cursor: dateFrom ? "pointer" : "not-allowed", opacity: dateFrom ? 1 : 0.55, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
                 <ShoppingBag size={17} strokeWidth={2.2} /> {tour._cartId ? "Update cart" : "Add to cart"} — {fmtXOF(payTotal)}
