@@ -3035,7 +3035,7 @@ const ZONE_COORDS = {
 };
 const tourCoords = (t) => ZONE_COORDS[t.zone] || [14.4974, -14.4524];
 
-function TourDetail({ tourId, go, setBooking, favorites = [], toggleFavorite, initialDate, initialPax, user, setSignin, notify }) {
+function TourDetail({ tourId, go, setBooking, addToCart, favorites = [], toggleFavorite, initialDate, initialPax, user, setSignin, notify }) {
   const t = TOURS.find((x) => x.id === tourId) || TOURS[0];
   // Ma Tontine Voyage needs a free account; guests are sent to sign-in instead
   const startTontine = () => { if (!user) { setSignin && setSignin(true); notify && notify("Create a free account to book with Ma Tontine Voyage."); return; } openBooking("deposit"); };
@@ -3059,6 +3059,11 @@ function TourDetail({ tourId, go, setBooking, favorites = [], toggleFavorite, in
   const dateOk = daysUntil != null && daysUntil >= 0 && !!dateTo && dateTo >= dateFrom;
   const tontinePossible = dateOk && daysUntil >= 15;
   const openBooking = (plan) => setBooking({ ...t, initialPlan: plan, initialPax: pax, initialExtras: extras, initialDateFrom: dateFrom, initialDateTo: dateTo, initialVehicle: vehicle });
+  const addTourToCart = () => {
+    if (!dateOk || t.quote) return;
+    const chosen = t.addons.filter((a) => extras.includes(a.name)).map((a) => ({ name: a.name, per: a.per, price: a.price, amount: a.price ? (a.per === "person" ? a.price * pax : a.price) : null }));
+    addToCart && addToCart({ tour: t, date: dateFrom, dateFrom, dateTo: dateFrom, adults: pax, children: 0, infants: 0, plan: "full", months: 3, schedule: "", total: estTotal, lineTotal: estTotal, deposit: estTotal * 0.2, contact: {}, addons: chosen, promoCode: "", payMethod: "stripe" });
+  };
 
   const imgs = useTourPhotos(t.id);
   const galleryCount = Math.max(5, imgs.length);
@@ -3304,7 +3309,10 @@ function TourDetail({ tourId, go, setBooking, favorites = [], toggleFavorite, in
               <button style={{ ...btnGold, width: "100%", marginTop: 14, borderRadius: 12, background: T.indigo, color: "#fff" }} onClick={() => openBooking("quote")}>Request a quote</button>
             ) : (
               <>
-                <button disabled={!dateOk} style={{ ...btnGold, width: "100%", marginTop: 14, borderRadius: 12, opacity: dateOk ? 1 : 0.5, cursor: dateOk ? "pointer" : "not-allowed" }} onClick={() => dateOk && openBooking("full")}>Pay in full</button>
+                <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+                  <button disabled={!dateOk} style={{ flex: 1, background: "#fff", color: T.ink, border: `1.5px solid ${T.green}`, borderRadius: 12, padding: "12px 8px", fontWeight: 800, fontSize: 14.5, cursor: dateOk ? "pointer" : "not-allowed", opacity: dateOk ? 1 : 0.5, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 7, fontFamily: "inherit" }} onClick={() => dateOk && addTourToCart()}><ShoppingBag size={16} strokeWidth={2.2} /> Add to cart</button>
+                  <button disabled={!dateOk} style={{ ...btnGold, flex: 1, marginTop: 0, borderRadius: 12, padding: "12px 8px", fontSize: 14.5, opacity: dateOk ? 1 : 0.5, cursor: dateOk ? "pointer" : "not-allowed" }} onClick={() => dateOk && openBooking("full")}>Pay in full</button>
+                </div>
                 <button disabled={!tontinePossible} style={{ width: "100%", marginTop: 8, background: "#1A1A1A", color: "#fff", border: "none", borderRadius: 12, padding: "12px 14px", fontWeight: 800, cursor: tontinePossible ? "pointer" : "not-allowed", fontSize: 15, opacity: tontinePossible ? 1 : 0.5 }} onClick={() => tontinePossible && startTontine()}>Pay with Ma Tontine (20%)</button>
                 {!dateOk && <div style={{ fontSize: 12.5, color: "#8A968E", marginTop: 8, textAlign: "center" }}>Choose a travel date to book.</div>}
               </>
@@ -3351,6 +3359,7 @@ function TourDetail({ tourId, go, setBooking, favorites = [], toggleFavorite, in
                 </div>
               </div>
             </div>
+            <button style={{ width: "100%", marginBottom: 8, background: "#fff", color: T.ink, border: `1.5px solid ${T.green}`, borderRadius: 12, padding: "11px 8px", fontWeight: 800, fontSize: 14, cursor: "pointer", opacity: dateOk ? 1 : 0.5, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 7, fontFamily: "inherit" }} onClick={() => dateOk ? addTourToCart() : showFlash("Choose a travel date above to add to cart.")}><ShoppingBag size={16} strokeWidth={2.2} /> Add to cart</button>
             <div style={{ display: "flex", gap: 8 }}>
               <button style={{ ...btnGold, flex: 1, borderRadius: 12, fontSize: 14, padding: "11px 8px", opacity: dateOk ? 1 : 0.5 }} onClick={() => dateOk ? openBooking("full") : showFlash("Choose a travel date above to book.")}>Pay in full</button>
               <button style={{ flex: 1, background: "#1A1A1A", color: "#fff", border: "none", borderRadius: 12, padding: "11px 8px", fontWeight: 800, cursor: "pointer", fontSize: 14, opacity: tontinePossible ? 1 : 0.5 }} onClick={() => tontinePossible ? startTontine() : showFlash(dateOk ? "Ma Tontine needs a travel date at least 15 days away." : "Choose a travel date above to book.")}>Ma Tontine</button>
