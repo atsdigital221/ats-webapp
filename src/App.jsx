@@ -3310,7 +3310,7 @@ function TourDetail({ tourId, go, setBooking, addToCart, favorites = [], toggleF
             ) : (
               <>
                 <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
-                  <button disabled={!dateOk} style={{ flex: 1, background: "#fff", color: T.ink, border: `1.5px solid ${T.green}`, borderRadius: 12, padding: "12px 8px", fontWeight: 800, fontSize: 14.5, cursor: dateOk ? "pointer" : "not-allowed", opacity: dateOk ? 1 : 0.5, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 7, fontFamily: "inherit" }} onClick={() => dateOk && addTourToCart()}><ShoppingBag size={16} strokeWidth={2.2} /> Add to cart</button>
+                  <button disabled={!dateOk} style={{ flex: 1, background: T.green, color: "#fff", border: "none", borderRadius: 12, padding: "12px 8px", fontWeight: 800, fontSize: 14.5, cursor: dateOk ? "pointer" : "not-allowed", opacity: dateOk ? 1 : 0.5, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 7, fontFamily: "inherit" }} onClick={() => dateOk && addTourToCart()}><ShoppingBag size={16} strokeWidth={2.2} /> Add to cart</button>
                   <button disabled={!dateOk} style={{ ...btnGold, flex: 1, marginTop: 0, borderRadius: 12, padding: "12px 8px", fontSize: 14.5, opacity: dateOk ? 1 : 0.5, cursor: dateOk ? "pointer" : "not-allowed" }} onClick={() => dateOk && openBooking("full")}>Pay in full</button>
                 </div>
                 <button disabled={!tontinePossible} style={{ width: "100%", marginTop: 8, background: "#1A1A1A", color: "#fff", border: "none", borderRadius: 12, padding: "12px 14px", fontWeight: 800, cursor: tontinePossible ? "pointer" : "not-allowed", fontSize: 15, opacity: tontinePossible ? 1 : 0.5 }} onClick={() => tontinePossible && startTontine()}>Pay with Ma Tontine (20%)</button>
@@ -3359,7 +3359,7 @@ function TourDetail({ tourId, go, setBooking, addToCart, favorites = [], toggleF
                 </div>
               </div>
             </div>
-            <button style={{ width: "100%", marginBottom: 8, background: "#fff", color: T.ink, border: `1.5px solid ${T.green}`, borderRadius: 12, padding: "11px 8px", fontWeight: 800, fontSize: 14, cursor: "pointer", opacity: dateOk ? 1 : 0.5, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 7, fontFamily: "inherit" }} onClick={() => dateOk ? addTourToCart() : showFlash("Choose a travel date above to add to cart.")}><ShoppingBag size={16} strokeWidth={2.2} /> Add to cart</button>
+            <button style={{ width: "100%", marginBottom: 8, background: T.green, color: "#fff", border: "none", borderRadius: 12, padding: "11px 8px", fontWeight: 800, fontSize: 14, cursor: "pointer", opacity: dateOk ? 1 : 0.5, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 7, fontFamily: "inherit" }} onClick={() => dateOk ? addTourToCart() : showFlash("Choose a travel date above to add to cart.")}><ShoppingBag size={16} strokeWidth={2.2} /> Add to cart</button>
             <div style={{ display: "flex", gap: 8 }}>
               <button style={{ ...btnGold, flex: 1, borderRadius: 12, fontSize: 14, padding: "11px 8px", opacity: dateOk ? 1 : 0.5 }} onClick={() => dateOk ? openBooking("full") : showFlash("Choose a travel date above to book.")}>Pay in full</button>
               <button style={{ flex: 1, background: "#1A1A1A", color: "#fff", border: "none", borderRadius: 12, padding: "11px 8px", fontWeight: 800, cursor: "pointer", fontSize: 14, opacity: tontinePossible ? 1 : 0.5 }} onClick={() => tontinePossible ? startTontine() : showFlash(dateOk ? "Ma Tontine needs a travel date at least 15 days away." : "Choose a travel date above to book.")}>Ma Tontine</button>
@@ -6359,8 +6359,8 @@ function CartPage({ cart = [], removeFromCart, clearCart, payCart, go, user }) {
           {cart.map((it) => {
             const pax = (it.adults || 0) + (it.children || 0) + (it.infants || 0);
             return (
-              <div key={it._cartId} style={{ display: "flex", gap: 14, alignItems: "flex-start", background: "#fff", border: `1px solid ${T.line}`, borderRadius: 14, padding: 16 }}>
-                <div style={{ width: 42, height: 42, borderRadius: 10, background: "#EAF4EC", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><CatIcon tour={it.tour} size={22} color={T.green} /></div>
+              <div key={it._cartId} onClick={() => it.tour?.id && go("tour", { id: it.tour.id })} style={{ display: "flex", gap: 14, alignItems: "flex-start", background: "#fff", border: `1px solid ${T.line}`, borderRadius: 14, padding: 16, cursor: "pointer" }}>
+                <Thumb rec={it} size={64} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 700, fontSize: 15 }}>{it.tour?.name}</div>
                   <div style={{ fontSize: 12.5, color: "#6B7A72", marginTop: 3 }}>{it.dateFrom || it.date}{pax ? ` · ${pax} traveller${pax > 1 ? "s" : ""}` : ""}</div>
@@ -6368,7 +6368,7 @@ function CartPage({ cart = [], removeFromCart, clearCart, payCart, go, user }) {
                 </div>
                 <div style={{ textAlign: "right", flexShrink: 0 }}>
                   <div style={{ fontWeight: 800, fontSize: 15 }}>{fmtXOF(it.lineTotal != null ? it.lineTotal : it.total)}</div>
-                  <button onClick={() => removeFromCart(it._cartId)} aria-label="Remove" style={{ marginTop: 8, background: "none", border: "none", cursor: "pointer", color: "#B3261E", display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12.5, fontWeight: 600, fontFamily: "inherit" }}><Trash2 size={15} /> Remove</button>
+                  <button onClick={(e) => { e.stopPropagation(); removeFromCart(it._cartId); }} aria-label="Remove" style={{ marginTop: 8, background: "none", border: "none", cursor: "pointer", color: "#B3261E", display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12.5, fontWeight: 600, fontFamily: "inherit" }}><Trash2 size={15} /> Remove</button>
                 </div>
               </div>
             );
@@ -6682,7 +6682,7 @@ function BookingModal({ tour, user, onClose, onConfirm, onAddToCart }) {
             {!IS_CORPORATE && !tour.quote && plan === "full" && (
               <button onClick={() => { if (!billValid(bill) || !dateFrom) { setMsg("Add your travel date and contact details first."); return; } onAddToCart && onAddToCart({ tour, date: dateFrom, dateFrom, dateTo: dateFrom, adults, children, infants, plan: "full", months, schedule: "", total: calc.total, lineTotal: payTotal, deposit: calc.deposit, contact: { ...bill, name: `${bill.firstName} ${bill.lastName}`.trim() }, addons: chosenAddons, promoCode: promoValid ? promo.code : "", payMethod }); }}
                 disabled={!billValid(bill) || !dateFrom}
-                style={{ width: "100%", marginTop: 14, background: "#fff", color: T.ink, border: `1.5px solid ${T.green}`, borderRadius: 12, padding: 13, fontWeight: 800, fontSize: 15, cursor: (billValid(bill) && dateFrom) ? "pointer" : "not-allowed", opacity: (billValid(bill) && dateFrom) ? 1 : 0.55, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                style={{ width: "100%", marginTop: 14, background: T.green, color: "#fff", border: "none", borderRadius: 12, padding: 13, fontWeight: 800, fontSize: 15, cursor: (billValid(bill) && dateFrom) ? "pointer" : "not-allowed", opacity: (billValid(bill) && dateFrom) ? 1 : 0.55, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
                 <ShoppingBag size={17} strokeWidth={2.2} /> Add to cart — {fmtXOF(payTotal)}
               </button>
             )}
