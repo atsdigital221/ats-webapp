@@ -4993,8 +4993,8 @@ function AdminConsole({ user, isAdmin, isSuper, setSignin }) {
 
   const ROLES = ["client", "agent", "corporate", "admin", "super_admin"];
   const roleOptions = (current) => isSuper ? ROLES : Array.from(new Set(["client", "agent", "corporate", current]));
-  const th = { textAlign: "left", padding: "8px 10px", fontSize: 11.5, textTransform: "uppercase", letterSpacing: ".05em", color: "#8A968E", borderBottom: `1px solid ${T.line}`, whiteSpace: "nowrap" };
-  const td = { padding: "8px 10px", fontSize: 13.5, borderBottom: `1px solid ${T.line}`, verticalAlign: "middle" };
+  const th = { textAlign: "left", padding: "11px 12px", fontSize: 11, textTransform: "uppercase", letterSpacing: ".05em", color: "#8A968E", borderBottom: `1px solid ${T.line}`, whiteSpace: "nowrap", background: "#F7F9F8" };
+  const td = { padding: "11px 12px", fontSize: 13.5, borderBottom: `1px solid ${T.line}`, verticalAlign: "middle" };
   const groupTd = { padding: "12px 10px 5px", fontSize: 11.5, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".06em", color: T.green, background: "#F5F8F6" };
   const sel = { ...input, padding: "6px 8px", fontSize: 13, width: "auto" };
   const tabs = [["users", "Users & roles"], ["orgs", "Corporate"], ["codes", "Promo codes"], ["bookings", "Bookings"], ["payments", "Payments"], ["commissions", "Commissions"], ["analytics", "Analytics"], ["activity", isSuper ? "Activity (all)" : "Activity"]];
@@ -5009,19 +5009,41 @@ function AdminConsole({ user, isAdmin, isSuper, setSignin }) {
   };
   const shownBookings = bookings.filter((b) => (bookingFilter === "all" || channelOf(b.data) === bookingFilter) && (!onlyRequests || REQUEST_STATES.includes(b.status)) && bMatch(b));
   const commStatusColor = { pending: "#B8860B", approved: T.indigo, paid: T.green, cancelled: "#B3261E" };
+  const kConfirmed = bookings.filter((b) => ["paid", "settled", "confirmed"].includes(b.status)).length;
+  const kRevenue = bookings.filter((b) => ["paid", "settled", "confirmed"].includes(b.status)).reduce((s2, b) => s2 + (Number(b.data?.paidAmount) || Number(b.data?.total) || 0), 0);
+  const kFailed = attempts.filter((a) => a.status === "failed").length;
+  const kpis = [
+    { icon: CalendarCheck, label: "Bookings", value: String(bookings.length), tint: "#E6F4EA", fg: T.green },
+    { icon: CircleCheck, label: "Confirmed & paid", value: String(kConfirmed), tint: "#E6F4EA", fg: "#137333" },
+    { icon: Info, label: "Action needed", value: String(requestCount), tint: "#FEF7E0", fg: "#8A6D00" },
+    { icon: X, label: "Failed payments", value: String(kFailed), tint: "#FCE8E6", fg: "#B3261E" },
+    { icon: Landmark, label: "Confirmed revenue", value: fmtXOF(kRevenue), tint: "#EEF2F0", fg: T.ink },
+  ];
 
   return (
     <Wrap>
       <Eyebrow>Back office</Eyebrow><H2>Admin console</H2>
       {msg && <div style={{ background: "#E9F7EE", border: "1px solid #C7E9D3", color: "#1A6B3A", borderRadius: 10, padding: "8px 12px", fontSize: 13, marginBottom: 12 }}>{msg}</div>}
-      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 18 }}>
-        {tabs.map(([k, l]) => (
-          <button key={k} onClick={() => setTab(k)} style={{ border: "none", cursor: "pointer", background: tab === k ? T.green : "#fff", color: tab === k ? "#fff" : T.ink, borderRadius: 999, padding: "8px 16px", fontWeight: 600, fontSize: 13, boxShadow: `inset 0 0 0 1px ${T.line}` }}>{l}</button>
-        ))}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(158px, 1fr))", gap: 12, margin: "4px 0 20px" }}>
+        {kpis.map((k) => { const Ico = k.icon; return (
+          <div key={k.label} style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 16, padding: "14px 16px", boxShadow: "0 1px 2px rgba(16,24,40,.04)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 9 }}>
+              <span style={{ width: 30, height: 30, borderRadius: 9, background: k.tint, color: k.fg, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Ico size={16} strokeWidth={2.2} /></span>
+              <span style={{ fontSize: 12, fontWeight: 600, color: "#6B7A72" }}>{k.label}</span>
+            </div>
+            <div className="disp" style={{ fontSize: 22, fontWeight: 800, color: T.ink, letterSpacing: "-0.02em" }}>{k.value}</div>
+          </div>
+        ); })}
+      </div>
+      <style>{`.admin-tab{transition:background .15s ease,box-shadow .15s ease}.admin-tab:hover{background:#EEF5F0 !important}.admin-tab--on:hover{background:${T.green} !important}`}</style>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
+        {tabs.map(([k, l]) => { const on = tab === k; return (
+          <button key={k} className={"admin-tab" + (on ? " admin-tab--on" : "")} onClick={() => setTab(k)} style={{ border: "none", cursor: "pointer", background: on ? T.green : "#fff", color: on ? "#fff" : T.ink, borderRadius: 10, padding: "8px 15px", fontWeight: 600, fontSize: 13, fontFamily: "inherit", boxShadow: on ? "0 2px 8px rgba(0,146,69,.22)" : `inset 0 0 0 1px ${T.line}` }}>{l}{k === "payments" && kFailed ? ` · ${kFailed}` : ""}</button>
+        ); })}
       </div>
 
       {loading ? <div style={{ opacity: 0.6 }}>Loading…</div> : (
-        <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 14, overflowX: "auto" }}>
+        <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 16, overflowX: "auto", boxShadow: "0 1px 2px rgba(16,24,40,.04), 0 1px 3px rgba(16,24,40,.05)" }}>
           {tab === "users" && (
             <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 640 }}>
               <thead><tr><th style={th}>User</th><th style={th}>Role</th><th style={th}>Organization</th></tr></thead>
@@ -5186,7 +5208,7 @@ function AdminConsole({ user, isAdmin, isSuper, setSignin }) {
                           }
                           return fmtXOF(d.total);
                         })()}</td>
-                        <td style={td}><span style={{ fontSize: 12, fontWeight: 700, color: statusColor(b.status) }}>● {statusLabel[b.status] || b.status}</span></td>
+                        <td style={td}><span style={{ display: "inline-block", fontSize: 11.5, fontWeight: 700, color: statusColor(b.status), background: statusBg(b.status), borderRadius: 999, padding: "3px 11px", whiteSpace: "nowrap" }}>{statusLabel[b.status] || b.status}</span></td>
                         <td style={td}>
                           {b.status === "modification_requested" ? (
                             <div style={{ minWidth: 210 }}>
@@ -5801,6 +5823,7 @@ const planLabel = (p) => p === "deposit" ? "Ma Tontine Voyage" : p === "quote" ?
 const planColor = (p) => p === "deposit" ? T.laterite : p === "quote" ? T.indigo : p === "itinerary" ? T.indigo : T.green;
 const statusLabel = { pending: "In progress", confirmed: "Confirmed", paid: "Paid", cancelled: "Cancelled", settled: "Fully paid", completed: "Completed", invoiced: "Invoiced · due", modification_requested: "Change requested", cancellation_requested: "Cancellation requested" };
 const statusColor = (s) => s === "cancelled" ? "#B3261E" : s === "cancellation_requested" ? "#B3261E" : s === "modification_requested" ? T.gold : s === "invoiced" ? T.indigo : s === "settled" || s === "confirmed" || s === "paid" || s === "completed" ? T.green : T.laterite;
+const statusBg = (s) => (s === "cancelled" || s === "cancellation_requested") ? "#FCE8E6" : s === "modification_requested" ? "#FEF7E0" : s === "invoiced" ? "#ECEAFB" : (s === "settled" || s === "confirmed" || s === "paid" || s === "completed") ? "#E6F4EA" : "#EEF2F0";
 
 // ---- ATS cancellation policy (mirror of the server; used for on-screen previews only) ----
 const retainedPctFor = (days) => days == null ? 10 : days < 3 ? 100 : days < 7 ? 50 : days < 10 ? 30 : 10;
