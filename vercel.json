@@ -1,3 +1,11 @@
 {
+  "redirects": [
+    { "source": "/en/product/:slug*", "destination": "/tours", "permanent": true },
+    { "source": "/product/:slug*", "destination": "/tours", "permanent": true },
+    { "source": "/en/account", "destination": "/account", "permanent": true },
+    { "source": "/services", "destination": "/", "permanent": true },
+    { "source": "/en/services", "destination": "/", "permanent": true },
+    { "source": "/en/:path*", "destination": "/", "permanent": true }
+  ],
   "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
 }
