@@ -4823,6 +4823,19 @@ function AgentPortal({ user, role, setSignin, notify, go, setBooking }) {
 }
 
 // ---------------- ADMIN CONSOLE (role: admin; all writes via admin RLS) ----------------
+function dateBucket(iso) {
+  const d = new Date(iso); if (isNaN(d.getTime())) return { k: 5, label: "\u2014" };
+  const now = new Date();
+  const s = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const dd = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const diff = Math.round((s - dd) / 86400000);
+  if (diff <= 0) return { k: 0, label: "Today" };
+  if (diff === 1) return { k: 1, label: "Yesterday" };
+  if (diff <= 7) return { k: 2, label: "This week" };
+  if (d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()) return { k: 3, label: "This month" };
+  return { k: 4, label: "Older" };
+}
+
 function AdminConsole({ user, isAdmin, isSuper, setSignin }) {
   const [tab, setTab] = useState("users");
   const [profiles, setProfiles] = useState([]);
@@ -4834,6 +4847,8 @@ function AdminConsole({ user, isAdmin, isSuper, setSignin }) {
   const [waContacts, setWaContacts] = useState([]);
   const [attempts, setAttempts] = useState([]);
   const [attemptFilter, setAttemptFilter] = useState("all");
+  const [bookingQ, setBookingQ] = useState("");
+  const [attemptQ, setAttemptQ] = useState("");
   const [bookingFilter, setBookingFilter] = useState("all");
   const [onlyRequests, setOnlyRequests] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -4980,12 +4995,19 @@ function AdminConsole({ user, isAdmin, isSuper, setSignin }) {
   const roleOptions = (current) => isSuper ? ROLES : Array.from(new Set(["client", "agent", "corporate", current]));
   const th = { textAlign: "left", padding: "8px 10px", fontSize: 11.5, textTransform: "uppercase", letterSpacing: ".05em", color: "#8A968E", borderBottom: `1px solid ${T.line}`, whiteSpace: "nowrap" };
   const td = { padding: "8px 10px", fontSize: 13.5, borderBottom: `1px solid ${T.line}`, verticalAlign: "middle" };
+  const groupTd = { padding: "12px 10px 5px", fontSize: 11.5, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".06em", color: T.green, background: "#F5F8F6" };
   const sel = { ...input, padding: "6px 8px", fontSize: 13, width: "auto" };
   const tabs = [["users", "Users & roles"], ["orgs", "Corporate"], ["codes", "Promo codes"], ["bookings", "Bookings"], ["payments", "Payments"], ["commissions", "Commissions"], ["analytics", "Analytics"], ["activity", isSuper ? "Activity (all)" : "Activity"]];
   const actionLabel = (a) => ({ "promo_code.create": "created code", "promo_code.update": "edited code", "promo_code.activate": "activated code", "promo_code.deactivate": "deactivated code", "organization.create": "created org", "organization.update": "edited org", "organization.activate": "activated org", "organization.deactivate": "deactivated org", "profile.update": "changed user", "commission.approved": "approved commission", "commission.paid": "paid commission", "commission.cancelled": "cancelled commission", "booking.modify_approved": "approved a change", "booking.modify_rejected": "rejected a change", "booking.refund_processed": "processed a refund" }[a] || (a && a.startsWith("booking.status.") ? `set booking → ${a.slice(15)}` : a));
   const REQUEST_STATES = ["modification_requested", "cancellation_requested"];
   const requestCount = bookings.filter((b) => REQUEST_STATES.includes(b.status)).length;
-  const shownBookings = bookings.filter((b) => (bookingFilter === "all" || channelOf(b.data) === bookingFilter) && (!onlyRequests || REQUEST_STATES.includes(b.status)));
+  const bMatch = (b) => {
+    const q = bookingQ.trim().toLowerCase(); if (!q) return true;
+    const d = b.data || {};
+    const hay = [d.contact?.name, d.contact?.email, b.guest_email, d.contact?.phone, d.tour?.name, b.ref, (profiles.find((p) => p.id === b.user_id) || {}).email].filter(Boolean).join(" ").toLowerCase();
+    return hay.includes(q);
+  };
+  const shownBookings = bookings.filter((b) => (bookingFilter === "all" || channelOf(b.data) === bookingFilter) && (!onlyRequests || REQUEST_STATES.includes(b.status)) && bMatch(b));
   const commStatusColor = { pending: "#B8860B", approved: T.indigo, paid: T.green, cancelled: "#B3261E" };
 
   return (
@@ -5119,13 +5141,16 @@ function AdminConsole({ user, isAdmin, isSuper, setSignin }) {
                 ))}
                 <button onClick={() => setOnlyRequests((v) => !v)} style={{ border: "none", cursor: "pointer", marginLeft: "auto", background: onlyRequests ? "#B3261E" : (requestCount ? "#FBECEC" : "#F7F7F7"), color: onlyRequests ? "#fff" : (requestCount ? "#B3261E" : "#8A968E"), borderRadius: 999, padding: "6px 14px", fontWeight: 700, fontSize: 12.5, display: "inline-flex", alignItems: "center", gap: 6 }}><Info size={14} /> Action needed · {requestCount}</button>
               </div>
-              <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 900 }}>
+              <input value={bookingQ} onChange={(e) => setBookingQ(e.target.value)} placeholder="Search by name, email, phone, tour or ref\u2026" style={{ ...input, marginBottom: 12 }} />
+                <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 900 }}>
                 <thead><tr><th style={th}>Item</th><th style={th}>Customer</th><th style={th}>Channel</th><th style={th}>Plan</th><th style={th}>Total</th><th style={th}>Status</th><th style={th}>Manage</th><th style={th}>Date</th></tr></thead>
                 <tbody>
-                  {shownBookings.map((b) => {
+                  {shownBookings.map((b, i) => {
                     const d = b.data || {};
                     const ch = channelOf(d);
-                    return (
+                    const _bk = dateBucket(b.created_at).label;
+                    const head = (i === 0 || dateBucket(shownBookings[i - 1].created_at).label !== _bk) ? <tr key={"h-" + i}><td colSpan={8} style={groupTd}>{_bk}</td></tr> : null;
+                    return [head, (
                       <tr key={b.id}>
                         <td style={td}><div style={{ fontWeight: 600 }}>{d.tour?.name || "—"}</div>{d.promo?.code && <div style={{ fontSize: 11.5, color: T.green }}>code {d.promo.code}</div>}{d.corp?.orgName && <div style={{ fontSize: 11.5, color: T.indigo }}>{d.corp.orgName}</div>}</td>
                         <td style={td}>
@@ -5188,7 +5213,7 @@ function AdminConsole({ user, isAdmin, isSuper, setSignin }) {
                         </td>
                         <td style={td}>{new Date(b.created_at).toLocaleDateString()}</td>
                       </tr>
-                    );
+                    )];
                   })}
                   {shownBookings.length === 0 && <tr><td style={td} colSpan={8}>No booking in this view.</td></tr>}
                 </tbody>
@@ -5198,7 +5223,8 @@ function AdminConsole({ user, isAdmin, isSuper, setSignin }) {
 
           {tab === "payments" && (() => {
             const badge = (st) => st === "succeeded" ? { bg: "#E6F4EA", fg: "#137333", label: "Succeeded" } : st === "failed" ? { bg: "#FCE8E6", fg: "#B3261E", label: "Failed" } : { bg: "#FEF7E0", fg: "#8A6D00", label: "Abandoned" };
-            const shown = attempts.filter((a) => attemptFilter === "all" || a.status === attemptFilter);
+            const aMatch = (a) => { const q = attemptQ.trim().toLowerCase(); if (!q) return true; const hay = [a.email, a.reason, a.booking_id, a.amount != null ? String(a.amount) : ""].filter(Boolean).join(" ").toLowerCase(); return hay.includes(q); };
+            const shown = attempts.filter((a) => (attemptFilter === "all" || a.status === attemptFilter) && aMatch(a));
             const bref = (a) => { const bk = bookings.find((b) => b.id === a.booking_id); return bk ? (bk.ref || (bk.data && bk.data.tour && bk.data.tour.name) || String(a.booking_id).slice(0, 8)) : (a.booking_id ? String(a.booking_id).slice(0, 8) : "\u2014"); };
             return (
             <div style={{ padding: 16 }}>
@@ -5208,12 +5234,13 @@ function AdminConsole({ user, isAdmin, isSuper, setSignin }) {
                 ))}
                 <button onClick={reload} style={{ border: "none", cursor: "pointer", marginLeft: "auto", background: "#F7F7F7", color: "#1A1A1A", borderRadius: 999, padding: "6px 14px", fontWeight: 600, fontSize: 12.5 }}>Refresh</button>
               </div>
+              <input value={attemptQ} onChange={(e) => setAttemptQ(e.target.value)} placeholder="Search by email, reason, booking or amount\u2026" style={{ ...input, marginBottom: 12 }} />
               {shown.length === 0 ? <div style={{ color: "#8A968E", fontSize: 14, padding: "10px 2px" }}>No payment attempts recorded yet. Failed, abandoned and successful card attempts will appear here.</div> : (
               <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 820 }}>
                 <thead><tr><th style={th}>Date</th><th style={th}>Customer</th><th style={th}>Amount</th><th style={th}>Status</th><th style={th}>Reason</th><th style={th}>Booking</th><th style={th}>Provider</th></tr></thead>
                 <tbody>
-                  {shown.map((a) => { const bd = badge(a.status); return (
+                  {shown.map((a, i) => { const bd = badge(a.status); const _bk = dateBucket(a.created_at).label; const head = (i === 0 || dateBucket(shown[i - 1].created_at).label !== _bk) ? <tr key={"h-" + i}><td colSpan={7} style={groupTd}>{_bk}</td></tr> : null; return [head, (
                     <tr key={a.id}>
                       <td style={{ ...td, whiteSpace: "nowrap" }}>{new Date(a.created_at).toLocaleString()}</td>
                       <td style={td}>{a.email || "\u2014"}</td>
@@ -5223,7 +5250,7 @@ function AdminConsole({ user, isAdmin, isSuper, setSignin }) {
                       <td style={{ ...td, fontSize: 12 }}>{bref(a)}</td>
                       <td style={{ ...td, textTransform: "capitalize" }}>{a.provider}</td>
                     </tr>
-                  ); })}
+                  )]; })}
                 </tbody>
               </table>
               </div>
