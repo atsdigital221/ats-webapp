@@ -4849,6 +4849,7 @@ function AdminConsole({ user, isAdmin, isSuper, setSignin }) {
   const [attemptFilter, setAttemptFilter] = useState("all");
   const [bookingQ, setBookingQ] = useState("");
   const [attemptQ, setAttemptQ] = useState("");
+  const [bookingDetail, setBookingDetail] = useState(null);
   const [bookingFilter, setBookingFilter] = useState("all");
   const [onlyRequests, setOnlyRequests] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -5042,6 +5043,55 @@ function AdminConsole({ user, isAdmin, isSuper, setSignin }) {
         ); })}
       </div>
 
+      {bookingDetail && (() => {
+        const b = bookingDetail; const d = b.data || {};
+        const rowD = (l, v) => (v == null || v === "") ? null : <div style={{ display: "flex", justifyContent: "space-between", gap: 16, padding: "7px 0", borderBottom: `1px solid ${T.line}`, fontSize: 13.5 }}><span style={{ color: "#6B7A72" }}>{l}</span><span style={{ fontWeight: 600, textAlign: "right" }}>{v}</span></div>;
+        const sect = (t) => <div style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".06em", color: T.green, margin: "16px 0 4px" }}>{t}</div>;
+        const pax = (d.adults || 0) + (d.children || 0) + (d.infants || 0);
+        return (
+          <div onClick={() => setBookingDetail(null)} style={{ position: "fixed", inset: 0, zIndex: 120, background: "rgba(11,46,27,.45)", display: "flex", alignItems: "flex-start", justifyContent: "center", padding: 20, overflowY: "auto" }}>
+            <div onClick={(e) => e.stopPropagation()} style={{ background: "#fff", borderRadius: 18, width: "min(560px, 100%)", margin: "40px 0", boxShadow: "0 24px 60px rgba(0,0,0,.28)", overflow: "hidden" }}>
+              <div style={{ padding: "18px 22px", borderBottom: `1px solid ${T.line}`, display: "flex", alignItems: "flex-start", gap: 12 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div className="disp" style={{ fontWeight: 800, fontSize: 18, color: T.ink }}>{d.tour?.name || "Booking"}</div>
+                  <div style={{ fontSize: 12.5, color: "#6B7A72", marginTop: 2 }}>{b.ref ? `Ref ${b.ref} · ` : ""}{new Date(b.created_at).toLocaleString()}</div>
+                </div>
+                <span style={{ fontSize: 11.5, fontWeight: 700, color: statusColor(b.status), background: statusBg(b.status), borderRadius: 999, padding: "4px 12px", whiteSpace: "nowrap" }}>{statusLabel[b.status] || b.status}</span>
+                <button onClick={() => setBookingDetail(null)} aria-label="Close" style={{ background: "none", border: "none", cursor: "pointer", color: T.ink, padding: 2 }}><X size={20} /></button>
+              </div>
+              <div style={{ padding: "4px 22px 20px" }}>
+                {sect("Customer")}
+                {rowD("Name", d.contact?.name || custOf(b))}
+                {rowD("Email", d.contact?.email || b.guest_email)}
+                {rowD("Phone", d.contact?.phone)}
+                {sect("Booking")}
+                {rowD("Channel", channelOf(d))}
+                {rowD("Plan", planLabel(d.plan))}
+                {rowD("Travel date", d.dateFrom || d.date)}
+                {pax ? rowD("Travellers", `${d.adults || 0} adult${(d.adults || 0) > 1 ? "s" : ""}${d.children ? ` · ${d.children} child` : ""}${d.infants ? ` · ${d.infants} infant` : ""}`) : null}
+                {rowD("Vehicle", (d.vehicle != null && d.vehicle >= 0 && VEHICLES[d.vehicle]) ? VEHICLES[d.vehicle].name : null)}
+                {d.addons && d.addons.length ? rowD("Add-ons", d.addons.map((a) => a.name).join(", ")) : null}
+                {rowD("Promo code", d.promo?.code || d.promoCode)}
+                {rowD("Corporate", d.corp?.orgName)}
+                {sect("Payment")}
+                {rowD("Total", d.total != null ? fmtXOF(d.total) : null)}
+                {d.plan === "deposit" ? rowD("Deposit (30%)", d.deposit != null ? fmtXOF(d.deposit) : null) : null}
+                {rowD("Paid so far", d.paidAmount != null ? fmtXOF(d.paidAmount) : null)}
+                {d.plan === "deposit" && d.months ? rowD("Instalments", `${d.payCount || 1} / ${(d.months || 0) + 1}`) : null}
+                {d.items && d.items.length ? (<>
+                  <div style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".06em", color: T.green, margin: "16px 0 6px" }}>Cart items ({d.items.length})</div>
+                  {d.items.map((it, ix) => (
+                    <div key={ix} style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "7px 0", borderBottom: `1px solid ${T.line}`, fontSize: 13 }}>
+                      <span><strong>{it.tour?.name}</strong><br /><span style={{ color: "#6B7A72", fontSize: 12 }}>{it.dateFrom || it.date}{((it.adults || 0) + (it.children || 0)) ? ` · ${(it.adults || 0) + (it.children || 0)} pax` : ""}{it.addons && it.addons.length ? ` · +${it.addons.length} add-on` : ""}</span></span>
+                      <span style={{ fontWeight: 700, whiteSpace: "nowrap" }}>{fmtXOF(it.lineTotal != null ? it.lineTotal : it.total)}</span>
+                    </div>
+                  ))}
+                </>) : null}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
       {loading ? <div style={{ opacity: 0.6 }}>Loading…</div> : (
         <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 16, overflowX: "auto", boxShadow: "0 1px 2px rgba(16,24,40,.04), 0 1px 3px rgba(16,24,40,.05)" }}>
           {tab === "users" && (
@@ -5163,7 +5213,7 @@ function AdminConsole({ user, isAdmin, isSuper, setSignin }) {
                 ))}
                 <button onClick={() => setOnlyRequests((v) => !v)} style={{ border: "none", cursor: "pointer", marginLeft: "auto", background: onlyRequests ? "#B3261E" : (requestCount ? "#FBECEC" : "#F7F7F7"), color: onlyRequests ? "#fff" : (requestCount ? "#B3261E" : "#8A968E"), borderRadius: 999, padding: "6px 14px", fontWeight: 700, fontSize: 12.5, display: "inline-flex", alignItems: "center", gap: 6 }}><Info size={14} /> Action needed · {requestCount}</button>
               </div>
-              <input value={bookingQ} onChange={(e) => setBookingQ(e.target.value)} placeholder="Search by name, email, phone, tour or ref\u2026" style={{ ...input, marginBottom: 12 }} />
+              <input value={bookingQ} onChange={(e) => setBookingQ(e.target.value)} placeholder="Search by name, email, phone, tour or ref…" style={{ ...input, marginBottom: 12 }} />
                 <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 900 }}>
                 <thead><tr><th style={th}>Item</th><th style={th}>Customer</th><th style={th}>Channel</th><th style={th}>Plan</th><th style={th}>Total</th><th style={th}>Status</th><th style={th}>Manage</th><th style={th}>Date</th></tr></thead>
                 <tbody>
@@ -5174,7 +5224,7 @@ function AdminConsole({ user, isAdmin, isSuper, setSignin }) {
                     const head = (i === 0 || dateBucket(shownBookings[i - 1].created_at).label !== _bk) ? <tr key={"h-" + i}><td colSpan={8} style={groupTd}>{_bk}</td></tr> : null;
                     return [head, (
                       <tr key={b.id}>
-                        <td style={td}><div style={{ fontWeight: 600 }}>{d.tour?.name || "—"}</div>{d.promo?.code && <div style={{ fontSize: 11.5, color: T.green }}>code {d.promo.code}</div>}{d.corp?.orgName && <div style={{ fontSize: 11.5, color: T.indigo }}>{d.corp.orgName}</div>}</td>
+                        <td style={{ ...td, cursor: "pointer" }} onClick={() => setBookingDetail(b)} title="View full details"><div style={{ fontWeight: 700, color: T.ink, textDecoration: "underline", textDecorationColor: "rgba(0,146,69,.4)", textUnderlineOffset: 3 }}>{d.tour?.name || "—"}</div>{d.promo?.code && <div style={{ fontSize: 11.5, color: T.green }}>code {d.promo.code}</div>}{d.corp?.orgName && <div style={{ fontSize: 11.5, color: T.indigo }}>{d.corp.orgName}</div>}</td>
                         <td style={td}>
                           <div style={{ fontWeight: 600 }}>{custOf(b)}</div>
                           {(() => {
@@ -5256,7 +5306,7 @@ function AdminConsole({ user, isAdmin, isSuper, setSignin }) {
                 ))}
                 <button onClick={reload} style={{ border: "none", cursor: "pointer", marginLeft: "auto", background: "#F7F7F7", color: "#1A1A1A", borderRadius: 999, padding: "6px 14px", fontWeight: 600, fontSize: 12.5 }}>Refresh</button>
               </div>
-              <input value={attemptQ} onChange={(e) => setAttemptQ(e.target.value)} placeholder="Search by email, reason, booking or amount\u2026" style={{ ...input, marginBottom: 12 }} />
+              <input value={attemptQ} onChange={(e) => setAttemptQ(e.target.value)} placeholder="Search by email, reason, booking or amount…" style={{ ...input, marginBottom: 12 }} />
               {shown.length === 0 ? <div style={{ color: "#8A968E", fontSize: 14, padding: "10px 2px" }}>No payment attempts recorded yet. Failed, abandoned and successful card attempts will appear here.</div> : (
               <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 820 }}>
