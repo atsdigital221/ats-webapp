@@ -920,7 +920,7 @@ export default function ATSPlatformPreview() {
     setCheckingOut(true);
     notify("Redirecting to secure payment…");
     const rec = await saveRecord({ ...b, status: "pending" });
-    const fn = b.payMethod === "stripe" ? "create-stripe-checkout" : "create-payment";
+    const fn = "create-stripe-checkout"; // PayDunya desactive — Stripe uniquement
     const { data, error } = await supabase.functions.invoke(fn, {
       body: {
         amount,
@@ -937,7 +937,7 @@ export default function ATSPlatformPreview() {
   };
 
   // ---- Pay one Ma Tontine instalment via PayDunya (client-chosen amount) ----
-  const payInstallment = async (rec, amountArg, payMethod = "paydunya") => {
+  const payInstallment = async (rec, amountArg, payMethod = "stripe") => {
     if (!rec._id) { notify("This booking can't be paid online yet."); return; }
     const st = tontineState(rec);
     const amount = Math.round(amountArg != null ? amountArg : st.minNext);
@@ -945,7 +945,7 @@ export default function ATSPlatformPreview() {
     const nextNo = st.payCount + 1;
     setCheckingOut(true);
     notify("Redirecting to secure payment…");
-    const fn = payMethod === "stripe" ? "create-stripe-checkout" : "create-payment";
+    const fn = "create-stripe-checkout"; // PayDunya desactive — Stripe uniquement
     const { data, error } = await supabase.functions.invoke(fn, {
       body: {
         amount,
@@ -3610,7 +3610,7 @@ function TripBuilder({ notify, go, user, saveRecord }) {
           {[
             [Compass, "Choose your experience", "Browse 35+ tours, transfers and flights — or build a fully custom trip."],
             [CalendarCheck, "Reserve with 30%", "Secure any trip with a small deposit through Ma Tontine Voyage."],
-            [Clock, "Pay in instalments", "Spread the balance until departure — card, Wave, Orange Money, PayPal…"],
+            [Clock, "Pay in instalments", "Spread the balance until departure — secure card payment (Visa / Mastercard)."],
             [Plane, "Travel with ATS", "Meet your local team on the ground and enjoy Senegal, worry-free."],
           ].map(([Ico, title, body], i) => (
             <div key={title} style={{ background: "#F6FAF7", border: `1px solid ${T.line}`, borderRadius: 18, padding: "22px 20px" }}>
@@ -5725,7 +5725,7 @@ function PaymentResult({ status, go, user, setSignin }) {
           {!success && <button style={{ width: "100%", background: "#fff", color: T.green, border: `1.5px solid ${T.green}`, borderRadius: 12, padding: "11px 14px", fontWeight: 700, cursor: "pointer", fontSize: 14 }} onClick={() => go("tours")}>Browse tours</button>}
           <button style={{ background: "none", border: "none", cursor: "pointer", fontWeight: 600, color: T.ink, opacity: 0.65, fontSize: 14 }} onClick={() => go("home")}>Back to home</button>
         </div>
-        {success && <div style={{ fontSize: 12, opacity: 0.55, marginTop: 16 }}>Final confirmation is validated automatically once PayDunya notifies our system.</div>}
+        {success && <div style={{ fontSize: 12, opacity: 0.55, marginTop: 16 }}>Final confirmation is validated automatically once your payment is confirmed.</div>}
       </div>
     </Wrap>
   );
