@@ -4832,6 +4832,8 @@ function AdminConsole({ user, isAdmin, isSuper, setSignin }) {
   const [comms, setComms] = useState([]);
   const [activity, setActivity] = useState([]);
   const [waContacts, setWaContacts] = useState([]);
+  const [attempts, setAttempts] = useState([]);
+  const [attemptFilter, setAttemptFilter] = useState("all");
   const [bookingFilter, setBookingFilter] = useState("all");
   const [onlyRequests, setOnlyRequests] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -4841,7 +4843,7 @@ function AdminConsole({ user, isAdmin, isSuper, setSignin }) {
 
   const reload = async () => {
     setLoading(true);
-    const [p, o, c, b, cm, ac, wa] = await Promise.all([
+    const [p, o, c, b, cm, ac, wa, pa] = await Promise.all([
       supabase.from("profiles").select("id,email,first_name,last_name,role,org_id").order("created_at"),
       supabase.from("organizations").select("*").order("created_at"),
       supabase.from("promo_codes").select("*").order("created_at"),
@@ -4849,8 +4851,9 @@ function AdminConsole({ user, isAdmin, isSuper, setSignin }) {
       supabase.from("commissions").select("*").order("created_at", { ascending: false }),
       supabase.from("admin_activity").select("*").order("created_at", { ascending: false }).limit(200),
       supabase.from("whatsapp_contacts").select("*"),
+      supabase.from("payment_attempts").select("*").order("created_at", { ascending: false }).limit(500),
     ]);
-    setProfiles(p.data || []); setOrgs(o.data || []); setCodes(c.data || []); setBookings(b.data || []); setComms(cm.data || []); setActivity(ac.data || []); setWaContacts(wa.data || []); setLoading(false);
+    setProfiles(p.data || []); setOrgs(o.data || []); setCodes(c.data || []); setBookings(b.data || []); setComms(cm.data || []); setActivity(ac.data || []); setWaContacts(wa.data || []); setAttempts(pa.data || []); setLoading(false);
   };
   useEffect(() => { if (isAdmin) reload(); }, [isAdmin]);
 
@@ -4978,7 +4981,7 @@ function AdminConsole({ user, isAdmin, isSuper, setSignin }) {
   const th = { textAlign: "left", padding: "8px 10px", fontSize: 11.5, textTransform: "uppercase", letterSpacing: ".05em", color: "#8A968E", borderBottom: `1px solid ${T.line}`, whiteSpace: "nowrap" };
   const td = { padding: "8px 10px", fontSize: 13.5, borderBottom: `1px solid ${T.line}`, verticalAlign: "middle" };
   const sel = { ...input, padding: "6px 8px", fontSize: 13, width: "auto" };
-  const tabs = [["users", "Users & roles"], ["orgs", "Corporate"], ["codes", "Promo codes"], ["bookings", "Bookings"], ["commissions", "Commissions"], ["analytics", "Analytics"], ["activity", isSuper ? "Activity (all)" : "Activity"]];
+  const tabs = [["users", "Users & roles"], ["orgs", "Corporate"], ["codes", "Promo codes"], ["bookings", "Bookings"], ["payments", "Payments"], ["commissions", "Commissions"], ["analytics", "Analytics"], ["activity", isSuper ? "Activity (all)" : "Activity"]];
   const actionLabel = (a) => ({ "promo_code.create": "created code", "promo_code.update": "edited code", "promo_code.activate": "activated code", "promo_code.deactivate": "deactivated code", "organization.create": "created org", "organization.update": "edited org", "organization.activate": "activated org", "organization.deactivate": "deactivated org", "profile.update": "changed user", "commission.approved": "approved commission", "commission.paid": "paid commission", "commission.cancelled": "cancelled commission", "booking.modify_approved": "approved a change", "booking.modify_rejected": "rejected a change", "booking.refund_processed": "processed a refund" }[a] || (a && a.startsWith("booking.status.") ? `set booking → ${a.slice(15)}` : a));
   const REQUEST_STATES = ["modification_requested", "cancellation_requested"];
   const requestCount = bookings.filter((b) => REQUEST_STATES.includes(b.status)).length;
@@ -5193,6 +5196,41 @@ function AdminConsole({ user, isAdmin, isSuper, setSignin }) {
             </div>
           )}
 
+          {tab === "payments" && (() => {
+            const badge = (st) => st === "succeeded" ? { bg: "#E6F4EA", fg: "#137333", label: "Succeeded" } : st === "failed" ? { bg: "#FCE8E6", fg: "#B3261E", label: "Failed" } : { bg: "#FEF7E0", fg: "#8A6D00", label: "Abandoned" };
+            const shown = attempts.filter((a) => attemptFilter === "all" || a.status === attemptFilter);
+            const bref = (a) => { const bk = bookings.find((b) => b.id === a.booking_id); return bk ? (bk.ref || (bk.data && bk.data.tour && bk.data.tour.name) || String(a.booking_id).slice(0, 8)) : (a.booking_id ? String(a.booking_id).slice(0, 8) : "\u2014"); };
+            return (
+            <div style={{ padding: 16 }}>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
+                {[["all", "All"], ["succeeded", "Succeeded"], ["failed", "Failed"], ["expired", "Abandoned"]].map(([k, l]) => (
+                  <button key={k} onClick={() => setAttemptFilter(k)} style={{ border: "none", cursor: "pointer", background: attemptFilter === k ? T.green : "#F7F7F7", color: attemptFilter === k ? "#fff" : "#1A1A1A", borderRadius: 999, padding: "6px 14px", fontWeight: 600, fontSize: 12.5 }}>{l} \u00b7 {k === "all" ? attempts.length : attempts.filter((a) => a.status === k).length}</button>
+                ))}
+                <button onClick={reload} style={{ border: "none", cursor: "pointer", marginLeft: "auto", background: "#F7F7F7", color: "#1A1A1A", borderRadius: 999, padding: "6px 14px", fontWeight: 600, fontSize: 12.5 }}>Refresh</button>
+              </div>
+              {shown.length === 0 ? <div style={{ color: "#8A968E", fontSize: 14, padding: "10px 2px" }}>No payment attempts recorded yet. Failed, abandoned and successful card attempts will appear here.</div> : (
+              <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 820 }}>
+                <thead><tr><th style={th}>Date</th><th style={th}>Customer</th><th style={th}>Amount</th><th style={th}>Status</th><th style={th}>Reason</th><th style={th}>Booking</th><th style={th}>Provider</th></tr></thead>
+                <tbody>
+                  {shown.map((a) => { const bd = badge(a.status); return (
+                    <tr key={a.id}>
+                      <td style={{ ...td, whiteSpace: "nowrap" }}>{new Date(a.created_at).toLocaleString()}</td>
+                      <td style={td}>{a.email || "\u2014"}</td>
+                      <td style={{ ...td, fontWeight: 700, whiteSpace: "nowrap" }}>{a.amount != null ? fmtXOF(a.amount) : "\u2014"}</td>
+                      <td style={td}><span style={{ background: bd.bg, color: bd.fg, borderRadius: 999, padding: "3px 10px", fontSize: 12, fontWeight: 700, whiteSpace: "nowrap" }}>{bd.label}</span></td>
+                      <td style={{ ...td, maxWidth: 300 }}>{a.reason || "\u2014"}</td>
+                      <td style={{ ...td, fontSize: 12 }}>{bref(a)}</td>
+                      <td style={{ ...td, textTransform: "capitalize" }}>{a.provider}</td>
+                    </tr>
+                  ); })}
+                </tbody>
+              </table>
+              </div>
+              )}
+            </div>
+            );
+          })()}
           {tab === "commissions" && (
             <div style={{ padding: 16 }}>
               {(() => {
