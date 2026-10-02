@@ -792,7 +792,7 @@ function MaintenanceGate({ onUnlock }) {
           Une demande ? / Need us?<br />
           <a href="mailto:infos@africatourismsolutions.com" style={{ color: T.green, fontWeight: 700, textDecoration: "none" }}>infos@africatourismsolutions.com</a>
           <span style={{ color: "rgba(0,0,0,.35)" }}> · </span>
-          <a href="tel:+221338251279" style={{ color: T.ink, fontWeight: 600, textDecoration: "none" }}>+221 33 825 12 79</a>
+          <a href="tel:+221774807878" style={{ color: T.ink, fontWeight: 600, textDecoration: "none" }}>+221 77 480 78 78</a>
         </div>
 
         <div style={{ marginTop: 38, paddingTop: 24, borderTop: `1px solid ${T.line}` }}>
