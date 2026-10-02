@@ -742,7 +742,7 @@ const MAINTENANCE = import.meta.env.VITE_MAINTENANCE === "1";
 const ACCESS_CODE = (import.meta.env.VITE_ACCESS_CODE || "ATS-2026").toString();
 
 function MaintenanceGate({ onUnlock }) {
-  const logo = supabase.storage.from(PHOTO_BUCKET).getPublicUrl("site/logo-white.png").data.publicUrl;
+  const logo = supabase.storage.from(PHOTO_BUCKET).getPublicUrl("site/logo.png").data.publicUrl;
   const [code, setCode] = useState("");
   const [err, setErr] = useState(false);
   const [logoOk, setLogoOk] = useState(true);
@@ -758,36 +758,52 @@ function MaintenanceGate({ onUnlock }) {
     } catch { /* */ }
   }, []);
   return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, textAlign: "center", background: `linear-gradient(150deg, ${T.green} 0%, #073D23 60%, ${T.indigo} 100%)`, color: "#fff", fontFamily: "'Century Gothic','Poppins',system-ui,sans-serif" }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap');`}</style>
-      <div style={{ maxWidth: 520, width: "100%" }}>
+    <div style={{ minHeight: "100vh", position: "relative", display: "flex", alignItems: "center", justifyContent: "center", padding: "56px 24px", textAlign: "center", background: "#FFFFFF", color: T.ink, fontFamily: "'Century Gothic','Poppins',system-ui,sans-serif", overflow: "hidden" }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap');
+        .mnt-bar{position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,${T.green},${T.gold})}
+        .mnt-prog{height:100%;width:40%;border-radius:999px;background:linear-gradient(90deg,${T.green},${T.gold});animation:mntSlide 1.9s ease-in-out infinite}
+        @keyframes mntSlide{0%{transform:translateX(-120%)}100%{transform:translateX(320%)}}
+        .mnt-input:focus{border-color:${T.green};box-shadow:0 0 0 3px rgba(0,146,69,.15)}
+        @media(prefers-reduced-motion:reduce){.mnt-prog{animation:none;width:100%;opacity:.5}}
+      `}</style>
+      {/* soft brand glow, very light */}
+      <div aria-hidden style={{ position: "absolute", top: -160, left: "50%", transform: "translateX(-50%)", width: 620, height: 420, background: `radial-gradient(60% 60% at 50% 40%, rgba(0,146,69,.10), rgba(248,216,21,.06) 55%, transparent 75%)`, pointerEvents: "none" }} />
+      <div className="mnt-bar" />
+      <div style={{ maxWidth: 560, width: "100%", position: "relative" }}>
         {logoOk && logo
-          ? <img src={logo} alt="Africa Tourism Solutions" onError={() => setLogoOk(false)} style={{ height: 64, objectFit: "contain", marginBottom: 28 }} />
-          : <div style={{ fontWeight: 800, fontSize: 22, letterSpacing: ".04em", marginBottom: 28 }}>AFRICA TOURISM SOLUTIONS</div>}
-        <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: ".18em", opacity: 0.8, marginBottom: 14 }}>MAINTENANCE EN COURS</div>
-        <h1 className="disp" style={{ fontSize: 30, fontWeight: 800, margin: "0 0 16px", lineHeight: 1.2 }}>Notre site fait peau neuve</h1>
-        <p style={{ fontSize: 15.5, lineHeight: 1.7, opacity: 0.92, margin: "0 0 8px" }}>
+          ? <img src={logo} alt="Africa Tourism Solutions" onError={() => setLogoOk(false)} style={{ height: 76, objectFit: "contain", marginBottom: 30 }} />
+          : <div className="disp" style={{ fontWeight: 800, fontSize: 24, letterSpacing: ".04em", marginBottom: 30, color: T.green }}>AFRICA TOURISM SOLUTIONS</div>}
+        <div style={{ fontSize: 12.5, fontWeight: 700, letterSpacing: ".2em", color: T.green, marginBottom: 14 }}>MAINTENANCE EN COURS</div>
+        <h1 className="disp" style={{ fontSize: 32, fontWeight: 800, margin: "0 0 16px", lineHeight: 1.18, color: T.ink }}>Notre site fait peau neuve</h1>
+        <p style={{ fontSize: 16, lineHeight: 1.7, color: "rgba(0,0,0,.72)", margin: "0 auto 8px", maxWidth: 460 }}>
           Nous mettons à jour nos offres et notre plateforme de réservation. Le site sera de nouveau accessible très bientôt.
         </p>
-        <p style={{ fontSize: 13.5, lineHeight: 1.7, opacity: 0.72, margin: "0 0 28px" }}>
+        <p style={{ fontSize: 13.5, lineHeight: 1.7, color: "rgba(0,0,0,.5)", margin: "0 auto 26px", maxWidth: 460 }}>
           Our website is being updated and will be back online shortly.
         </p>
-        <div style={{ fontSize: 14, lineHeight: 1.8, opacity: 0.9 }}>
-          Une demande ? / Need us?<br />
-          <a href="mailto:infos@africatourismsolutions.com" style={{ color: T.gold, fontWeight: 700, textDecoration: "none" }}>infos@africatourismsolutions.com</a>
-          <span style={{ opacity: 0.6 }}> · </span>
-          <a href="tel:+221338251279" style={{ color: "#fff", fontWeight: 600, textDecoration: "none" }}>+221 33 825 12 79</a>
+
+        {/* progress shimmer — signals work in progress */}
+        <div style={{ height: 6, width: 220, maxWidth: "70%", margin: "0 auto 30px", borderRadius: 999, background: T.paperDark, overflow: "hidden" }}>
+          <div className="mnt-prog" />
         </div>
 
-        <div style={{ marginTop: 40, paddingTop: 22, borderTop: "1px solid rgba(255,255,255,.18)" }}>
-          <div style={{ fontSize: 12.5, opacity: 0.7, marginBottom: 10 }}>Accès équipe</div>
+        <div style={{ fontSize: 14, lineHeight: 1.9, color: "rgba(0,0,0,.7)" }}>
+          Une demande ? / Need us?<br />
+          <a href="mailto:infos@africatourismsolutions.com" style={{ color: T.green, fontWeight: 700, textDecoration: "none" }}>infos@africatourismsolutions.com</a>
+          <span style={{ color: "rgba(0,0,0,.35)" }}> · </span>
+          <a href="tel:+221338251279" style={{ color: T.ink, fontWeight: 600, textDecoration: "none" }}>+221 33 825 12 79</a>
+        </div>
+
+        <div style={{ marginTop: 38, paddingTop: 24, borderTop: `1px solid ${T.line}` }}>
+          <div style={{ fontSize: 12.5, fontWeight: 600, color: "rgba(0,0,0,.55)", marginBottom: 12 }}>Accès équipe</div>
           <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
-            <input value={code} onChange={(e) => { setCode(e.target.value); setErr(false); }} onKeyDown={(e) => e.key === "Enter" && submit()}
+            <input className="mnt-input" value={code} onChange={(e) => { setCode(e.target.value); setErr(false); }} onKeyDown={(e) => e.key === "Enter" && submit()}
               placeholder="Code d'accès" aria-label="Code d'accès"
-              style={{ background: "rgba(255,255,255,.12)", border: `1.5px solid ${err ? "#FF9B8A" : "rgba(255,255,255,.3)"}`, borderRadius: 10, padding: "10px 14px", color: "#fff", fontSize: 14, outline: "none", minWidth: 180 }} />
-            <button onClick={submit} style={{ background: T.gold, color: "#1A1A1A", border: "none", borderRadius: 10, fontWeight: 700, fontSize: 14, padding: "10px 20px", cursor: "pointer" }}>Entrer</button>
+              style={{ background: "#fff", border: `1.5px solid ${err ? "#C0392B" : T.line}`, borderRadius: 10, padding: "12px 14px", color: T.ink, fontSize: 15, outline: "none", minWidth: 200, minHeight: 46, boxSizing: "border-box", transition: "border-color .15s, box-shadow .15s" }} />
+            <button onClick={submit} style={{ background: T.gold, color: "#1A1A1A", border: "none", borderRadius: 10, fontWeight: 700, fontSize: 15, padding: "12px 24px", minHeight: 46, cursor: "pointer" }}>Entrer</button>
           </div>
-          {err && <div style={{ fontSize: 12.5, color: "#FFC9BE", marginTop: 8 }}>Code incorrect.</div>}
+          {err && <div style={{ fontSize: 12.5, color: "#C0392B", marginTop: 8 }}>Code incorrect.</div>}
         </div>
       </div>
     </div>
