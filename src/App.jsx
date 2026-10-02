@@ -735,6 +735,65 @@ function filtersFromUrl(pathname, search) {
   return f;
 }
 
+// ---- Maintenance mode: set VITE_MAINTENANCE=1 in Vercel to block the public site. ----
+// The team enters the access code (VITE_ACCESS_CODE, default below) once per browser,
+// or opens any URL with ?access=<code>. Turn off by removing VITE_MAINTENANCE and redeploying.
+const MAINTENANCE = import.meta.env.VITE_MAINTENANCE === "1";
+const ACCESS_CODE = (import.meta.env.VITE_ACCESS_CODE || "ATS-2026").toString();
+
+function MaintenanceGate({ onUnlock }) {
+  const logo = supabase.storage.from(PHOTO_BUCKET).getPublicUrl("site/logo-white.png").data.publicUrl;
+  const [code, setCode] = useState("");
+  const [err, setErr] = useState(false);
+  const [logoOk, setLogoOk] = useState(true);
+  const unlock = () => { try { localStorage.setItem("ats_access", "1"); } catch { /* */ } onUnlock(); };
+  const submit = () => {
+    if (code.trim().toUpperCase() === ACCESS_CODE.toUpperCase()) unlock();
+    else setErr(true);
+  };
+  useEffect(() => {
+    try {
+      const u = new URLSearchParams(window.location.search).get("access");
+      if (u && u.trim().toUpperCase() === ACCESS_CODE.toUpperCase()) unlock();
+    } catch { /* */ }
+  }, []);
+  return (
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, textAlign: "center", background: `linear-gradient(150deg, ${T.green} 0%, #073D23 60%, ${T.indigo} 100%)`, color: "#fff", fontFamily: "'Century Gothic','Poppins',system-ui,sans-serif" }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap');`}</style>
+      <div style={{ maxWidth: 520, width: "100%" }}>
+        {logoOk && logo
+          ? <img src={logo} alt="Africa Tourism Solutions" onError={() => setLogoOk(false)} style={{ height: 64, objectFit: "contain", marginBottom: 28 }} />
+          : <div style={{ fontWeight: 800, fontSize: 22, letterSpacing: ".04em", marginBottom: 28 }}>AFRICA TOURISM SOLUTIONS</div>}
+        <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: ".18em", opacity: 0.8, marginBottom: 14 }}>MAINTENANCE EN COURS</div>
+        <h1 className="disp" style={{ fontSize: 30, fontWeight: 800, margin: "0 0 16px", lineHeight: 1.2 }}>Notre site fait peau neuve</h1>
+        <p style={{ fontSize: 15.5, lineHeight: 1.7, opacity: 0.92, margin: "0 0 8px" }}>
+          Nous mettons à jour nos offres et notre plateforme de réservation. Le site sera de nouveau accessible très bientôt.
+        </p>
+        <p style={{ fontSize: 13.5, lineHeight: 1.7, opacity: 0.72, margin: "0 0 28px" }}>
+          Our website is being updated and will be back online shortly.
+        </p>
+        <div style={{ fontSize: 14, lineHeight: 1.8, opacity: 0.9 }}>
+          Une demande ? / Need us?<br />
+          <a href="mailto:infos@africatourismsolutions.com" style={{ color: T.gold, fontWeight: 700, textDecoration: "none" }}>infos@africatourismsolutions.com</a>
+          <span style={{ opacity: 0.6 }}> · </span>
+          <a href="tel:+221338251279" style={{ color: "#fff", fontWeight: 600, textDecoration: "none" }}>+221 33 825 12 79</a>
+        </div>
+
+        <div style={{ marginTop: 40, paddingTop: 22, borderTop: "1px solid rgba(255,255,255,.18)" }}>
+          <div style={{ fontSize: 12.5, opacity: 0.7, marginBottom: 10 }}>Accès équipe</div>
+          <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
+            <input value={code} onChange={(e) => { setCode(e.target.value); setErr(false); }} onKeyDown={(e) => e.key === "Enter" && submit()}
+              placeholder="Code d'accès" aria-label="Code d'accès"
+              style={{ background: "rgba(255,255,255,.12)", border: `1.5px solid ${err ? "#FF9B8A" : "rgba(255,255,255,.3)"}`, borderRadius: 10, padding: "10px 14px", color: "#fff", fontSize: 14, outline: "none", minWidth: 180 }} />
+            <button onClick={submit} style={{ background: T.gold, color: "#1A1A1A", border: "none", borderRadius: 10, fontWeight: 700, fontSize: 14, padding: "10px 20px", cursor: "pointer" }}>Entrer</button>
+          </div>
+          {err && <div style={{ fontSize: 12.5, color: "#FFC9BE", marginTop: 8 }}>Code incorrect.</div>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ATSPlatformPreview() {
   const [page, setPage] = useState(() => {
     try { return urlToPage(window.location.pathname, window.location.search); } catch { /* ignore */ }
@@ -767,6 +826,8 @@ export default function ATSPlatformPreview() {
     return () => { window.removeEventListener("pageshow", clear); window.removeEventListener("popstate", clear); };
   }, []);
   const [signin, setSignin] = useState(false);
+  // ---- Maintenance / construction gate (public blocked, team enters an access code) ----
+  const [unlocked, setUnlocked] = useState(() => { try { return localStorage.getItem("ats_access") === "1"; } catch { return false; } });
   const [chat, setChat] = useState(false);
   const [filters, setFilters] = useState(() => {
     try { return filtersFromUrl(window.location.pathname, window.location.search) || { pole: "All", tag: "All", q: "" }; } catch { return { pole: "All", tag: "All", q: "" }; }
@@ -1127,13 +1188,8 @@ export default function ATSPlatformPreview() {
     const token = params.get("token");
     const provider = params.get("provider");
     if (!p) return;
-    // Cart checkout returned: clear the cart only on a completed payment; keep it otherwise.
-    try {
-      if (sessionStorage.getItem("ats_cart_paying")) {
-        if (p === "success") setCart([]);
-        sessionStorage.removeItem("ats_cart_paying");
-      }
-    } catch { /* ignore */ }
+    // Empty the cart on any completed payment (paid items must not linger).
+    try { if (p === "success") setCart([]); sessionStorage.removeItem("ats_cart_paying"); } catch { /* ignore */ }
     // Leave a "home" entry behind the payment page and push the payment page on top,
     // so the browser back button returns to the app instead of bouncing to the payment provider.
     window.history.replaceState({ atsPage: { name: "home" } }, "", window.location.pathname);
@@ -1153,6 +1209,8 @@ export default function ATSPlatformPreview() {
   }, []);
 
   const ctx = { go, notify, setBooking, user, setUser, role, isCorporate, corpDiscount: isCorporate ? corpDiscount : 0, isAdmin: role === "admin" || role === "super_admin", isSuper: role === "super_admin", bookings, favorites, toggleFavorite, filters, setFilters, setSignin, setChat, signOut, saveRecord, patchBooking, cancelBooking, manageBooking, payInstallment, cart, addToCart, removeFromCart, clearCart, payCart, payCartTontine, currency, setCurrency };
+
+  if (MAINTENANCE && !unlocked) return <MaintenanceGate onUnlock={() => setUnlocked(true)} />;
 
   return (
     <div style={{ background: T.paper, color: T.ink, fontFamily: "'Century Gothic','Poppins',system-ui,sans-serif", minHeight: "100vh" }}>
@@ -5945,48 +6003,58 @@ function AccountPage({ user, bookings, favorites = [], toggleFavorite, setSignin
         )
       ) : list.length === 0 ? (
         <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 14, padding: 24 }}>Nothing here yet — book a tour, request a quote or build a trip and it will appear in this space.</div>
-      ) : list.map((b, i) => {
-        const ts = b.plan === "deposit" ? tontineState(b) : null;
-        return (
-        <div key={b._id || i} className="card-hover" style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 16, padding: 20, marginBottom: 14, opacity: b._status === "cancelled" ? 0.6 : 1, display: "flex", flexDirection: "column", gap: 12 }}>
-          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-            <Thumb rec={b} size={48} />
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div className="disp" style={{ fontWeight: 800, fontSize: 17 }}>{b.tour.name}</div>
-              <div style={{ fontSize: 13, opacity: 0.7 }}>{b.adults} traveler{b.adults > 1 ? "s" : ""}{b.children ? ` · ${b.children} child` : ""}{b.date ? ` · ${b.date}` : ""}{b.plan === "quote" || b.plan === "itinerary" ? "" : ` · Total ${fmtXOF(b.total)}`}</div>
+      ) : (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 18 }}>
+        {list.map((b, i) => {
+          const ts = b.plan === "deposit" ? tontineState(b) : null;
+          const cancelled = b._status === "cancelled";
+          return (
+          <div key={b._id || i} className="card-hover" style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 18, overflow: "hidden", opacity: cancelled ? 0.62 : 1, display: "flex", flexDirection: "column", cursor: "pointer" }} onClick={() => setDetail(b)}>
+            <div style={{ position: "relative" }}>
+              <Cover tour={b.tour} id={b.tour?.id} ratio="16 / 10" size={54} />
+              <span style={{ position: "absolute", top: 12, left: 12, fontSize: 11, fontWeight: 700, color: "#fff", background: planColor(b.plan), padding: "4px 10px", borderRadius: 999, boxShadow: "0 2px 8px rgba(0,0,0,.18)" }}>{planLabel(b.plan)}</span>
+              <span style={{ position: "absolute", top: 12, right: 12, display: "inline-flex", alignItems: "center", gap: 5, background: "rgba(255,255,255,.96)", borderRadius: 999, padding: "5px 11px", fontSize: 11, fontWeight: 700, color: statusColor(b._status), boxShadow: "0 2px 8px rgba(0,0,0,.18)" }}>● {statusLabel[b._status] || "In progress"}</span>
+            </div>
+            <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 10, flex: 1 }}>
+              <div className="disp" style={{ fontWeight: 800, fontSize: 17, lineHeight: 1.25 }}>{b.tour.name}</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 5, fontSize: 13, color: "rgba(0,0,0,.72)" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 7 }}><Users size={14} color={T.green} /> {b.adults} traveler{b.adults > 1 ? "s" : ""}{b.children ? ` · ${b.children} child` : ""}{b.infants ? ` · ${b.infants} infant` : ""}</div>
+                {b.date && <div style={{ display: "flex", alignItems: "center", gap: 7 }}><Calendar size={14} color={T.green} /> {b.date}</div>}
+                {b.tour.pole && <div style={{ display: "flex", alignItems: "center", gap: 7 }}><MapPin size={14} color={T.green} /> {b.tour.pole}</div>}
+              </div>
+              {b.plan !== "quote" && b.plan !== "itinerary" && (
+                <div style={{ fontSize: 15.5, fontWeight: 800, color: T.ink }}>{fmtXOF(b.total)}</div>
+              )}
+
+              {ts && !cancelled && (
+                <div style={{ background: T.paperDark, borderRadius: 12, padding: "10px 12px", marginTop: "auto" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, fontWeight: 700, marginBottom: 6 }}>
+                    <span>{ts.settled ? `Fully paid · ${ts.payCount}/${ts.payCount}` : `Ma Tontine · ${ts.payCount}/${ts.plannedTotal}`}</span>
+                    <span style={{ color: T.green }}>{ts.settled ? 100 : ts.pct}%</span>
+                  </div>
+                  <div style={{ height: 8, borderRadius: 999, background: "rgba(11,46,27,.12)", overflow: "hidden" }}>
+                    <div style={{ height: "100%", width: `${ts.settled ? 100 : ts.pct}%`, background: `linear-gradient(90deg, ${T.green}, ${T.gold})`, borderRadius: 999, transition: "width .4s ease" }} />
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11.5, opacity: 0.7, marginTop: 6 }}>
+                    <span>Paid {fmtXOF(ts.paidAmount)}</span>
+                    <span>Left {fmtXOF(ts.remaining)}</span>
+                  </div>
+                </div>
+              )}
+
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: ts ? 0 : "auto" }}>
+                <button style={{ ...btnGreen, fontSize: 13, padding: "8px 14px" }} onClick={(e) => { e.stopPropagation(); setDetail(b); }}>View details</button>
+                {ts && !cancelled && !ts.settled && (
+                  <button style={{ background: "none", border: `1.5px solid ${T.line}`, borderRadius: 10, cursor: "pointer", fontWeight: 700, color: T.ink, padding: "8px 14px", fontSize: 13 }}
+                    onClick={(e) => { e.stopPropagation(); setPayTarget(b); }}>Pay balance</button>
+                )}
+              </div>
             </div>
           </div>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <span style={{ ...pill(planColor(b.plan)), fontSize: 12 }}>{planLabel(b.plan)}</span>
-            <span style={{ fontSize: 11.5, fontWeight: 700, color: statusColor(b._status), alignSelf: "center" }}>● {statusLabel[b._status] || "In progress"}</span>
-          </div>
-
-          {ts && b._status !== "cancelled" && (
-            <div style={{ background: T.paperDark, borderRadius: 12, padding: "12px 14px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, fontWeight: 700, marginBottom: 6 }}>
-                <span>{ts.settled ? `Fully paid · ${ts.payCount}/${ts.payCount} payments` : `Ma Tontine · ${ts.payCount}/${ts.plannedTotal} payments (deposit incl.)`}</span>
-                <span style={{ color: T.green }}>{ts.settled ? 100 : ts.pct}%</span>
-              </div>
-              <div style={{ height: 9, borderRadius: 999, background: "rgba(11,46,27,.12)", overflow: "hidden" }}>
-                <div style={{ height: "100%", width: `${ts.settled ? 100 : ts.pct}%`, background: `linear-gradient(90deg, ${T.green}, ${T.gold})`, borderRadius: 999, transition: "width .4s ease" }} />
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, opacity: 0.7, marginTop: 6 }}>
-                <span>Paid: {fmtXOF(ts.paidAmount)}</span>
-                <span>Remaining: {fmtXOF(ts.remaining)}</span>
-              </div>
-            </div>
-          )}
-
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-            <button style={{ ...btnGreen, fontSize: 13, padding: "8px 16px" }} onClick={() => setDetail(b)}>View details</button>
-            {ts && b._status !== "cancelled" && !ts.settled && (
-              <button style={{ background: "none", border: `1.5px solid ${T.line}`, borderRadius: 10, cursor: "pointer", fontWeight: 700, color: T.ink, padding: "8px 16px", fontSize: 13 }}
-                onClick={() => setPayTarget(b)}>Pay towards balance</button>
-            )}
-          </div>
+          );
+        })}
         </div>
-        );
-      })}
+      )}
 
       {detail && <BookingDetail rec={detail} onClose={() => setDetail(null)} notify={notify} patchBooking={patchBooking} cancelBooking={cancelBooking} manageBooking={manageBooking} user={user} onPay={(r) => setPayTarget(r)} />}
       {payTarget && <InstallmentModal rec={payTarget} onClose={() => setPayTarget(null)} onConfirm={(amt, pm) => { const r = payTarget; setPayTarget(null); payInstallment(r, amt, pm); }} />}
@@ -6061,7 +6129,7 @@ function InstallmentModal({ rec, onClose, onConfirm }) {
         <span style={{ fontWeight: 700, fontSize: 12 }}>International card <span style={{ fontWeight: 500, opacity: 0.7 }}>· Visa / Mastercard · USD</span></span>
       </div>
       {valid && (
-        <div style={{ fontSize: 12, opacity: 0.7, marginTop: 6 }}>Charged in USD: <strong>${(val / 590).toFixed(2)}</strong> (1 USD = 590 XOF).</div>
+        <div style={{ fontSize: 12, opacity: 0.7, marginTop: 6 }}>Charged in USD: <strong>${(val / 550).toFixed(2)}</strong> (1 USD = 550 XOF).</div>
       )}
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 14 }}>
         <button style={{ ...btnGold, fontSize: 13.5, padding: "10px 18px", opacity: valid ? 1 : 0.5, cursor: valid ? "pointer" : "not-allowed" }}
@@ -6109,13 +6177,15 @@ function BookingDetail({ rec, onClose, notify, patchBooking, cancelBooking, mana
   const ts = rec.plan === "deposit" ? tontineState(rec) : null;
   return (
     <Overlay onClose={onClose}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <Thumb rec={rec} size={44} />
-        <h3 className="disp" style={{ fontWeight: 800, fontSize: 20, margin: 0, flex: 1 }}>{rec.tour.name}</h3>
-      </div>
-      <div style={{ display: "flex", gap: 8, margin: "10px 0 14px" }}>
-        <span style={{ ...pill(planColor(rec.plan)), fontSize: 12 }}>{planLabel(rec.plan)}</span>
-        <span style={{ fontSize: 12, fontWeight: 700, color: statusColor(rec._status), alignSelf: "center" }}>● {statusLabel[rec._status] || "In progress"}</span>
+      <div style={{ position: "relative", margin: "-24px -24px 16px", borderRadius: "20px 20px 0 0", overflow: "hidden" }}>
+        <Cover tour={rec.tour} id={rec.tour?.id} ratio="16 / 9" size={64} />
+        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,.74), rgba(0,0,0,.05) 55%, transparent)" }} />
+        <span style={{ position: "absolute", top: 12, left: 12, fontSize: 11, fontWeight: 700, color: "#fff", background: planColor(rec.plan), padding: "4px 10px", borderRadius: 999, boxShadow: "0 2px 8px rgba(0,0,0,.2)" }}>{planLabel(rec.plan)}</span>
+        <span style={{ position: "absolute", top: 12, right: 12, display: "inline-flex", alignItems: "center", gap: 5, background: "rgba(255,255,255,.96)", borderRadius: 999, padding: "5px 11px", fontSize: 11, fontWeight: 700, color: statusColor(rec._status), boxShadow: "0 2px 8px rgba(0,0,0,.2)" }}>● {statusLabel[rec._status] || "In progress"}</span>
+        <div style={{ position: "absolute", left: 16, right: 16, bottom: 12 }}>
+          <div style={{ fontSize: 10.5, fontWeight: 700, color: "rgba(255,255,255,.85)", letterSpacing: ".05em", marginBottom: 3 }}>REF · {(rec._id || "PENDING").toString().slice(0, 8).toUpperCase()}</div>
+          <h3 className="disp" style={{ fontWeight: 800, fontSize: 21, margin: 0, color: "#fff", lineHeight: 1.2, textShadow: "0 2px 12px rgba(0,0,0,.45)" }}>{rec.tour.name}</h3>
+        </div>
       </div>
 
       <div style={{ background: T.paperDark, borderRadius: 12, padding: "12px 14px", fontSize: 14, lineHeight: 1.7 }}>
@@ -6525,7 +6595,7 @@ function AIChat({ onClose, go, user, role }) {
 function Overlay({ children, onClose }) {
   return (
     <div role="dialog" aria-modal="true" style={{ position: "fixed", inset: 0, zIndex: 70, background: "rgba(20,32,26,.55)", display: "flex", alignItems: "center", justifyContent: "center", padding: 14 }} onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()} style={{ background: T.paper, borderRadius: 20, width: "100%", maxWidth: 420, padding: 24, color: T.ink }}>{children}</div>
+      <div onClick={(e) => e.stopPropagation()} style={{ background: T.paper, borderRadius: 20, width: "100%", maxWidth: 460, padding: 24, color: T.ink, maxHeight: "92vh", overflowY: "auto" }}>{children}</div>
     </div>
   );
 }
