@@ -3448,7 +3448,7 @@ function TourDetail({ tourId, go, setBooking, addToCart, removeFromCart, favorit
                     <button disabled={!dateOk} style={{ flex: 1, background: T.green, color: "#fff", border: "none", borderRadius: 12, padding: "12px 8px", fontWeight: 800, fontSize: 14.5, cursor: dateOk ? "pointer" : "not-allowed", opacity: dateOk ? 1 : 0.5, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 7, fontFamily: "inherit" }} onClick={() => dateOk && addTourToCart()}><ShoppingBag size={16} strokeWidth={2.2} /> Add to cart</button>
                     <button disabled={!dateOk} style={{ ...btnGold, flex: 1, marginTop: 0, borderRadius: 12, padding: "12px 8px", fontSize: 14.5, opacity: dateOk ? 1 : 0.5, cursor: dateOk ? "pointer" : "not-allowed" }} onClick={() => dateOk && openBooking("full")}>Pay in full</button>
                   </div>
-                  <button disabled={!tontinePossible} style={{ width: "100%", marginTop: 8, background: "#1A1A1A", color: "#fff", border: "none", borderRadius: 12, padding: "12px 14px", fontWeight: 800, cursor: tontinePossible ? "pointer" : "not-allowed", fontSize: 15, opacity: tontinePossible ? 1 : 0.5 }} onClick={() => tontinePossible && startTontine()}>Pay with Ma Tontine (30%)</button>
+                  <button disabled={!tontinePossible} style={{ width: "100%", marginTop: 8, background: "#1A1A1A", color: "#fff", border: "none", borderRadius: 12, padding: "12px 14px", fontWeight: 800, cursor: tontinePossible ? "pointer" : "not-allowed", fontSize: 15, opacity: tontinePossible ? 1 : 0.5 }} onClick={() => tontinePossible && startTontine()}>Pay in instalments</button>
                 </>)}
                 {!dateOk && <div style={{ fontSize: 12.5, color: "#8A968E", marginTop: 8, textAlign: "center" }}>Choose a travel date to book.</div>}
               </>
@@ -3504,7 +3504,7 @@ function TourDetail({ tourId, go, setBooking, addToCart, removeFromCart, favorit
             <button style={{ width: "100%", marginBottom: 8, background: T.green, color: "#fff", border: "none", borderRadius: 12, padding: "11px 8px", fontWeight: 800, fontSize: 14, cursor: "pointer", opacity: dateOk ? 1 : 0.5, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 7, fontFamily: "inherit" }} onClick={() => dateOk ? addTourToCart() : showFlash("Choose a travel date above to add to cart.")}><ShoppingBag size={16} strokeWidth={2.2} /> Add to cart</button>
             <div style={{ display: "flex", gap: 8 }}>
               <button style={{ ...btnGold, flex: 1, borderRadius: 12, fontSize: 14, padding: "11px 8px", opacity: dateOk ? 1 : 0.5 }} onClick={() => dateOk ? openBooking("full") : showFlash("Choose a travel date above to book.")}>Pay in full</button>
-              <button style={{ flex: 1, background: "#1A1A1A", color: "#fff", border: "none", borderRadius: 12, padding: "11px 8px", fontWeight: 800, cursor: "pointer", fontSize: 14, opacity: tontinePossible ? 1 : 0.5 }} onClick={() => tontinePossible ? startTontine() : showFlash(dateOk ? "Ma Tontine needs a travel date at least 15 days away." : "Choose a travel date above to book.")}>Ma Tontine</button>
+              <button style={{ flex: 1, background: "#1A1A1A", color: "#fff", border: "none", borderRadius: 12, padding: "11px 8px", fontWeight: 800, cursor: "pointer", fontSize: 14, opacity: tontinePossible ? 1 : 0.5 }} onClick={() => tontinePossible ? startTontine() : showFlash(dateOk ? "Ma Tontine needs a travel date at least 15 days away." : "Choose a travel date above to book.")}>Instalments</button>
             </div>
             </>)}
             {!dateOk && <div style={{ fontSize: 11, color: "#8A968E", marginTop: 5, textAlign: "center" }}>Choose a travel date to book.</div>}
@@ -6729,7 +6729,7 @@ function CartPage({ cart = [], removeFromCart, clearCart, payCart, payCartTontin
                 </div>
                 <button onClick={() => { if (ready) payCartTontine({ ...bill, name: `${bill.firstName} ${bill.lastName}`.trim() }, selOpt, months); }} disabled={!ready}
                   style={{ width: "100%", background: "#1A1A1A", color: "#fff", border: "none", borderRadius: 12, padding: 13, fontWeight: 800, fontSize: 15, cursor: ready ? "pointer" : "not-allowed", opacity: ready ? 1 : 0.55 }}>
-                  Reserve with Ma Tontine — {fmtXOF(deposit)} now
+                  Reserve in instalments — {fmtXOF(deposit)} now
                 </button>
                 {!user && <div style={{ fontSize: 11.5, color: "#6B7A72", marginTop: 7, textAlign: "center" }}>You&apos;ll be asked to sign in — a free account is required to track instalments.</div>}
               </>
@@ -6916,7 +6916,7 @@ function BookingModal({ tour, user, onClose, onConfirm, onAddToCart }) {
               <button onClick={() => setPlan("full")} style={{ flex: 1, border: `1.5px solid ${plan === "full" ? T.green : T.line}`, background: plan === "full" ? T.green : "#fff", borderRadius: 12, padding: "10px 8px", fontWeight: 600, fontSize: 13, cursor: "pointer", color: plan === "full" ? "#fff" : T.ink }}>Pay in full</button>
               <button onClick={() => tontineAllowed && setPlan("deposit")} disabled={!tontineAllowed} title={!user ? "A free account is required for Ma Tontine Voyage" : !tontineAvailable ? "Choose a travel date further away to pay in instalments" : ""}
                 style={{ flex: 1, border: `1.5px solid ${plan === "deposit" ? T.green : T.line}`, background: plan === "deposit" ? T.green : "#fff", borderRadius: 12, padding: "10px 8px", fontWeight: 600, fontSize: 13, cursor: tontineAllowed ? "pointer" : "not-allowed", color: plan === "deposit" ? "#fff" : T.ink, opacity: tontineAllowed ? 1 : 0.45 }}>
-                Ma Tontine Voyage · 30% deposit
+                Pay in instalments · 30% deposit
               </button>
             </div>
             {tontineAvailable && !user && (
