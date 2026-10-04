@@ -3208,6 +3208,7 @@ function TourDetail({ tourId, go, setBooking, addToCart, removeFromCart, favorit
   const ppUnit = t.quote ? null : (t.grid[tier]?.a ?? fromPrice(t));
   const rates = t.zone ? RATES[t.zone] : null;
   const transportCost = vehicle >= 0 && rates ? rates[vehicle] : 0;
+  const paxMax = vehicle >= 0 ? VEHICLES[vehicle].cap : null; // chosen vehicle caps the traveler count
   const extrasTotal = t.addons.filter((a) => extras.includes(a.name) && a.price).reduce((s, a) => s + (a.per === "person" ? a.price * pax : a.price), 0);
   const estTotal = ppUnit != null ? ppUnit * pax + extrasTotal + transportCost : null;
   const toggleExtra = (name) => setExtras((x) => x.includes(name) ? x.filter((n) => n !== name) : [...x, name]);
@@ -3351,14 +3352,6 @@ function TourDetail({ tourId, go, setBooking, addToCart, removeFromCart, favorit
             </div>
           </Section>
 
-          <Section title="FAQ">
-            <div style={{ display: "flex", flexDirection: "column", gap: 12, fontSize: 14.5, lineHeight: 1.6 }}>
-              <div><strong>Why do prices change with group size?</strong><br />ATS prices per person by basis — Private 1–2, Private 3–4, or Group 5+ — so bigger groups pay less per person.</div>
-              <div><strong>Is transport included?</strong><br />{transportIncluded ? "Yes — this tour includes private-vehicle pick-up and drop-off at your hotel." : "No. Choose your vehicle category at booking (Sedan, SUV, Minivan or coach), priced per vehicle from the ATS Logistics rate card."}</div>
-              <div><strong>Can I pay in instalments?</strong><br />Yes — Ma Tontine Voyage: 30% deposit confirms your booking, balance in scheduled instalments before departure.</div>
-            </div>
-          </Section>
-
           <Section title="Traveler reviews">
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               {REVIEWS.map((r, i) => (
@@ -3395,9 +3388,9 @@ function TourDetail({ tourId, go, setBooking, addToCart, removeFromCart, favorit
                   <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                     <button onClick={() => setPax(Math.max(1, pax - 1))} style={btnCircle} aria-label="Fewer">−</button>
                     <span style={{ fontWeight: 700, minWidth: 20, textAlign: "center" }}>{pax}</span>
-                    <button onClick={() => setPax(pax + 1)} style={btnCircle} aria-label="More">+</button>
+                    <button onClick={() => setPax(paxMax != null ? Math.min(paxMax, pax + 1) : pax + 1)} disabled={paxMax != null && pax >= paxMax} style={{ ...btnCircle, opacity: paxMax != null && pax >= paxMax ? 0.4 : 1, cursor: paxMax != null && pax >= paxMax ? "not-allowed" : "pointer" }} aria-label="More">+</button>
                   </div>
-                  <div style={{ fontSize: 11.5, opacity: 0.6, marginTop: 4 }}>Price adjusts automatically with group size.</div>
+                  <div style={{ fontSize: 11.5, opacity: 0.6, marginTop: 4 }}>{paxMax != null ? `Limited to ${paxMax} seats for the chosen vehicle.` : "Price adjusts automatically with group size."}</div>
                 </div>
 
                 <div style={{ marginTop: 12 }}>
@@ -3496,7 +3489,7 @@ function TourDetail({ tourId, go, setBooking, addToCart, removeFromCart, favorit
               <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6 }}>
                 <button onClick={() => setPax(Math.max(1, pax - 1))} style={btnCircle} aria-label="Fewer">−</button>
                 <span style={{ fontWeight: 700, minWidth: 14, textAlign: "center" }}>{pax}</span>
-                <button onClick={() => setPax(pax + 1)} style={btnCircle} aria-label="More">+</button>
+                <button onClick={() => setPax(paxMax != null ? Math.min(paxMax, pax + 1) : pax + 1)} disabled={paxMax != null && pax >= paxMax} style={{ ...btnCircle, opacity: paxMax != null && pax >= paxMax ? 0.4 : 1, cursor: paxMax != null && pax >= paxMax ? "not-allowed" : "pointer" }} aria-label="More">+</button>
                 <div style={{ width: 138, minWidth: 0, flexShrink: 1 }}>
                   <RangeDate from={dateFrom} to={dateFrom} onChange={(f) => setTripDate(f)} triggerStyle={{ ...input, padding: "9px 10px", fontSize: 13 }} wide single minDate={minDate} align="right" up />
                 </div>
