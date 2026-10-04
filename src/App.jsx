@@ -1251,7 +1251,7 @@ export default function ATSPlatformPreview() {
         <>
           {page.name === "home" && <Home {...ctx} addBookingHome={confirmBooking} />}
           {page.name === "tours" && <ToursPage {...ctx} />}
-          {page.name === "tour" && <TourDetail {...ctx} tourId={page.id} initialDate={page.date} initialPax={page.pax} initialExtras={page.extras} initialVehicle={page.vehicle} editCartId={page.editCartId} />}
+          {page.name === "tour" && <TourDetail {...ctx} tourId={page.id} initialDate={page.date} initialPax={page.pax} initialExtras={page.extras} initialVehicle={page.vehicle} initialVehicles={page.vehicles} editCartId={page.editCartId} />}
           {page.name === "builder" && <TripBuilder {...ctx} />}
           {page.name === "flights" && <FlightsPage {...ctx} initial={page.fp} initialLegs={page.flegs} />}
           {page.name === "flightQuote" && <FlightQuotePage {...ctx} initial={page.fp} initialLegs={page.flegs} />}
@@ -3163,7 +3163,7 @@ const ZONE_COORDS = {
 };
 const tourCoords = (t) => ZONE_COORDS[t.zone] || [14.4974, -14.4524];
 
-function TourDetail({ tourId, go, setBooking, addToCart, removeFromCart, favorites = [], toggleFavorite, initialDate, initialPax, initialExtras, initialVehicle, editCartId, user, setSignin, notify }) {
+function TourDetail({ tourId, go, setBooking, addToCart, removeFromCart, favorites = [], toggleFavorite, initialDate, initialPax, initialExtras, initialVehicle, initialVehicles, editCartId, user, setSignin, notify }) {
   const t = TOURS.find((x) => x.id === tourId) || TOURS[0];
   const transportIncluded = t.id === "city"; // Dakar City Tour: private vehicle, pick-up & drop-off included
   // Ma Tontine Voyage needs a free account; guests are sent to sign-in instead
@@ -3172,7 +3172,11 @@ function TourDetail({ tourId, go, setBooking, addToCart, removeFromCart, favorit
   const fav = favorites.includes(t.id);
   const [pax, setPax] = useState(initialPax || 2);
   const [extras, setExtras] = useState(initialExtras || []);
-  const [vehicle, setVehicle] = useState(typeof initialVehicle === "number" ? initialVehicle : -1);      // -1 = no transport
+  const _initVeh = Array.isArray(initialVehicles) && initialVehicles.length ? initialVehicles : (typeof initialVehicle === "number" && initialVehicle >= 0 ? [initialVehicle] : []);
+  const [vehicle, setVehicle] = useState(_initVeh[0] ?? -1);   // 1st vehicle (-1 = no transport)
+  const [vehicle2, setVehicle2] = useState(_initVeh[1] ?? -1); // 2nd (optional)
+  const [vehicle3, setVehicle3] = useState(_initVeh[2] ?? -1); // 3rd (optional)
+  const vehSel = [vehicle, vehicle2, vehicle3].filter((i) => i >= 0);
   const [preview, setPreview] = useState(null);   // gallery lightbox index
   const [flash, setFlash] = useState("");          // ephemeral alert on the mobile bar
   const flashTimer = useRef();
@@ -3187,11 +3191,11 @@ function TourDetail({ tourId, go, setBooking, addToCart, removeFromCart, favorit
   const daysUntil = dateFrom ? Math.ceil((new Date(dateFrom + "T00:00:00") - new Date(todayStr + "T00:00:00")) / 86400000) : null;
   const dateOk = daysUntil != null && daysUntil >= 0 && !!dateTo && dateTo >= dateFrom;
   const tontinePossible = dateOk && daysUntil >= 15;
-  const openBooking = (plan) => setBooking({ ...t, initialPlan: plan, initialPax: pax, initialExtras: extras, initialDateFrom: dateFrom, initialDateTo: dateTo, initialVehicle: vehicle });
+  const openBooking = (plan) => setBooking({ ...t, initialPlan: plan, initialPax: pax, initialExtras: extras, initialDateFrom: dateFrom, initialDateTo: dateTo, initialVehicle: vehicle, initialVehicles: vehSel });
   const addTourToCart = () => {
     if (!dateOk || t.quote) return;
     const chosen = t.addons.filter((a) => extras.includes(a.name)).map((a) => ({ name: a.name, per: a.per, price: a.price, amount: a.price ? (a.per === "person" ? a.price * pax : a.price) : null }));
-    addToCart && addToCart({ tour: t, date: dateFrom, dateFrom, dateTo: dateFrom, adults: pax, children: 0, infants: 0, plan: "full", months: 3, schedule: "", total: estTotal, lineTotal: estTotal, deposit: estTotal * 0.3, contact: {}, addons: chosen, vehicle, promoCode: "", payMethod: "stripe", _cartId: editCartId });
+    addToCart && addToCart({ tour: t, date: dateFrom, dateFrom, dateTo: dateFrom, adults: pax, children: 0, infants: 0, plan: "full", months: 3, schedule: "", total: estTotal, lineTotal: estTotal, deposit: estTotal * 0.3, contact: {}, addons: chosen, vehicle, vehicles: vehSel, promoCode: "", payMethod: "stripe", _cartId: editCartId });
     if (editCartId) go("cart");
   };
   const removeTourFromCart = () => { if (removeFromCart && editCartId) removeFromCart(editCartId); go("cart"); };
@@ -3207,10 +3211,11 @@ function TourDetail({ tourId, go, setBooking, addToCart, removeFromCart, favorit
   const tier = tierOf(pax);
   const ppUnit = t.quote ? null : (t.grid[tier]?.a ?? fromPrice(t));
   const rates = t.zone ? RATES[t.zone] : null;
-  const transportCost = vehicle >= 0 && rates ? rates[vehicle] : 0;
-  const paxMax = vehicle >= 0 ? VEHICLES[vehicle].cap : null; // chosen vehicle caps the traveler count
+  const transportCost = rates ? vehSel.reduce((sum, i) => sum + (rates[i] || 0), 0) : 0;
+  const paxMax = vehSel.length ? vehSel.reduce((sum, i) => sum + VEHICLES[i].cap, 0) : null; // chosen vehicles cap the traveler count (additive)
   const extrasTotal = t.addons.filter((a) => extras.includes(a.name) && a.price).reduce((s, a) => s + (a.per === "person" ? a.price * pax : a.price), 0);
   const estTotal = ppUnit != null ? ppUnit * pax + extrasTotal + transportCost : null;
+  useEffect(() => { setPax((x) => (paxMax != null && x > paxMax ? paxMax : x)); }, [paxMax]); // keep travelers within the chosen vehicles' total seats
   const toggleExtra = (name) => setExtras((x) => x.includes(name) ? x.filter((n) => n !== name) : [...x, name]);
 
   // Similar tours for cross-sell (same tag weighted highest, then same pole/zone)
@@ -3411,13 +3416,23 @@ function TourDetail({ tourId, go, setBooking, addToCart, removeFromCart, favorit
                 {rates && !transportIncluded && (
                   <div style={{ marginTop: 12 }}>
                     <label style={label}>Transport (optional)</label>
-                    <select value={vehicle} onChange={(e) => setVehicle(+e.target.value)} style={{ ...input, fontWeight: 600 }}>
+                    <select value={vehicle} onChange={(e) => { const v = +e.target.value; setVehicle(v); if (v < 0) { setVehicle2(-1); setVehicle3(-1); } }} style={{ ...input, fontWeight: 600 }}>
                       <option value={-1}>No transport — I'll arrange my own</option>
-                      {VEHICLES.map((v, i) => (
-                        <option key={v.name} value={i} disabled={v.cap < pax}>{v.name} · up to {v.cap} — {fmtXOF(rates[i])}{v.cap < pax ? " (too small)" : ""}</option>
-                      ))}
+                      {VEHICLES.map((v, i) => (<option key={v.name} value={i}>{v.name} · up to {v.cap} — {fmtXOF(rates[i])}</option>))}
                     </select>
-                    <div style={{ fontSize: 11.5, opacity: 0.6, marginTop: 4 }}>Per vehicle, for the day — chosen by group size.</div>
+                    {vehicle >= 0 && (
+                      <select value={vehicle2} onChange={(e) => { const v = +e.target.value; setVehicle2(v); if (v < 0) setVehicle3(-1); }} style={{ ...input, fontWeight: 600, marginTop: 8 }}>
+                        <option value={-1}>+ Add a 2nd vehicle (optional)</option>
+                        {VEHICLES.map((v, i) => (<option key={v.name} value={i}>{v.name} · up to {v.cap} — {fmtXOF(rates[i])}</option>))}
+                      </select>
+                    )}
+                    {vehicle >= 0 && vehicle2 >= 0 && (
+                      <select value={vehicle3} onChange={(e) => setVehicle3(+e.target.value)} style={{ ...input, fontWeight: 600, marginTop: 8 }}>
+                        <option value={-1}>+ Add a 3rd vehicle (optional)</option>
+                        {VEHICLES.map((v, i) => (<option key={v.name} value={i}>{v.name} · up to {v.cap} — {fmtXOF(rates[i])}</option>))}
+                      </select>
+                    )}
+                    <div style={{ fontSize: 11.5, opacity: 0.6, marginTop: 4 }}>{vehSel.length ? `${vehSel.length} vehicle${vehSel.length > 1 ? "s" : ""} · up to ${paxMax} seats total` : "Per vehicle, for the day. Add more vehicles for larger groups."}</div>
                   </div>
                 )}
 
@@ -5145,7 +5160,7 @@ function AdminConsole({ user, isAdmin, isSuper, setSignin }) {
                 {rowD("Plan", planLabel(d.plan))}
                 {rowD("Travel date", d.dateFrom || d.date)}
                 {pax ? rowD("Travellers", `${d.adults || 0} adult${(d.adults || 0) > 1 ? "s" : ""}${d.children ? ` · ${d.children} child` : ""}${d.infants ? ` · ${d.infants} infant` : ""}`) : null}
-                {rowD("Vehicle", (d.vehicle != null && d.vehicle >= 0 && VEHICLES[d.vehicle]) ? VEHICLES[d.vehicle].name : null)}
+                {rowD("Vehicle", (Array.isArray(d.vehicles) && d.vehicles.length) ? d.vehicles.map((i) => VEHICLES[i] && VEHICLES[i].name).filter(Boolean).join(" + ") : ((d.vehicle != null && d.vehicle >= 0 && VEHICLES[d.vehicle]) ? VEHICLES[d.vehicle].name : null))}
                 {d.addons && d.addons.length ? rowD("Add-ons", d.addons.map((a) => a.name).join(", ")) : null}
                 {rowD("Promo code", d.promo?.code || d.promoCode)}
                 {rowD("Corporate", d.corp?.orgName)}
@@ -6677,7 +6692,7 @@ function CartPage({ cart = [], removeFromCart, clearCart, payCart, payCartTontin
                 <div style={{ textAlign: "right", flexShrink: 0 }}>
                   <div style={{ fontWeight: 800, fontSize: 15 }}>{fmtXOF(it.lineTotal != null ? it.lineTotal : it.total)}</div>
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8, marginTop: 10 }}>
-                    <button onClick={(e) => { e.stopPropagation(); go("tour", { id: it.tour.id, date: it.dateFrom, pax: (it.adults || 0) + (it.children || 0) || 1, extras: (it.addons || []).map((a) => a.name), vehicle: typeof it.vehicle === "number" ? it.vehicle : -1, editCartId: it._cartId }); }} aria-label="Edit" style={{ background: "#fff", border: `1.5px solid ${T.green}`, cursor: "pointer", color: T.green, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 12.5, fontWeight: 700, fontFamily: "inherit", padding: "7px 14px", borderRadius: 9 }}><Pencil size={14} /> Edit</button>
+                    <button onClick={(e) => { e.stopPropagation(); go("tour", { id: it.tour.id, date: it.dateFrom, pax: (it.adults || 0) + (it.children || 0) || 1, extras: (it.addons || []).map((a) => a.name), vehicle: typeof it.vehicle === "number" ? it.vehicle : -1, vehicles: Array.isArray(it.vehicles) ? it.vehicles : (typeof it.vehicle === "number" && it.vehicle >= 0 ? [it.vehicle] : []), editCartId: it._cartId }); }} aria-label="Edit" style={{ background: "#fff", border: `1.5px solid ${T.green}`, cursor: "pointer", color: T.green, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 12.5, fontWeight: 700, fontFamily: "inherit", padding: "7px 14px", borderRadius: 9 }}><Pencil size={14} /> Edit</button>
                     <button onClick={(e) => { e.stopPropagation(); removeFromCart(it._cartId); }} aria-label="Remove" style={{ background: "#fff", border: "1.5px solid #E7C4C0", cursor: "pointer", color: "#B3261E", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 12.5, fontWeight: 700, fontFamily: "inherit", padding: "7px 14px", borderRadius: 9 }}><Trash2 size={14} /> Remove</button>
                   </div>
                 </div>
@@ -6758,7 +6773,11 @@ function BookingModal({ tour, user, onClose, onConfirm, onAddToCart }) {
   const [children, setChildren] = useState(0); // 3–12
   const [infants, setInfants] = useState(0);  // under 3, free
   const [addons, setAddons] = useState(tour.initialExtras || []);
-  const [vehicle, setVehicle] = useState(tour.initialVehicle ?? -1); // -1 = no transport
+  const _bInitVeh = Array.isArray(tour.initialVehicles) && tour.initialVehicles.length ? tour.initialVehicles : (typeof tour.initialVehicle === "number" && tour.initialVehicle >= 0 ? [tour.initialVehicle] : []);
+  const [vehicle, setVehicle] = useState(_bInitVeh[0] ?? -1); // 1st vehicle (-1 = no transport)
+  const [vehicle2, setVehicle2] = useState(_bInitVeh[1] ?? -1);
+  const [vehicle3, setVehicle3] = useState(_bInitVeh[2] ?? -1);
+  const vehSel = [vehicle, vehicle2, vehicle3].filter((i) => i >= 0);
   const [plan, setPlan] = useState(tour.initialPlan === "deposit" ? "deposit" : "full");
   const [sched, setSched] = useState("3m");
   const [tranches, setTranches] = useState(3); // client-chosen number of instalments for the 70% balance
@@ -6815,10 +6834,10 @@ function BookingModal({ tour, user, onClose, onConfirm, onAddToCart }) {
     const base = adults * tg.a + children * (tg.c ?? tg.a);
     const paidAddons = tour.addons.filter((x) => addons.includes(x.name) && x.price);
     const addonTotal = paidAddons.reduce((s, x) => s + (x.per === "person" ? x.price * pax : x.price), 0);
-    const transport = vehicle >= 0 && rates ? rates[vehicle] : 0;
+    const transport = rates ? vehSel.reduce((sum, i) => sum + (rates[i] || 0), 0) : 0;
     const total = base + addonTotal + transport;
     return { base, addonTotal, transport, total, deposit: total * 0.3, installment: (total * 0.7) / months };
-  }, [tour, adults, children, addons, vehicle, months, pax, tg, rates]);
+  }, [tour, adults, children, addons, vehicle, vehicle2, vehicle3, months, pax, tg, rates]);
 
   const onRequestAddons = tour.addons.filter((x) => addons.includes(x.name) && !x.price);
   const chosenAddons = tour.addons.filter((x) => addons.includes(x.name)).map((a) => ({ name: a.name, per: a.per, price: a.price, amount: a.price ? (a.per === "person" ? a.price * pax : a.price) : null }));
@@ -6964,7 +6983,7 @@ function BookingModal({ tour, user, onClose, onConfirm, onAddToCart }) {
 
             <div style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".1em", color: T.green, marginTop: 20, marginBottom: 12, borderTop: `1px solid ${T.line}`, paddingTop: 18 }}>Order summary</div>
             <Row l={`Tour · ${tierLabel[tier]} · ${adults} ad${children ? ` + ${children} ch` : ""}`} v={fmtXOF(calc.base)} />
-            {calc.transport > 0 && <Row l={`Transport · ${VEHICLES[vehicle].name}`} v={fmtXOF(calc.transport)} />}
+            {calc.transport > 0 && <Row l={`Transport · ${vehSel.map((i) => VEHICLES[i].name).join(" + ")}`} v={fmtXOF(calc.transport)} />}
             {chosenAddons.map((a) => <Row key={a.name} l={`+ ${a.name}${a.per === "person" ? ` (×${pax})` : ""}`} v={a.amount != null ? fmtXOF(a.amount) : "on request"} />)}
             {discActive && <div style={{ display: "flex", padding: "4px 0", color: T.green, fontWeight: 600 }}><span>{discLabel} · −{discPct}%</span><span style={{ marginLeft: "auto" }}>−{fmtXOF(calc.total - payTotal)}</span></div>}
             <div style={{ borderTop: `1px solid ${T.line}`, marginTop: 8, paddingTop: 10, display: "flex", fontSize: 17 }}>
@@ -7030,7 +7049,7 @@ function BookingModal({ tour, user, onClose, onConfirm, onAddToCart }) {
             </div>
 
             {!IS_CORPORATE && !tour.quote && plan === "full" && (
-              <button onClick={() => { if (!dateFrom) { setMsg("Add your travel date first."); return; } onAddToCart && onAddToCart({ tour, date: dateFrom, dateFrom, dateTo: dateFrom, adults, children, infants, plan: "full", months, schedule: "", total: calc.total, lineTotal: payTotal, deposit: calc.deposit, contact: { ...bill, name: `${bill.firstName} ${bill.lastName}`.trim() }, addons: chosenAddons, vehicle, promoCode: promoValid ? promo.code : "", payMethod, _cartId: tour._cartId }); }}
+              <button onClick={() => { if (!dateFrom) { setMsg("Add your travel date first."); return; } onAddToCart && onAddToCart({ tour, date: dateFrom, dateFrom, dateTo: dateFrom, adults, children, infants, plan: "full", months, schedule: "", total: calc.total, lineTotal: payTotal, deposit: calc.deposit, contact: { ...bill, name: `${bill.firstName} ${bill.lastName}`.trim() }, addons: chosenAddons, vehicle, vehicles: vehSel, promoCode: promoValid ? promo.code : "", payMethod, _cartId: tour._cartId }); }}
                 disabled={!dateFrom}
                 style={{ width: "100%", marginTop: 14, background: T.green, color: "#fff", border: "none", borderRadius: 12, padding: 13, fontWeight: 800, fontSize: 15, cursor: dateFrom ? "pointer" : "not-allowed", opacity: dateFrom ? 1 : 0.55, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
                 <ShoppingBag size={17} strokeWidth={2.2} /> {tour._cartId ? "Update cart" : "Add to cart"} — {fmtXOF(payTotal)}
@@ -7039,7 +7058,7 @@ function BookingModal({ tour, user, onClose, onConfirm, onAddToCart }) {
             <TermsCheck checked={accepted} onChange={setAccepted} />
             <button style={{ width: "100%", marginTop: 12, background: IS_CORPORATE ? T.indigo : T.gold, color: IS_CORPORATE ? "#fff" : T.ink, border: "none", borderRadius: 12, padding: 14, fontWeight: 800, fontSize: 16, cursor: (billValid(bill) && dateFrom && accepted) ? "pointer" : "not-allowed", opacity: (billValid(bill) && dateFrom && accepted) ? 1 : 0.55 }}
               disabled={!billValid(bill) || !dateFrom || !accepted}
-              onClick={() => onConfirm({ tour, date: dateFrom, dateFrom, dateTo: dateFrom, adults, children, infants, plan: IS_CORPORATE ? "full" : plan, months, schedule: plan === "deposit" ? selectedOpt.label : "", total: calc.total, deposit: calc.deposit, contact: { ...bill, name: `${bill.firstName} ${bill.lastName}`.trim() }, addons: chosenAddons, promoCode: promoValid ? promo.code : "", payMethod })}>
+              onClick={() => onConfirm({ tour, date: dateFrom, dateFrom, dateTo: dateFrom, adults, children, infants, plan: IS_CORPORATE ? "full" : plan, months, schedule: plan === "deposit" ? selectedOpt.label : "", total: calc.total, deposit: calc.deposit, contact: { ...bill, name: `${bill.firstName} ${bill.lastName}`.trim() }, addons: chosenAddons, vehicle, vehicles: vehSel, promoCode: promoValid ? promo.code : "", payMethod })}>
               {IS_CORPORATE ? `Book now — pay later (${fmtXOF(payTotal)})` : plan === "deposit" ? `Reserve with ${fmtXOF(calc.deposit)} deposit` : `Pay in full — ${fmtXOF(payTotal)}`}
             </button>
             {(() => {
@@ -7079,15 +7098,23 @@ function BookingModal({ tour, user, onClose, onConfirm, onAddToCart }) {
               {rates && (
                 <>
                   <div style={sect}>Transport — choose your vehicle (optional)</div>
-                  <select value={vehicle} onChange={(e) => setVehicle(+e.target.value)} style={{ ...input, fontWeight: 600 }}>
+                  <select value={vehicle} onChange={(e) => { const v = +e.target.value; setVehicle(v); if (v < 0) { setVehicle2(-1); setVehicle3(-1); } }} style={{ ...input, fontWeight: 600 }}>
                     <option value={-1}>No transport — I'll arrange my own</option>
-                    {VEHICLES.map((v, i) => (
-                      <option key={v.name} value={i} disabled={v.cap < seats}>
-                        {v.name} · up to {v.cap} — {fmtXOF(rates[i])}{v.cap < seats ? " (too small for your group)" : ""}
-                      </option>
-                    ))}
+                    {VEHICLES.map((v, i) => (<option key={v.name} value={i}>{v.name} · up to {v.cap} — {fmtXOF(rates[i])}</option>))}
                   </select>
-                  <div style={{ fontSize: 12.5, opacity: 0.65, marginTop: 6 }}>Per vehicle, round trip / at disposal for the day — ATS Logistics rate card.</div>
+                  {vehicle >= 0 && (
+                    <select value={vehicle2} onChange={(e) => { const v = +e.target.value; setVehicle2(v); if (v < 0) setVehicle3(-1); }} style={{ ...input, fontWeight: 600, marginTop: 8 }}>
+                      <option value={-1}>+ Add a 2nd vehicle (optional)</option>
+                      {VEHICLES.map((v, i) => (<option key={v.name} value={i}>{v.name} · up to {v.cap} — {fmtXOF(rates[i])}</option>))}
+                    </select>
+                  )}
+                  {vehicle >= 0 && vehicle2 >= 0 && (
+                    <select value={vehicle3} onChange={(e) => setVehicle3(+e.target.value)} style={{ ...input, fontWeight: 600, marginTop: 8 }}>
+                      <option value={-1}>+ Add a 3rd vehicle (optional)</option>
+                      {VEHICLES.map((v, i) => (<option key={v.name} value={i}>{v.name} · up to {v.cap} — {fmtXOF(rates[i])}</option>))}
+                    </select>
+                  )}
+                  <div style={{ fontSize: 12.5, opacity: 0.65, marginTop: 6 }}>{vehSel.length > 1 ? `${vehSel.length} vehicles · up to ${vehSel.reduce((x, i) => x + VEHICLES[i].cap, 0)} seats total — ` : ""}Per vehicle, round trip / at disposal for the day — ATS Logistics rate card.</div>
                 </>
               )}
 
