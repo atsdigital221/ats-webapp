@@ -94,7 +94,7 @@ const TOURS = [{"id": "goree", "pole": "Dakar", "name": "Goree Island — Memory
 const POLES = ["All", "Dakar", "Petite Côte", "Sine Saloum", "Casamance", "Saint-Louis", "Kédougou", "Grand Tours"];
 // Optional per-package vehicle add-on. Set to true to show the vehicle selector again.
 // Hidden on request (2026-10) — kept in code for easy re-enable.
-const SHOW_VEHICLE_OPTION = false;
+const SHOW_VEHICLE_OPTION = true;
 const VEHICLES = [
   { name: "Renault Mégane", cap: 3, bags: 2, type: "Berline", slug: "standard-sedan" }, { name: "Honda Accord", cap: 3, bags: 2, type: "Berline", slug: "premium-sedan" }, { name: "Mercedes-Benz S-Class", cap: 3, bags: 3, type: "Berline", slug: "luxury-sedan" },
   { name: "Standard SUV", cap: 4, bags: 3, type: "SUV", slug: "standard-suv" }, { name: "Toyota Prado VX", cap: 4, bags: 3, type: "SUV", slug: "premium-suv" }, { name: "Toyota Land Cruiser LC300", cap: 4, bags: 4, type: "SUV", slug: "luxury-suv" },
