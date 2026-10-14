@@ -102,6 +102,7 @@ const RATES = {"airport": [25000, 35000, 200000, 40000, 55000, 250000, 90000, 13
 const tierOf = (pax) => (pax <= 2 ? "p12" : pax <= 4 ? "p34" : "grp");
 const PAX_GROUP = 10;   // 10+ travelers = group booking, custom-priced on request
 const PAX_MAX_BOOK = 9; // max directly bookable/payable travelers across all packages
+const PAX_MAX_SELECT = 50; // highest traveler count selectable (group quote up to 50)
 const tierLabel = { p12: "Private 1–2 pax", p34: "Private 3–4 pax", grp: "Group (5+ pax)" };
 const fromPrice = (t) => t.grid.grp.a;
 
@@ -958,8 +959,11 @@ export default function ATSPlatformPreview() {
     if (b.tour?.name) rows.push(["Item", b.tour.name]);
     const d = b.dateFrom || b.date; if (d) rows.push(["Date", String(d)]);
     const pax = (b.adults || 0) + (b.children || 0); if (pax) rows.push(["Travelers", String(pax)]);
+    if (Array.isArray(b.addons) && b.addons.length) rows.push(["Add-ons", b.addons.map((a) => a.name).filter(Boolean).join(", ")]);
+    if (Array.isArray(b.vehicles) && b.vehicles.length) rows.push(["Transport", b.vehicles.map((i) => VEHICLES[i] && VEHICLES[i].name).filter(Boolean).join(" + ")]);
     if (b.total) rows.push(["Total", fmtXOF(b.total)]);
     rows.push(["Plan", planLabel(b.plan)]);
+    if (b.note) rows.push(["Message", String(b.note)]);
     return rows;
   };
   const saveRecord = async (b) => {
@@ -3193,7 +3197,7 @@ function TourDetail({ tourId, go, setBooking, addToCart, removeFromCart, favorit
   const daysUntil = dateFrom ? Math.ceil((new Date(dateFrom + "T00:00:00") - new Date(todayStr + "T00:00:00")) / 86400000) : null;
   const dateOk = daysUntil != null && daysUntil >= 0 && !!dateTo && dateTo >= dateFrom;
   const tontinePossible = dateOk && daysUntil >= 15;
-  const openBooking = (plan) => setBooking({ ...t, initialPlan: plan, initialPax: pax, initialExtras: extras, initialDateFrom: dateFrom, initialDateTo: dateTo, initialVehicle: vehicle, initialVehicles: vehSel });
+  const openBooking = (plan) => setBooking({ ...t, initialPlan: plan, groupQuote: plan === "quote" && !t.quote, initialPax: pax, initialExtras: extras, initialDateFrom: dateFrom, initialDateTo: dateTo, initialVehicle: vehicle, initialVehicles: vehSel });
   const addTourToCart = () => {
     if (!dateOk || t.quote) return;
     const chosen = t.addons.filter((a) => extras.includes(a.name)).map((a) => ({ name: a.name, per: a.per, price: a.price, amount: a.price ? (a.per === "person" ? a.price * pax : a.price) : null }));
@@ -3218,7 +3222,7 @@ function TourDetail({ tourId, go, setBooking, addToCart, removeFromCart, favorit
   const extrasTotal = t.addons.filter((a) => extras.includes(a.name) && a.price).reduce((s, a) => s + (a.per === "person" ? a.price * pax : a.price), 0);
   const estTotal = ppUnit != null ? ppUnit * pax + extrasTotal + transportCost : null;
   useEffect(() => { setPax((x) => (paxMax != null && x > paxMax ? paxMax : x)); }, [paxMax]); // keep travelers within the chosen vehicles' total seats
-  const paxCeil = Math.min(PAX_GROUP, paxMax != null ? paxMax : PAX_GROUP); // hard ceiling: never above 10 (group)
+  const paxCeil = Math.min(PAX_MAX_SELECT, paxMax != null ? paxMax : PAX_MAX_SELECT); // up to 50 (or chosen vehicles' seats)
   const isGroup = pax >= PAX_GROUP; // at 10 the order is on request (agent-priced)
   const toggleExtra = (name) => setExtras((x) => x.includes(name) ? x.filter((n) => n !== name) : [...x, name]);
 
@@ -3399,7 +3403,7 @@ function TourDetail({ tourId, go, setBooking, addToCart, removeFromCart, favorit
                     <span style={{ fontWeight: 700, minWidth: 20, textAlign: "center" }}>{pax}</span>
                     <button onClick={() => setPax(Math.min(paxCeil, pax + 1))} disabled={pax >= paxCeil} style={{ ...btnCircle, opacity: pax >= paxCeil ? 0.4 : 1, cursor: pax >= paxCeil ? "not-allowed" : "pointer" }} aria-label="More">+</button>
                   </div>
-                  <div style={{ fontSize: 11.5, opacity: 0.6, marginTop: 4 }}>{isGroup ? "Group of 10 — price on request (custom-quoted by our team)." : (paxMax != null ? `Limited to ${paxMax} seats for the chosen vehicle.` : "Price adjusts automatically with group size.")}</div>
+                  <div style={{ fontSize: 11.5, opacity: 0.6, marginTop: 4 }}>{isGroup ? `Group of ${pax} — price on request (custom-quoted by our team).` : (paxMax != null ? `Limited to ${paxMax} seats for the chosen vehicle.` : "Price adjusts automatically with group size.")}</div>
                 </div>
 
                 <div style={{ marginTop: 12 }}>
@@ -5178,6 +5182,7 @@ function AdminConsole({ user, isAdmin, isSuper, setSignin }) {
                 {pax ? rowD("Travellers", `${d.adults || 0} adult${(d.adults || 0) > 1 ? "s" : ""}${d.children ? ` · ${d.children} child` : ""}${d.infants ? ` · ${d.infants} infant` : ""}`) : null}
                 {rowD("Vehicle", (Array.isArray(d.vehicles) && d.vehicles.length) ? d.vehicles.map((i) => VEHICLES[i] && VEHICLES[i].name).filter(Boolean).join(" + ") : ((d.vehicle != null && d.vehicle >= 0 && VEHICLES[d.vehicle]) ? VEHICLES[d.vehicle].name : null))}
                 {d.addons && d.addons.length ? rowD("Add-ons", d.addons.map((a) => a.name).join(", ")) : null}
+                {d.note ? rowD("Message", d.note) : null}
                 {rowD("Promo code", d.promo?.code || d.promoCode)}
                 {rowD("Corporate", d.corp?.orgName)}
                 {sect("Payment")}
@@ -6900,7 +6905,9 @@ function BookingModal({ tour, user, onClose, onConfirm, onAddToCart }) {
     </div>
   );
 
-  if (tour.quote) {
+  if (tour.quote || tour.groupQuote) {
+    const selVeh = (Array.isArray(vehSel) ? vehSel : []).map((i) => VEHICLES[i] && VEHICLES[i].name).filter(Boolean);
+    const boxStyle = { background: "#F8F5EF", border: "1px solid #ECE7DD", borderRadius: 10, padding: "10px 13px", fontSize: 13.5, lineHeight: 1.6, color: "rgba(0,0,0,.82)" };
     return (
       <Wrap>
         <button onClick={onClose} style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "none", border: "none", cursor: "pointer", color: T.ink, fontWeight: 700, fontSize: 14, padding: 0, marginBottom: 14 }}>
@@ -6908,18 +6915,34 @@ function BookingModal({ tour, user, onClose, onConfirm, onAddToCart }) {
         </button>
         <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 20, width: "100%", maxWidth: 720, margin: "0 auto", padding: "26px 30px", color: T.ink }}>
           {headerBlock}
+          {tour.groupQuote && (
+            <div style={{ marginTop: 10, background: "#FFF8E6", border: "1px solid #F1E2A6", borderRadius: 10, padding: "12px 14px", fontSize: 13.5, lineHeight: 1.6, color: "rgba(0,0,0,.82)" }}>
+              <strong style={{ color: "#1A1A1A" }}>Group request — {(adults + children)} travelers.</strong> Bookings of 10+ are custom-priced by our team. Your selection below is kept — add any details and we'll send a tailored quote.
+            </div>
+          )}
           <div style={sect}>Travel date</div>
           <input type="date" min={minDate} value={dateFrom} onChange={(e) => setTripDate(e.target.value)} style={input} />
           <div style={sect}>Travelers</div>
-          <Counter label="Adults" sub="" value={adults} set={setAdults} min={1} />
-          <Counter label="Children (3–12)" sub="" value={children} set={setChildren} />
+          <Counter label="Adults" sub="" value={adults} set={setAdults} min={1} max={PAX_MAX_SELECT} />
+          <Counter label="Children (3–12)" sub="" value={children} set={setChildren} max={PAX_MAX_SELECT} />
           <Counter label="Infants (under 3)" sub="Free" value={infants} set={setInfants} />
-          <div style={sect}>Your request</div>
-          <textarea style={{ ...input, minHeight: 70, resize: "vertical" }} placeholder="Dates flexible? Interests? Budget range?" value={msg} onChange={(e) => setMsg(e.target.value)} />
-          <button style={{ width: "100%", marginTop: 14, background: T.indigo, color: "#fff", border: "none", borderRadius: 12, padding: 14, fontWeight: 800, fontSize: 16, cursor: "pointer" }}
-            onClick={() => onConfirm({ tour, date, adults, children, infants, plan: "quote", months: 0, total: 0, deposit: 0 })}>
+          {chosenAddons.length > 0 && (<>
+            <div style={sect}>Selected add-ons</div>
+            <div style={boxStyle}>{chosenAddons.map((a) => a.name).join("  ·  ")}</div>
+          </>)}
+          {selVeh.length > 0 && (<>
+            <div style={sect}>Selected transport</div>
+            <div style={boxStyle}>{selVeh.join("  +  ")}</div>
+          </>)}
+          <div style={sect}>Your contact details</div>
+          <BillingFields bill={bill} setBill={setBill} />
+          <div style={sect}>Your message</div>
+          <textarea style={{ ...input, minHeight: 90, resize: "vertical" }} placeholder="Tell us about your group: exact dates, preferences, budget, special requests…" value={msg} onChange={(e) => setMsg(e.target.value)} />
+          <button disabled={!billValid(bill)} style={{ width: "100%", marginTop: 14, background: T.indigo, color: "#fff", border: "none", borderRadius: 12, padding: 14, fontWeight: 800, fontSize: 16, cursor: billValid(bill) ? "pointer" : "not-allowed", opacity: billValid(bill) ? 1 : 0.55 }}
+            onClick={() => onConfirm({ tour, date: dateFrom, dateFrom, dateTo: dateFrom, adults, children, infants, plan: "quote", months: 0, total: 0, deposit: 0, addons: chosenAddons, vehicle, vehicles: (Array.isArray(vehSel) ? vehSel : []), note: msg, contact: { ...bill, name: `${bill.firstName} ${bill.lastName}`.trim() } })}>
             Send quote request
           </button>
+          {!billValid(bill) && <div style={{ fontSize: 12.5, color: "#B3261E", marginTop: 8 }}>Please add your name, email and phone to send the request.</div>}
           <div style={{ marginTop: 10, fontSize: 12, opacity: 0.6, textAlign: "center" }}>An ATS advisor replies with a personalised price by email/WhatsApp.</div>
         </div>
       </Wrap>
@@ -7114,8 +7137,8 @@ function BookingModal({ tour, user, onClose, onConfirm, onAddToCart }) {
               <input type="date" min={minDate} value={dateFrom} onChange={(e) => setTripDate(e.target.value)} style={input} />
 
               <div style={sect}>Travelers</div>
-              <Counter label="Adults" sub={`${fmtXOF(tg.a)} each at current basis`} value={adults} set={setAdults} min={1} max={PAX_GROUP - children} />
-              <Counter label="Children (3–12)" sub={tg.c ? `${fmtXOF(tg.c)} each` : "child rate confirmed at booking"} value={children} set={setChildren} max={PAX_GROUP - adults} />
+              <Counter label="Adults" sub={`${fmtXOF(tg.a)} each at current basis`} value={adults} set={setAdults} min={1} max={PAX_MAX_BOOK - children} />
+              <Counter label="Children (3–12)" sub={tg.c ? `${fmtXOF(tg.c)} each` : "child rate confirmed at booking"} value={children} set={setChildren} max={PAX_MAX_BOOK - adults} />
               <Counter label="Infants (under 3)" sub="Free" value={infants} set={setInfants} />
               <div style={{ marginTop: 10, background: "#f8f8f8", border: "1px solid #ECECEC", borderRadius: 10, padding: "10px 13px", fontSize: 13.5, color: "rgba(0,0,0,.8)" }}>
                 Basis applied: <strong style={{ color: "#1A1A1A" }}>{tierLabel[tier]}</strong> — {tier !== "grp" ? "add travelers to unlock lower per-person rates." : "best per-person rate unlocked."}
