@@ -155,6 +155,23 @@ const DOTS=[[57.3,92.3],[59.2,92.3],[61.2,92.3],[57.3,90.3],[59.2,90.3],[61.2,90
 
 // ---------------- SHARED UI ----------------
 const btnCircle = { width: 30, height: 30, borderRadius: "50%", border: `1px solid ${T.line}`, background: "#fff", cursor: "pointer", fontWeight: 700, fontSize: 15, color: T.ink, display: "inline-flex", alignItems: "center", justifyContent: "center" };
+// Minimal traveler stepper row (Adults / Children) for the booking sidebar
+const stepBtn = { width: 36, height: 36, borderRadius: 10, border: `1.5px solid ${T.line}`, background: "#fff", color: T.ink, fontSize: 19, fontWeight: 600, lineHeight: 1, display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: "pointer" };
+function PaxRow({ label, note, value, dec, inc, canDec, canInc, last }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", padding: "11px 0", borderBottom: last ? "none" : `1px solid ${T.line}` }}>
+      <div style={{ minWidth: 0 }}>
+        <div style={{ fontWeight: 600, fontSize: 14.5, color: T.ink }}>{label}</div>
+        <div style={{ fontSize: 12, color: "#8A968E", marginTop: 1 }}>{note}</div>
+      </div>
+      <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10 }}>
+        <button onClick={dec} disabled={!canDec} aria-label={`Fewer ${label}`} style={{ ...stepBtn, opacity: canDec ? 1 : 0.35, cursor: canDec ? "pointer" : "not-allowed" }}>−</button>
+        <span style={{ minWidth: 18, textAlign: "center", fontWeight: 700, fontSize: 15.5 }}>{value}</span>
+        <button onClick={inc} disabled={!canInc} aria-label={`More ${label}`} style={{ ...stepBtn, opacity: canInc ? 1 : 0.35, cursor: canInc ? "pointer" : "not-allowed" }}>+</button>
+      </div>
+    </div>
+  );
+}
 const btnGold = { background: T.gold, color: T.ink, border: "none", borderRadius: 999, padding: "11px 22px", fontWeight: 700, fontSize: 15, cursor: "pointer" };
 const btnGreen = { ...btnGold, background: T.green, color: "#fff" };
 const input = { width: "100%", boxSizing: "border-box", padding: "11px 13px", borderRadius: 10, border: `1px solid ${T.line}`, background: "#fff", fontSize: 14.5, fontFamily: "inherit", color: T.ink };
@@ -1260,7 +1277,7 @@ export default function ATSPlatformPreview() {
         <>
           {page.name === "home" && <Home {...ctx} addBookingHome={confirmBooking} />}
           {page.name === "tours" && <ToursPage {...ctx} />}
-          {page.name === "tour" && <TourDetail {...ctx} tourId={page.id} initialDate={page.date} initialPax={page.pax} initialExtras={page.extras} initialVehicle={page.vehicle} initialVehicles={page.vehicles} editCartId={page.editCartId} />}
+          {page.name === "tour" && <TourDetail {...ctx} tourId={page.id} initialDate={page.date} initialPax={page.pax} initialChildren={page.children} initialExtras={page.extras} initialVehicle={page.vehicle} initialVehicles={page.vehicles} editCartId={page.editCartId} />}
           {page.name === "builder" && <TripBuilder {...ctx} />}
           {page.name === "flights" && <FlightsPage {...ctx} initial={page.fp} initialLegs={page.flegs} />}
           {page.name === "flightQuote" && <FlightQuotePage {...ctx} initial={page.fp} initialLegs={page.flegs} />}
@@ -3172,14 +3189,16 @@ const ZONE_COORDS = {
 };
 const tourCoords = (t) => ZONE_COORDS[t.zone] || [14.4974, -14.4524];
 
-function TourDetail({ tourId, go, setBooking, addToCart, removeFromCart, favorites = [], toggleFavorite, initialDate, initialPax, initialExtras, initialVehicle, initialVehicles, editCartId, user, setSignin, notify }) {
+function TourDetail({ tourId, go, setBooking, addToCart, removeFromCart, favorites = [], toggleFavorite, initialDate, initialPax, initialChildren, initialExtras, initialVehicle, initialVehicles, editCartId, user, setSignin, notify }) {
   const t = TOURS.find((x) => x.id === tourId) || TOURS[0];
   const transportIncluded = t.id === "city"; // Dakar City Tour: private vehicle, pick-up & drop-off included
   // Ma Tontine Voyage needs a free account; guests are sent to sign-in instead
   const startTontine = () => { if (!user) { setSignin && setSignin(true); notify && notify("Create a free account to book with Ma Tontine Voyage."); return; } openBooking("deposit"); };
   const [mlat, mlon] = tourCoords(t);
   const fav = favorites.includes(t.id);
-  const [pax, setPax] = useState(initialPax || 2);
+  const [adults, setAdults] = useState(initialPax || 2);
+  const [children, setChildren] = useState(typeof initialChildren === "number" ? initialChildren : 0);
+  const pax = adults + children;
   const [extras, setExtras] = useState(initialExtras || []);
   const _initVeh = Array.isArray(initialVehicles) && initialVehicles.length ? initialVehicles : (typeof initialVehicle === "number" && initialVehicle >= 0 ? [initialVehicle] : []);
   const [vehicle, setVehicle] = useState(_initVeh[0] ?? -1);   // 1st vehicle (-1 = no transport)
@@ -3196,15 +3215,15 @@ function TourDetail({ tourId, go, setBooking, addToCart, removeFromCart, favorit
   const [dateTo, setDateTo] = useState(initialDate || "");
   const setTripDate = (v) => { setDateFrom(v); setDateTo(v); }; // single date for trips
   // If the user arrives from the hero search, keep the date/travellers they already chose
-  useEffect(() => { if (initialDate) { setDateFrom(initialDate); setDateTo(initialDate); } if (initialPax) setPax(initialPax); }, [tourId, initialDate, initialPax]);
+  useEffect(() => { if (initialDate) { setDateFrom(initialDate); setDateTo(initialDate); } if (initialPax) setAdults(initialPax); if (typeof initialChildren === "number") setChildren(initialChildren); }, [tourId, initialDate, initialPax, initialChildren]);
   const daysUntil = dateFrom ? Math.ceil((new Date(dateFrom + "T00:00:00") - new Date(todayStr + "T00:00:00")) / 86400000) : null;
   const dateOk = daysUntil != null && daysUntil >= 0 && !!dateTo && dateTo >= dateFrom;
   const tontinePossible = dateOk && daysUntil >= 15;
-  const openBooking = (plan) => setBooking({ ...t, initialPlan: plan, groupQuote: plan === "quote" && !t.quote, initialPax: pax, initialExtras: extras, initialDateFrom: dateFrom, initialDateTo: dateTo, initialVehicle: vehicle, initialVehicles: vehSel });
+  const openBooking = (plan) => setBooking({ ...t, initialPlan: plan, groupQuote: plan === "quote" && !t.quote, initialPax: adults, initialChildren: children, initialExtras: extras, initialDateFrom: dateFrom, initialDateTo: dateTo, initialVehicle: vehicle, initialVehicles: vehSel });
   const addTourToCart = () => {
     if (!dateOk || t.quote) return;
     const chosen = t.addons.filter((a) => extras.includes(a.name)).map((a) => ({ name: a.name, per: a.per, price: a.price, amount: a.price ? (a.per === "person" ? a.price * pax : a.price) : null }));
-    addToCart && addToCart({ tour: t, date: dateFrom, dateFrom, dateTo: dateFrom, adults: pax, children: 0, infants: 0, plan: "full", months: 3, schedule: "", total: estTotal, lineTotal: estTotal, deposit: estTotal * 0.3, contact: {}, addons: chosen, vehicle, vehicles: vehSel, promoCode: "", payMethod: "stripe", _cartId: editCartId });
+    addToCart && addToCart({ tour: t, date: dateFrom, dateFrom, dateTo: dateFrom, adults, children, infants: 0, plan: "full", months: 3, schedule: "", total: estTotal, lineTotal: estTotal, deposit: estTotal * 0.3, contact: {}, addons: chosen, vehicle, vehicles: vehSel, promoCode: "", payMethod: "stripe", _cartId: editCartId });
     if (editCartId) go("cart");
   };
   const removeTourFromCart = () => { if (removeFromCart && editCartId) removeFromCart(editCartId); go("cart"); };
@@ -3219,12 +3238,13 @@ function TourDetail({ tourId, go, setBooking, addToCart, removeFromCart, favorit
   // Per-person price by group size (auto): 1–2 → p12, 3–4 → p34, 5+ → group rate
   const tier = tierOf(pax);
   const ppUnit = t.quote ? null : (t.grid[tier]?.a ?? fromPrice(t));
+  const childUnit = t.grid[tier] ? (t.grid[tier].c ?? t.grid[tier].a) : null; // child per-person price (falls back to adult)
   const rates = t.zone ? RATES[t.zone] : null;
   const transportCost = rates ? vehSel.reduce((sum, i) => sum + (rates[i] || 0), 0) : 0;
   const paxMax = vehSel.length ? vehSel.reduce((sum, i) => sum + VEHICLES[i].cap, 0) : null; // chosen vehicles cap the traveler count (additive)
   const extrasTotal = t.addons.filter((a) => extras.includes(a.name) && a.price).reduce((s, a) => s + (a.per === "person" ? a.price * pax : a.price), 0);
-  const estTotal = ppUnit != null ? ppUnit * pax + extrasTotal + transportCost : null;
-  useEffect(() => { setPax((x) => (paxMax != null && x > paxMax ? paxMax : x)); }, [paxMax]); // keep travelers within the chosen vehicles' total seats
+  const estTotal = ppUnit != null ? adults * ppUnit + children * (childUnit ?? ppUnit) + extrasTotal + transportCost : null;
+  useEffect(() => { if (paxMax != null && adults + children > paxMax) setAdults(Math.max(1, paxMax - children)); }, [paxMax]); // keep travelers within chosen vehicles' seats
   const paxCeil = Math.min(PAX_MAX_SELECT, paxMax != null ? paxMax : PAX_MAX_SELECT); // up to 50 (or chosen vehicles' seats)
   const isGroup = pax >= PAX_GROUP; // at 10 the order is on request (agent-priced)
   const toggleExtra = (name) => setExtras((x) => x.includes(name) ? x.filter((n) => n !== name) : [...x, name]);
@@ -3399,14 +3419,11 @@ function TourDetail({ tourId, go, setBooking, addToCart, removeFromCart, favorit
                 <div style={{ fontSize: 12.5, opacity: 0.6 }}>{tierLabel[tier]}{CORP_DISCOUNT > 0 ? ` · corporate rate −${CORP_DISCOUNT}% (paid in full)` : ""}</div>
                 {tier !== "grp" && <div style={{ fontSize: 12, color: T.green, fontWeight: 600, marginTop: 3 }}>from {fmtXOF(fromPrice(t))} / person at 5+ pax</div>}
 
-                <div style={{ marginTop: 14 }}>
-                  <label style={label}>Travelers</label>
-                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                    <button onClick={() => setPax(Math.max(1, pax - 1))} style={btnCircle} aria-label="Fewer">−</button>
-                    <span style={{ fontWeight: 700, minWidth: 20, textAlign: "center" }}>{pax}</span>
-                    <button onClick={() => setPax(Math.min(paxCeil, pax + 1))} disabled={pax >= paxCeil} style={{ ...btnCircle, opacity: pax >= paxCeil ? 0.4 : 1, cursor: pax >= paxCeil ? "not-allowed" : "pointer" }} aria-label="More">+</button>
-                  </div>
-                  <div style={{ fontSize: 11.5, opacity: 0.6, marginTop: 4 }}>{isGroup ? `Group of ${pax} — price on request (custom-quoted by our team).` : (paxMax != null ? `Limited to ${paxMax} seats for the chosen vehicle.` : "Price adjusts automatically with group size.")}</div>
+                <div style={{ marginTop: 18 }}>
+                  <div style={{ fontSize: 11.5, fontWeight: 700, letterSpacing: ".07em", textTransform: "uppercase", color: "#8A968E", marginBottom: 2 }}>Travelers</div>
+                  <PaxRow label="Adults" note={`${fmtXOF(CORP_DISCOUNT > 0 ? corpPrice(ppUnit) : ppUnit)} each`} value={adults} dec={() => setAdults(Math.max(1, adults - 1))} inc={() => setAdults(adults + 1)} canDec={adults > 1} canInc={pax < paxCeil} />
+                  <PaxRow label="Children" note={childUnit != null ? `${fmtXOF(childUnit)} each · ages 3–12` : "Rate at booking · ages 3–12"} value={children} dec={() => setChildren(Math.max(0, children - 1))} inc={() => setChildren(children + 1)} canDec={children > 0} canInc={pax < paxCeil} last />
+                  {isGroup && <div style={{ fontSize: 12, color: "#A9781A", marginTop: 8, lineHeight: 1.5 }}>Group of {pax} — price on request, custom-quoted by our team.</div>}
                 </div>
 
                 <div style={{ marginTop: 12 }}>
@@ -3453,16 +3470,14 @@ function TourDetail({ tourId, go, setBooking, addToCart, removeFromCart, favorit
                   </div>
                 ) : (
                 <>
-                <div style={{ borderTop: `1px solid ${T.line}`, marginTop: 14, paddingTop: 12, display: "flex", fontSize: 15 }}>
-                  <span style={{ opacity: 0.7 }}>Estimated total {CORP_DISCOUNT > 0 ? "(paid in full)" : ""}</span>
-                  <strong style={{ marginLeft: "auto" }}>
-                    {CORP_DISCOUNT > 0 && <span style={{ fontWeight: 500, opacity: 0.45, textDecoration: "line-through", marginRight: 6 }}>{fmtXOF(estTotal)}</span>}
-                    <span style={{ color: CORP_DISCOUNT > 0 ? T.green : "inherit" }}>{fmtXOF(CORP_DISCOUNT > 0 ? corpPrice(estTotal) : estTotal)}</span>
+                <div style={{ borderTop: `1px solid ${T.line}`, marginTop: 16, paddingTop: 14, display: "flex", alignItems: "baseline" }}>
+                  <span style={{ fontSize: 13.5, color: "#8A968E" }}>Total {CORP_DISCOUNT > 0 ? "(paid in full)" : ""}</span>
+                  <strong style={{ marginLeft: "auto", fontSize: 19, fontWeight: 800 }}>
+                    {CORP_DISCOUNT > 0 && <span style={{ fontWeight: 500, opacity: 0.4, textDecoration: "line-through", marginRight: 6, fontSize: 14 }}>{fmtXOF(estTotal)}</span>}
+                    <span style={{ color: CORP_DISCOUNT > 0 ? T.green : T.ink }}>{fmtXOF(CORP_DISCOUNT > 0 ? corpPrice(estTotal) : estTotal)}</span>
                   </strong>
                 </div>
-                <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 10, padding: "10px 12px", fontSize: 12.5, lineHeight: 1.6, marginTop: 10, color: "rgba(0,0,0,.8)" }}>
-                  <strong style={{ color: "#1A1A1A" }}>Ma Tontine Voyage:</strong> reserve with {fmtXOF(estTotal * 0.3)} (30%), balance in instalments before departure{CORP_DISCOUNT > 0 ? " (corporate rate applies to full payment)" : ""}.
-                </div>
+                <div style={{ fontSize: 12.5, color: "#8A968E", marginTop: 8, lineHeight: 1.55 }}>Or reserve from <strong style={{ color: T.ink, fontWeight: 700 }}>{fmtXOF(estTotal * 0.3)}</strong> (30%) and pay the balance in instalments.</div>
                 </>
                 )}
               </>
@@ -3484,7 +3499,7 @@ function TourDetail({ tourId, go, setBooking, addToCart, removeFromCart, favorit
                     <button disabled={!dateOk} style={{ flex: 1, background: T.green, color: "#fff", border: "none", borderRadius: 12, padding: "12px 8px", fontWeight: 800, fontSize: 14.5, cursor: dateOk ? "pointer" : "not-allowed", opacity: dateOk ? 1 : 0.5, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 7, fontFamily: "inherit" }} onClick={() => dateOk && addTourToCart()}><ShoppingBag size={16} strokeWidth={2.2} /> Add to cart</button>
                     <button disabled={!dateOk} style={{ ...btnGold, flex: 1, marginTop: 0, borderRadius: 12, padding: "12px 8px", fontSize: 14.5, opacity: dateOk ? 1 : 0.5, cursor: dateOk ? "pointer" : "not-allowed" }} onClick={() => dateOk && openBooking("full")}>Pay in full</button>
                   </div>
-                  <button disabled={!tontinePossible} style={{ width: "100%", marginTop: 8, background: "#1A1A1A", color: "#fff", border: "none", borderRadius: 12, padding: "12px 14px", fontWeight: 800, cursor: tontinePossible ? "pointer" : "not-allowed", fontSize: 15, opacity: tontinePossible ? 1 : 0.5 }} onClick={() => tontinePossible && startTontine()}>Pay in instalments</button>
+                  <button disabled={!tontinePossible} style={{ width: "100%", marginTop: 8, background: "none", color: T.ink, border: `1.5px solid ${T.line}`, borderRadius: 12, padding: "11px 14px", fontWeight: 700, cursor: tontinePossible ? "pointer" : "not-allowed", fontSize: 14.5, opacity: tontinePossible ? 1 : 0.5 }} onClick={() => tontinePossible && startTontine()}>Pay in instalments</button>
                 </>)}
                 {!dateOk && <div style={{ fontSize: 12.5, color: "#8A968E", marginTop: 8, textAlign: "center" }}>Choose a travel date to book.</div>}
               </>
@@ -3523,9 +3538,9 @@ function TourDetail({ tourId, go, setBooking, addToCart, removeFromCart, favorit
                 <div style={{ fontSize: 11, opacity: 0.6 }}>{isGroup ? `${pax} pax · group` : `${fmtXOF(ppUnit)} /pers · ${pax} pax`}</div>
               </div>
               <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6 }}>
-                <button onClick={() => setPax(Math.max(1, pax - 1))} style={btnCircle} aria-label="Fewer">−</button>
+                <button onClick={() => setAdults(Math.max(1, adults - 1))} style={btnCircle} aria-label="Fewer">−</button>
                 <span style={{ fontWeight: 700, minWidth: 14, textAlign: "center" }}>{pax}</span>
-                <button onClick={() => setPax(Math.min(paxCeil, pax + 1))} disabled={pax >= paxCeil} style={{ ...btnCircle, opacity: pax >= paxCeil ? 0.4 : 1, cursor: pax >= paxCeil ? "not-allowed" : "pointer" }} aria-label="More">+</button>
+                <button onClick={() => setAdults(adults + 1)} disabled={pax >= paxCeil} style={{ ...btnCircle, opacity: pax >= paxCeil ? 0.4 : 1, cursor: pax >= paxCeil ? "not-allowed" : "pointer" }} aria-label="More">+</button>
                 <div style={{ width: 138, minWidth: 0, flexShrink: 1 }}>
                   <RangeDate from={dateFrom} to={dateFrom} onChange={(f) => setTripDate(f)} triggerStyle={{ ...input, padding: "9px 10px", fontSize: 13 }} wide single minDate={minDate} align="right" up />
                 </div>
@@ -6716,7 +6731,7 @@ function CartPage({ cart = [], removeFromCart, clearCart, payCart, payCartTontin
                 <div style={{ textAlign: "right", flexShrink: 0 }}>
                   <div style={{ fontWeight: 800, fontSize: 15 }}>{fmtXOF(it.lineTotal != null ? it.lineTotal : it.total)}</div>
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8, marginTop: 10 }}>
-                    <button onClick={(e) => { e.stopPropagation(); go("tour", { id: it.tour.id, date: it.dateFrom, pax: (it.adults || 0) + (it.children || 0) || 1, extras: (it.addons || []).map((a) => a.name), vehicle: typeof it.vehicle === "number" ? it.vehicle : -1, vehicles: Array.isArray(it.vehicles) ? it.vehicles : (typeof it.vehicle === "number" && it.vehicle >= 0 ? [it.vehicle] : []), editCartId: it._cartId }); }} aria-label="Edit" style={{ background: "#fff", border: `1.5px solid ${T.green}`, cursor: "pointer", color: T.green, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 12.5, fontWeight: 700, fontFamily: "inherit", padding: "7px 14px", borderRadius: 9 }}><Pencil size={14} /> Edit</button>
+                    <button onClick={(e) => { e.stopPropagation(); go("tour", { id: it.tour.id, date: it.dateFrom, pax: it.adults || 1, children: it.children || 0, extras: (it.addons || []).map((a) => a.name), vehicle: typeof it.vehicle === "number" ? it.vehicle : -1, vehicles: Array.isArray(it.vehicles) ? it.vehicles : (typeof it.vehicle === "number" && it.vehicle >= 0 ? [it.vehicle] : []), editCartId: it._cartId }); }} aria-label="Edit" style={{ background: "#fff", border: `1.5px solid ${T.green}`, cursor: "pointer", color: T.green, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 12.5, fontWeight: 700, fontFamily: "inherit", padding: "7px 14px", borderRadius: 9 }}><Pencil size={14} /> Edit</button>
                     <button onClick={(e) => { e.stopPropagation(); removeFromCart(it._cartId); }} aria-label="Remove" style={{ background: "#fff", border: "1.5px solid #E7C4C0", cursor: "pointer", color: "#B3261E", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 12.5, fontWeight: 700, fontFamily: "inherit", padding: "7px 14px", borderRadius: 9 }}><Trash2 size={14} /> Remove</button>
                   </div>
                 </div>
