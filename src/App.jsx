@@ -2280,7 +2280,7 @@ function TourSearch({ go }) {
   const [expSel, setExpSel] = useState(null); // selected tour id
   const [expOpen, setExpOpen] = useState(false);
   const [date, setDate] = useState("");
-  const minDate = new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10); // same rule as the tour detail page
+  const minDate = new Date(Date.now() + 5 * 86400000).toISOString().slice(0, 10); // earliest booking = J+5
   const [trav, setTrav] = useState({ adults: 2, children: 0 });
   const [travOpen, setTravOpen] = useState(false);
   const total = trav.adults + trav.children;
@@ -3149,7 +3149,13 @@ function ToursPage({ go, setBooking, filters, setFilters, favorites, toggleFavor
 
 // ---------------- TOUR DETAIL ----------------
 function PriceGrid({ t }) {
-  const rows = [["p12", t.grid.p12], ["p34", t.grid.p34], ["grp", t.grid.grp]];
+  const g = t.grid;
+  const same = (x, y) => x && y && x.a === y.a && x.c === y.c;
+  // When the 3–4 and 5+ tiers share the same price (e.g. Dakar City Tour: 1–2 / 3–9),
+  // collapse them into a single "3–9 pax" row.
+  const rows = same(g.p34, g.grp)
+    ? [["p12", g.p12, "Private 1–2 pax"], ["mid", g.p34, "3–9 pax"]]
+    : [["p12", g.p12, tierLabel.p12], ["p34", g.p34, tierLabel.p34], ["grp", g.grp, tierLabel.grp]];
   return (
     <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
       <table style={{ width: "100%", minWidth: 320, borderCollapse: "collapse", fontSize: "clamp(12.5px, 3.2vw, 14.5px)" }}>
@@ -3161,9 +3167,9 @@ function PriceGrid({ t }) {
           </tr>
         </thead>
         <tbody>
-          {rows.map(([k, v]) => (
+          {rows.map(([k, v, label]) => (
             <tr key={k}>
-              <td style={{ padding: "9px 6px", borderBottom: `1px solid ${T.line}`, fontWeight: 600 }}>{tierLabel[k]}</td>
+              <td style={{ padding: "9px 6px", borderBottom: `1px solid ${T.line}`, fontWeight: 600 }}>{label}</td>
               <td style={{ padding: "9px 6px", borderBottom: `1px solid ${T.line}`, whiteSpace: "nowrap" }}>{v.a ? fmtXOF(v.a) : "On request"}</td>
               <td style={{ padding: "9px 6px", borderBottom: `1px solid ${T.line}`, whiteSpace: "nowrap" }}>{v.c ? fmtXOF(v.c) : v.a ? "Adult rate*" : "On request"}</td>
             </tr>
@@ -3210,7 +3216,7 @@ function TourDetail({ tourId, go, setBooking, addToCart, removeFromCart, favorit
   const flashTimer = useRef();
   const showFlash = (m) => { setFlash(m); clearTimeout(flashTimer.current); flashTimer.current = setTimeout(() => setFlash(""), 2600); };
   const todayStr = new Date().toISOString().slice(0, 10);
-  const minDate = new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10); // earliest = day after tomorrow
+  const minDate = new Date(Date.now() + 5 * 86400000).toISOString().slice(0, 10); // earliest booking = J+5
   const [dateFrom, setDateFrom] = useState(initialDate || "");
   const [dateTo, setDateTo] = useState(initialDate || "");
   const setTripDate = (v) => { setDateFrom(v); setDateTo(v); }; // single date for trips
@@ -6804,7 +6810,7 @@ function CartPage({ cart = [], removeFromCart, clearCart, payCart, payCartTontin
 
 function BookingModal({ tour, user, onClose, onConfirm, onAddToCart }) {
   const todayStr = new Date().toISOString().slice(0, 10);
-  const minDate = new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10); // earliest = day after tomorrow
+  const minDate = new Date(Date.now() + 5 * 86400000).toISOString().slice(0, 10); // earliest booking = J+5
   const [dateFrom, setDateFrom] = useState(tour.initialDateFrom || tour.initialDate || "");
   const [dateTo, setDateTo] = useState(tour.initialDateTo || tour.initialDateFrom || tour.initialDate || "");
   const setTripDate = (v) => { setDateFrom(v); setDateTo(v); }; // single date for trips
