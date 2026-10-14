@@ -100,6 +100,8 @@ const VEHICLES = [
 ];
 const RATES = {"airport": [25000, 35000, 200000, 40000, 55000, 250000, 90000, 130000, 150000, 65000, 90000, 180000], "dakar": [85000, 100000, 250000, 95000, 150000, 350000, 150000, 180000, 250000, 115000, 170000, 325000], "bandia": [85000, 100000, 250000, 95000, 150000, 350000, 150000, 180000, 250000, 115000, 170000, 325000], "joal": [110000, 125000, 315000, 120000, 190000, 445000, 190000, 230000, 315000, 150000, 215000, 410000], "ndangane": [150000, 180000, 445000, 170000, 265000, 620000, 265000, 320000, 445000, 210000, 300000, 580000], "palmarin": [145000, 170000, 430000, 165000, 260000, 605000, 260000, 310000, 430000, 200000, 290000, 560000], "toubacouta": [235000, 280000, 695000, 265000, 415000, 970000, 415000, 500000, 695000, 325000, 470000, 905000], "lompoul": [115000, 135000, 335000, 125000, 200000, 465000, 200000, 240000, 335000, 155000, 230000, 435000], "stlouis": [165000, 195000, 490000, 185000, 295000, 690000, 295000, 355000, 490000, 230000, 330000, 635000], "kedougou": [375000, 440000, 1095000, 415000, 660000, 1535000, 660000, 790000, 1095000, 515000, 740000, 1425000], "ziguinchor": [255000, 300000, 750000, 285000, 450000, 1050000, 450000, 540000, 750000, 350000, 505000, 975000], "capskirring": [290000, 340000, 845000, 320000, 510000, 1185000, 510000, 610000, 845000, 395000, 570000, 1100000]};
 const tierOf = (pax) => (pax <= 2 ? "p12" : pax <= 4 ? "p34" : "grp");
+const PAX_GROUP = 10;   // 10+ travelers = group booking, custom-priced on request
+const PAX_MAX_BOOK = 9; // max directly bookable/payable travelers across all packages
 const tierLabel = { p12: "Private 1–2 pax", p34: "Private 3–4 pax", grp: "Group (5+ pax)" };
 const fromPrice = (t) => t.grid.grp.a;
 
@@ -3216,6 +3218,8 @@ function TourDetail({ tourId, go, setBooking, addToCart, removeFromCart, favorit
   const extrasTotal = t.addons.filter((a) => extras.includes(a.name) && a.price).reduce((s, a) => s + (a.per === "person" ? a.price * pax : a.price), 0);
   const estTotal = ppUnit != null ? ppUnit * pax + extrasTotal + transportCost : null;
   useEffect(() => { setPax((x) => (paxMax != null && x > paxMax ? paxMax : x)); }, [paxMax]); // keep travelers within the chosen vehicles' total seats
+  const paxCeil = Math.min(PAX_GROUP, paxMax != null ? paxMax : PAX_GROUP); // hard ceiling: never above 10 (group)
+  const isGroup = pax >= PAX_GROUP; // at 10 the order is on request (agent-priced)
   const toggleExtra = (name) => setExtras((x) => x.includes(name) ? x.filter((n) => n !== name) : [...x, name]);
 
   // Similar tours for cross-sell (same tag weighted highest, then same pole/zone)
@@ -3393,9 +3397,9 @@ function TourDetail({ tourId, go, setBooking, addToCart, removeFromCart, favorit
                   <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                     <button onClick={() => setPax(Math.max(1, pax - 1))} style={btnCircle} aria-label="Fewer">−</button>
                     <span style={{ fontWeight: 700, minWidth: 20, textAlign: "center" }}>{pax}</span>
-                    <button onClick={() => setPax(paxMax != null ? Math.min(paxMax, pax + 1) : pax + 1)} disabled={paxMax != null && pax >= paxMax} style={{ ...btnCircle, opacity: paxMax != null && pax >= paxMax ? 0.4 : 1, cursor: paxMax != null && pax >= paxMax ? "not-allowed" : "pointer" }} aria-label="More">+</button>
+                    <button onClick={() => setPax(Math.min(paxCeil, pax + 1))} disabled={pax >= paxCeil} style={{ ...btnCircle, opacity: pax >= paxCeil ? 0.4 : 1, cursor: pax >= paxCeil ? "not-allowed" : "pointer" }} aria-label="More">+</button>
                   </div>
-                  <div style={{ fontSize: 11.5, opacity: 0.6, marginTop: 4 }}>{paxMax != null ? `Limited to ${paxMax} seats for the chosen vehicle.` : "Price adjusts automatically with group size."}</div>
+                  <div style={{ fontSize: 11.5, opacity: 0.6, marginTop: 4 }}>{isGroup ? "Group of 10 — price on request (custom-quoted by our team)." : (paxMax != null ? `Limited to ${paxMax} seats for the chosen vehicle.` : "Price adjusts automatically with group size.")}</div>
                 </div>
 
                 <div style={{ marginTop: 12 }}>
@@ -3436,6 +3440,12 @@ function TourDetail({ tourId, go, setBooking, addToCart, removeFromCart, favorit
                   </div>
                 )}
 
+                {isGroup ? (
+                  <div style={{ borderTop: `1px solid ${T.line}`, marginTop: 14, paddingTop: 12, background: "#FFF8E6", border: `1px solid #F1E2A6`, borderRadius: 10, padding: "12px 14px", fontSize: 13, lineHeight: 1.6, color: "rgba(0,0,0,.8)" }}>
+                    <strong style={{ color: "#1A1A1A" }}>Group of {pax} — price on request.</strong> Bookings of 10+ travelers are custom-priced by our team. Send a request and we'll get back to you with a tailored quote.
+                  </div>
+                ) : (
+                <>
                 <div style={{ borderTop: `1px solid ${T.line}`, marginTop: 14, paddingTop: 12, display: "flex", fontSize: 15 }}>
                   <span style={{ opacity: 0.7 }}>Estimated total {CORP_DISCOUNT > 0 ? "(paid in full)" : ""}</span>
                   <strong style={{ marginLeft: "auto" }}>
@@ -3446,11 +3456,15 @@ function TourDetail({ tourId, go, setBooking, addToCart, removeFromCart, favorit
                 <div style={{ background: "#fff", border: `1px solid ${T.line}`, borderRadius: 10, padding: "10px 12px", fontSize: 12.5, lineHeight: 1.6, marginTop: 10, color: "rgba(0,0,0,.8)" }}>
                   <strong style={{ color: "#1A1A1A" }}>Ma Tontine Voyage:</strong> reserve with {fmtXOF(estTotal * 0.3)} (30%), balance in instalments before departure{CORP_DISCOUNT > 0 ? " (corporate rate applies to full payment)" : ""}.
                 </div>
+                </>
+                )}
               </>
             )}
 
             {t.quote ? (
               <button style={{ ...btnGold, width: "100%", marginTop: 14, borderRadius: 12, background: T.indigo, color: "#fff" }} onClick={() => openBooking("quote")}>Request a quote</button>
+            ) : isGroup ? (
+              <button style={{ ...btnGold, width: "100%", marginTop: 14, borderRadius: 12, background: T.indigo, color: "#fff" }} onClick={() => openBooking("quote")}>Request a group quote</button>
             ) : (
               <>
                 {editCartId ? (
@@ -3498,19 +3512,21 @@ function TourDetail({ tourId, go, setBooking, addToCart, removeFromCart, favorit
             {tier !== "grp" && <div style={{ fontSize: 11, color: T.green, fontWeight: 600, marginBottom: 6, textAlign: "center" }}>from {fmtXOF(fromPrice(t))} / person at 5+ pax</div>}
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 7 }}>
               <div style={{ minWidth: 0, flexShrink: 0 }}>
-                <div style={{ fontWeight: 800, fontSize: 16, color: "#1A1A1A" }} className="disp">{fmtXOF(estTotal)}</div>
-                <div style={{ fontSize: 11, opacity: 0.6 }}>{fmtXOF(ppUnit)} /pers · {pax} pax</div>
+                <div style={{ fontWeight: 800, fontSize: 16, color: "#1A1A1A" }} className="disp">{isGroup ? "On request" : fmtXOF(estTotal)}</div>
+                <div style={{ fontSize: 11, opacity: 0.6 }}>{isGroup ? `${pax} pax · group` : `${fmtXOF(ppUnit)} /pers · ${pax} pax`}</div>
               </div>
               <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6 }}>
                 <button onClick={() => setPax(Math.max(1, pax - 1))} style={btnCircle} aria-label="Fewer">−</button>
                 <span style={{ fontWeight: 700, minWidth: 14, textAlign: "center" }}>{pax}</span>
-                <button onClick={() => setPax(paxMax != null ? Math.min(paxMax, pax + 1) : pax + 1)} disabled={paxMax != null && pax >= paxMax} style={{ ...btnCircle, opacity: paxMax != null && pax >= paxMax ? 0.4 : 1, cursor: paxMax != null && pax >= paxMax ? "not-allowed" : "pointer" }} aria-label="More">+</button>
+                <button onClick={() => setPax(Math.min(paxCeil, pax + 1))} disabled={pax >= paxCeil} style={{ ...btnCircle, opacity: pax >= paxCeil ? 0.4 : 1, cursor: pax >= paxCeil ? "not-allowed" : "pointer" }} aria-label="More">+</button>
                 <div style={{ width: 138, minWidth: 0, flexShrink: 1 }}>
                   <RangeDate from={dateFrom} to={dateFrom} onChange={(f) => setTripDate(f)} triggerStyle={{ ...input, padding: "9px 10px", fontSize: 13 }} wide single minDate={minDate} align="right" up />
                 </div>
               </div>
             </div>
-            {editCartId ? (
+            {isGroup ? (
+              <button style={{ ...btnGold, width: "100%", borderRadius: 12, background: T.indigo, color: "#fff" }} onClick={() => openBooking("quote")}>Request a group quote</button>
+            ) : editCartId ? (
               <div style={{ display: "flex", gap: 8 }}>
                 <button style={{ flex: 1, background: T.green, color: "#fff", border: "none", borderRadius: 12, padding: "11px 8px", fontWeight: 800, fontSize: 14, cursor: "pointer", opacity: dateOk ? 1 : 0.5, fontFamily: "inherit" }} onClick={() => dateOk ? addTourToCart() : showFlash("Choose a travel date above.")}>Update cart</button>
                 <button style={{ flex: 1, background: "#fff", color: "#B3261E", border: "1.5px solid #E7C4C0", borderRadius: 12, padding: "11px 8px", fontWeight: 800, fontSize: 14, cursor: "pointer", fontFamily: "inherit" }} onClick={removeTourFromCart}>Remove</button>
@@ -6824,6 +6840,7 @@ function BookingModal({ tour, user, onClose, onConfirm, onAddToCart }) {
 
   const pax = adults + children;
   const seats = pax + infants;
+  const bIsGroup = pax >= PAX_GROUP; // 10+ travelers = group, on request (no direct payment)
   const tier = tierOf(pax);
   const tg = tour.grid[tier];
   const rates = tour.zone ? RATES[tour.zone] : null;
@@ -6865,13 +6882,13 @@ function BookingModal({ tour, user, onClose, onConfirm, onAddToCart }) {
   const discLabel = corporate ? "Corporate rate" : (promoValid ? `Promo ${promo.code}` : "");
   const payTotal = calc ? Math.round(calc.total * (1 - discPct / 100)) : 0;
 
-  const Counter = ({ label: l, sub, value, set, min = 0 }) => (
+  const Counter = ({ label: l, sub, value, set, min = 0, max = Infinity }) => (
     <div style={{ display: "flex", alignItems: "center", padding: "10px 0", borderBottom: `1px solid ${T.line}` }}>
       <div><div style={{ fontWeight: 600, fontSize: 14.5 }}>{l}</div><div style={{ fontSize: 12, opacity: 0.6 }}>{sub}</div></div>
       <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 }}>
         <button onClick={() => set(Math.max(min, value - 1))} aria-label={`Fewer ${l}`} style={btnCircle}>−</button>
         <span style={{ minWidth: 18, textAlign: "center", fontWeight: 700 }}>{value}</span>
-        <button onClick={() => set(value + 1)} aria-label={`More ${l}`} style={btnCircle}>+</button>
+        <button onClick={() => set(Math.min(max, value + 1))} disabled={value >= max} aria-label={`More ${l}`} style={{ ...btnCircle, opacity: value >= max ? 0.4 : 1, cursor: value >= max ? "not-allowed" : "pointer" }}>+</button>
       </div>
     </div>
   );
@@ -7048,20 +7065,29 @@ function BookingModal({ tour, user, onClose, onConfirm, onAddToCart }) {
               )}
             </div>
 
-            {!IS_CORPORATE && !tour.quote && plan === "full" && (
+            {!IS_CORPORATE && !tour.quote && plan === "full" && !bIsGroup && (
               <button onClick={() => { if (!dateFrom) { setMsg("Add your travel date first."); return; } onAddToCart && onAddToCart({ tour, date: dateFrom, dateFrom, dateTo: dateFrom, adults, children, infants, plan: "full", months, schedule: "", total: calc.total, lineTotal: payTotal, deposit: calc.deposit, contact: { ...bill, name: `${bill.firstName} ${bill.lastName}`.trim() }, addons: chosenAddons, vehicle, vehicles: vehSel, promoCode: promoValid ? promo.code : "", payMethod, _cartId: tour._cartId }); }}
                 disabled={!dateFrom}
                 style={{ width: "100%", marginTop: 14, background: T.green, color: "#fff", border: "none", borderRadius: 12, padding: 13, fontWeight: 800, fontSize: 15, cursor: dateFrom ? "pointer" : "not-allowed", opacity: dateFrom ? 1 : 0.55, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
                 <ShoppingBag size={17} strokeWidth={2.2} /> {tour._cartId ? "Update cart" : "Add to cart"} — {fmtXOF(payTotal)}
               </button>
             )}
+            {bIsGroup ? (
+              <div style={{ marginTop: 14, background: "#FFF8E6", border: "1px solid #F1E2A6", borderRadius: 12, padding: "14px 16px", fontSize: 13.5, lineHeight: 1.6, color: "rgba(0,0,0,.82)" }}>
+                <div style={{ fontWeight: 800, color: "#1A1A1A", marginBottom: 4 }}>Group of {pax} — price on request</div>
+                Bookings of 10+ travelers are custom-priced by our team. Leave your details and we'll send a tailored quote.
+                <button disabled={!billValid(bill)} onClick={() => onConfirm({ tour, date: dateFrom, dateFrom, dateTo: dateFrom, adults, children, infants, plan: "quote", months: 0, schedule: "", total: 0, deposit: 0, contact: { ...bill, name: `${bill.firstName} ${bill.lastName}`.trim() }, addons: chosenAddons, vehicle, vehicles: vehSel })}
+                  style={{ ...btnGold, width: "100%", marginTop: 12, borderRadius: 10, opacity: billValid(bill) ? 1 : 0.55, cursor: billValid(bill) ? "pointer" : "not-allowed" }}>Request a group quote</button>
+              </div>
+            ) : (<>
             <TermsCheck checked={accepted} onChange={setAccepted} />
             <button style={{ width: "100%", marginTop: 12, background: IS_CORPORATE ? T.indigo : T.gold, color: IS_CORPORATE ? "#fff" : T.ink, border: "none", borderRadius: 12, padding: 14, fontWeight: 800, fontSize: 16, cursor: (billValid(bill) && dateFrom && accepted) ? "pointer" : "not-allowed", opacity: (billValid(bill) && dateFrom && accepted) ? 1 : 0.55 }}
               disabled={!billValid(bill) || !dateFrom || !accepted}
               onClick={() => onConfirm({ tour, date: dateFrom, dateFrom, dateTo: dateFrom, adults, children, infants, plan: IS_CORPORATE ? "full" : plan, months, schedule: plan === "deposit" ? selectedOpt.label : "", total: calc.total, deposit: calc.deposit, contact: { ...bill, name: `${bill.firstName} ${bill.lastName}`.trim() }, addons: chosenAddons, vehicle, vehicles: vehSel, promoCode: promoValid ? promo.code : "", payMethod })}>
               {IS_CORPORATE ? `Book now — pay later (${fmtXOF(payTotal)})` : plan === "deposit" ? `Reserve with ${fmtXOF(calc.deposit)} deposit` : `Pay in full — ${fmtXOF(payTotal)}`}
             </button>
-            {(() => {
+            </>)}
+            {!bIsGroup && (() => {
               const missing = [];
               if (!dateFrom) missing.push("travel date");
               if (!bill.firstName) missing.push("first name");
@@ -7088,8 +7114,8 @@ function BookingModal({ tour, user, onClose, onConfirm, onAddToCart }) {
               <input type="date" min={minDate} value={dateFrom} onChange={(e) => setTripDate(e.target.value)} style={input} />
 
               <div style={sect}>Travelers</div>
-              <Counter label="Adults" sub={`${fmtXOF(tg.a)} each at current basis`} value={adults} set={setAdults} min={1} />
-              <Counter label="Children (3–12)" sub={tg.c ? `${fmtXOF(tg.c)} each` : "child rate confirmed at booking"} value={children} set={setChildren} />
+              <Counter label="Adults" sub={`${fmtXOF(tg.a)} each at current basis`} value={adults} set={setAdults} min={1} max={PAX_GROUP - children} />
+              <Counter label="Children (3–12)" sub={tg.c ? `${fmtXOF(tg.c)} each` : "child rate confirmed at booking"} value={children} set={setChildren} max={PAX_GROUP - adults} />
               <Counter label="Infants (under 3)" sub="Free" value={infants} set={setInfants} />
               <div style={{ marginTop: 10, background: "#f8f8f8", border: "1px solid #ECECEC", borderRadius: 10, padding: "10px 13px", fontSize: 13.5, color: "rgba(0,0,0,.8)" }}>
                 Basis applied: <strong style={{ color: "#1A1A1A" }}>{tierLabel[tier]}</strong> — {tier !== "grp" ? "add travelers to unlock lower per-person rates." : "best per-person rate unlocked."}
