@@ -3196,7 +3196,7 @@ function TourDetail({ tourId, go, setBooking, addToCart, removeFromCart, favorit
   const startTontine = () => { if (!user) { setSignin && setSignin(true); notify && notify("Create a free account to book with Ma Tontine Voyage."); return; } openBooking("deposit"); };
   const [mlat, mlon] = tourCoords(t);
   const fav = favorites.includes(t.id);
-  const [adults, setAdults] = useState(initialPax || 2);
+  const [adults, setAdults] = useState(initialPax || 1);
   const [children, setChildren] = useState(typeof initialChildren === "number" ? initialChildren : 0);
   const pax = adults + children;
   const [extras, setExtras] = useState(initialExtras || []);
@@ -6808,7 +6808,7 @@ function BookingModal({ tour, user, onClose, onConfirm, onAddToCart }) {
   const [dateTo, setDateTo] = useState(tour.initialDateTo || tour.initialDateFrom || tour.initialDate || "");
   const setTripDate = (v) => { setDateFrom(v); setDateTo(v); }; // single date for trips
   const date = dateFrom; // start date drives availability / scheduling
-  const [adults, setAdults] = useState(tour.initialPax || 2);
+  const [adults, setAdults] = useState(tour.initialPax || 1);
   const [children, setChildren] = useState(0); // 3–12
   const [infants, setInfants] = useState(0);  // under 3, free
   const [addons, setAddons] = useState(tour.initialExtras || []);
