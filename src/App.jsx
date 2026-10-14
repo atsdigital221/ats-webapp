@@ -108,6 +108,8 @@ const PAX_MAX_BOOK = 9; // max directly bookable/payable travelers across all pa
 const PAX_MAX_SELECT = 50; // highest traveler count selectable (group quote up to 50)
 const tierLabel = { p12: "Private 1–2 pax", p34: "Private 3–4 pax", grp: "Group (5+ pax)" };
 const fromPrice = (t) => t.grid.grp.a;
+const VAT_RATE = 0.18; // TVA appliquee au-dessus des prix HT
+const vatOf = (n) => Math.round((n || 0) * VAT_RATE);
 
 const COUNTRIES = [
   { id: "sn", name: "Senegal", live: true, ll: [-14.5, 14.5], x: 14.6, y: 29.9, count: "35+ experiences" },
@@ -3162,8 +3164,8 @@ function PriceGrid({ t }) {
         <thead>
           <tr style={{ textAlign: "left", color: T.indigo }}>
             <th style={{ padding: "8px 6px", borderBottom: `2px solid ${T.green}` }}>Basis (per person)</th>
-            <th style={{ padding: "8px 6px", borderBottom: `2px solid ${T.green}`, whiteSpace: "nowrap" }}>Adult</th>
-            <th style={{ padding: "8px 6px", borderBottom: `2px solid ${T.green}`, whiteSpace: "nowrap" }}>Child 3–12</th>
+            <th style={{ padding: "8px 6px", borderBottom: `2px solid ${T.green}`, whiteSpace: "nowrap" }}>Adult (HT)</th>
+            <th style={{ padding: "8px 6px", borderBottom: `2px solid ${T.green}`, whiteSpace: "nowrap" }}>Child 3–12 (HT)</th>
           </tr>
         </thead>
         <tbody>
@@ -3229,7 +3231,7 @@ function TourDetail({ tourId, go, setBooking, addToCart, removeFromCart, favorit
   const addTourToCart = () => {
     if (!dateOk || t.quote) return;
     const chosen = t.addons.filter((a) => extras.includes(a.name)).map((a) => ({ name: a.name, per: a.per, price: a.price, amount: a.price ? (a.per === "person" ? a.price * pax : a.price) : null }));
-    addToCart && addToCart({ tour: t, date: dateFrom, dateFrom, dateTo: dateFrom, adults, children, infants: 0, plan: "full", months: 3, schedule: "", total: estTotal, lineTotal: estTotal, deposit: estTotal * 0.3, contact: {}, addons: chosen, vehicle, vehicles: vehSel, promoCode: "", payMethod: "stripe", _cartId: editCartId });
+    addToCart && addToCart({ tour: t, date: dateFrom, dateFrom, dateTo: dateFrom, adults, children, infants: 0, plan: "full", months: 3, schedule: "", total: estTotalTTC, lineTotal: estTotalTTC, deposit: estTotalTTC * 0.3, contact: {}, addons: chosen, vehicle, vehicles: vehSel, promoCode: "", payMethod: "stripe", _cartId: editCartId });
     if (editCartId) go("cart");
   };
   const removeTourFromCart = () => { if (removeFromCart && editCartId) removeFromCart(editCartId); go("cart"); };
@@ -3251,6 +3253,8 @@ function TourDetail({ tourId, go, setBooking, addToCart, removeFromCart, favorit
   const paxMax = vehSel.length ? vehSel.reduce((sum, i) => sum + VEHICLES[i].cap, 0) : null; // chosen vehicles cap the traveler count (additive)
   const extrasTotal = t.addons.filter((a) => extras.includes(a.name) && a.price).reduce((s, a) => s + (a.per === "person" ? a.price * pax : a.price), 0);
   const estTotal = ppUnit != null ? adults * ppUnit + children * (childUnit ?? ppUnit) + extrasTotal + transportCost : null;
+  const vatAmount = estTotal != null ? vatOf(estTotal) : null;
+  const estTotalTTC = estTotal != null ? estTotal + vatAmount : null;
   useEffect(() => { if (paxMax != null && adults + children > paxMax) setAdults(Math.max(1, paxMax - children)); }, [paxMax]); // keep travelers within chosen vehicles' seats
   const paxCeil = Math.min(PAX_MAX_SELECT, paxMax != null ? paxMax : PAX_MAX_SELECT); // up to 50 (or chosen vehicles' seats)
   const isGroup = pax >= PAX_GROUP; // at 10 the order is on request (agent-priced)
@@ -3424,12 +3428,12 @@ function TourDetail({ tourId, go, setBooking, addToCart, removeFromCart, favorit
                   <span style={{ fontSize: 13, opacity: 0.6 }}>/ person</span>
                 </div>
                 <div style={{ fontSize: 12.5, opacity: 0.6 }}>{tierLabel[tier]}{CORP_DISCOUNT > 0 ? ` · corporate rate −${CORP_DISCOUNT}% (paid in full)` : ""}</div>
-                {ppUnit != null && ppUnit > fromPrice(t) && <div style={{ fontSize: 12, color: T.green, fontWeight: 600, marginTop: 3 }}>from {fmtXOF(fromPrice(t))} / person at {grpBreak}+ pax</div>}
+                {ppUnit != null && ppUnit > fromPrice(t) && <div style={{ fontSize: 12, color: T.green, fontWeight: 600, marginTop: 3 }}>from {fmtXOF(fromPrice(t))} / person HT at {grpBreak}+ pax</div>}
 
                 <div style={{ marginTop: 18 }}>
                   <div style={{ fontSize: 11.5, fontWeight: 700, letterSpacing: ".07em", textTransform: "uppercase", color: "#8A968E", marginBottom: 2 }}>Travelers</div>
-                  <PaxRow label="Adults" note={`${fmtXOF(CORP_DISCOUNT > 0 ? corpPrice(ppUnit) : ppUnit)} each`} value={adults} dec={() => setAdults(Math.max(1, adults - 1))} inc={() => setAdults(adults + 1)} canDec={adults > 1} canInc={pax < paxCeil} />
-                  <PaxRow label="Children" note={childUnit != null ? `${fmtXOF(childUnit)} each · ages 3–12` : "Rate at booking · ages 3–12"} value={children} dec={() => setChildren(Math.max(0, children - 1))} inc={() => setChildren(children + 1)} canDec={children > 0} canInc={pax < paxCeil} last />
+                  <PaxRow label="Adults" note={`${fmtXOF(CORP_DISCOUNT > 0 ? corpPrice(ppUnit) : ppUnit)} each · HT`} value={adults} dec={() => setAdults(Math.max(1, adults - 1))} inc={() => setAdults(adults + 1)} canDec={adults > 1} canInc={pax < paxCeil} />
+                  <PaxRow label="Children" note={childUnit != null ? `${fmtXOF(childUnit)} each · HT · ages 3–12` : "Rate at booking · ages 3–12"} value={children} dec={() => setChildren(Math.max(0, children - 1))} inc={() => setChildren(children + 1)} canDec={children > 0} canInc={pax < paxCeil} last />
                   {isGroup && <div style={{ fontSize: 12, color: "#A9781A", marginTop: 8, lineHeight: 1.5 }}>Group of {pax} — price on request, custom-quoted by our team.</div>}
                 </div>
 
@@ -3477,14 +3481,16 @@ function TourDetail({ tourId, go, setBooking, addToCart, removeFromCart, favorit
                   </div>
                 ) : (
                 <>
-                <div style={{ borderTop: `1px solid ${T.line}`, marginTop: 16, paddingTop: 14, display: "flex", alignItems: "baseline" }}>
-                  <span style={{ fontSize: 13.5, color: "#8A968E" }}>Total {CORP_DISCOUNT > 0 ? "(paid in full)" : ""}</span>
+                <div style={{ display: "flex", alignItems: "baseline", borderTop: `1px solid ${T.line}`, marginTop: 16, paddingTop: 14, fontSize: 13, color: "#8A968E" }}><span>Subtotal (HT)</span><span style={{ marginLeft: "auto" }}>{fmtXOF(estTotal)}</span></div>
+                <div style={{ display: "flex", alignItems: "baseline", marginTop: 6, fontSize: 13, color: "#8A968E" }}><span>VAT (18%)</span><span style={{ marginLeft: "auto" }}>{fmtXOF(vatAmount)}</span></div>
+                <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${T.line}`, display: "flex", alignItems: "baseline" }}>
+                  <span style={{ fontSize: 13.5, color: "#8A968E" }}>Total {CORP_DISCOUNT > 0 ? "(paid in full)" : "(incl. VAT)"}</span>
                   <strong style={{ marginLeft: "auto", fontSize: 19, fontWeight: 800 }}>
-                    {CORP_DISCOUNT > 0 && <span style={{ fontWeight: 500, opacity: 0.4, textDecoration: "line-through", marginRight: 6, fontSize: 14 }}>{fmtXOF(estTotal)}</span>}
-                    <span style={{ color: CORP_DISCOUNT > 0 ? T.green : T.ink }}>{fmtXOF(CORP_DISCOUNT > 0 ? corpPrice(estTotal) : estTotal)}</span>
+                    {CORP_DISCOUNT > 0 && <span style={{ fontWeight: 500, opacity: 0.4, textDecoration: "line-through", marginRight: 6, fontSize: 14 }}>{fmtXOF(estTotalTTC)}</span>}
+                    <span style={{ color: CORP_DISCOUNT > 0 ? T.green : T.ink }}>{fmtXOF(CORP_DISCOUNT > 0 ? corpPrice(estTotalTTC) : estTotalTTC)}</span>
                   </strong>
                 </div>
-                <div style={{ fontSize: 12.5, color: "#8A968E", marginTop: 8, lineHeight: 1.55 }}>Or reserve from <strong style={{ color: T.ink, fontWeight: 700 }}>{fmtXOF(estTotal * 0.3)}</strong> (30%) and pay the balance in instalments.</div>
+                <div style={{ fontSize: 12.5, color: "#8A968E", marginTop: 8, lineHeight: 1.55 }}>Or reserve from <strong style={{ color: T.ink, fontWeight: 700 }}>{fmtXOF(estTotalTTC * 0.3)}</strong> (30%) and pay the balance in instalments.</div>
                 </>
                 )}
               </>
@@ -3538,11 +3544,11 @@ function TourDetail({ tourId, go, setBooking, addToCart, removeFromCart, favorit
           <button style={{ ...btnGold, width: "100%", borderRadius: 12, background: T.indigo, color: "#fff" }} onClick={() => openBooking("quote")}>Request a quote</button>
         ) : (
           <>
-            {ppUnit != null && ppUnit > fromPrice(t) && <div style={{ fontSize: 11, color: T.green, fontWeight: 600, marginBottom: 6, textAlign: "center" }}>from {fmtXOF(fromPrice(t))} / person at {grpBreak}+ pax</div>}
+            {ppUnit != null && ppUnit > fromPrice(t) && <div style={{ fontSize: 11, color: T.green, fontWeight: 600, marginBottom: 6, textAlign: "center" }}>from {fmtXOF(fromPrice(t))} / person HT at {grpBreak}+ pax</div>}
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 7 }}>
               <div style={{ minWidth: 0, flexShrink: 0 }}>
-                <div style={{ fontWeight: 800, fontSize: 16, color: "#1A1A1A" }} className="disp">{isGroup ? "On request" : fmtXOF(estTotal)}</div>
-                <div style={{ fontSize: 11, opacity: 0.6 }}>{isGroup ? `${pax} pax · group` : `${fmtXOF(ppUnit)} /pers · ${pax} pax`}</div>
+                <div style={{ fontWeight: 800, fontSize: 16, color: "#1A1A1A" }} className="disp">{isGroup ? "On request" : fmtXOF(estTotalTTC)}</div>
+                <div style={{ fontSize: 11, opacity: 0.6 }}>{isGroup ? `${pax} pax · group` : `${fmtXOF(ppUnit)} /pers HT · ${pax} pax`}</div>
               </div>
               <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6 }}>
                 <button onClick={() => setAdults(Math.max(1, adults - 1))} style={btnCircle} aria-label="Fewer">−</button>
@@ -6882,8 +6888,10 @@ function BookingModal({ tour, user, onClose, onConfirm, onAddToCart }) {
     const paidAddons = tour.addons.filter((x) => addons.includes(x.name) && x.price);
     const addonTotal = paidAddons.reduce((s, x) => s + (x.per === "person" ? x.price * pax : x.price), 0);
     const transport = rates ? vehSel.reduce((sum, i) => sum + (rates[i] || 0), 0) : 0;
-    const total = base + addonTotal + transport;
-    return { base, addonTotal, transport, total, deposit: total * 0.3, installment: (total * 0.7) / months };
+    const subtotal = base + addonTotal + transport;
+    const vat = vatOf(subtotal);
+    const total = subtotal + vat;
+    return { base, addonTotal, transport, subtotal, vat, total, deposit: total * 0.3, installment: (total * 0.7) / months };
   }, [tour, adults, children, addons, vehicle, vehicle2, vehicle3, months, pax, tg, rates]);
 
   const onRequestAddons = tour.addons.filter((x) => addons.includes(x.name) && !x.price);
@@ -7050,6 +7058,7 @@ function BookingModal({ tour, user, onClose, onConfirm, onAddToCart }) {
             <Row l={`Tour · ${tierLabel[tier]} · ${adults} ad${children ? ` + ${children} ch` : ""}`} v={fmtXOF(calc.base)} />
             {calc.transport > 0 && <Row l={`Transport · ${vehSel.map((i) => VEHICLES[i].name).join(" + ")}`} v={fmtXOF(calc.transport)} />}
             {chosenAddons.map((a) => <Row key={a.name} l={`+ ${a.name}${a.per === "person" ? ` (×${pax})` : ""}`} v={a.amount != null ? fmtXOF(a.amount) : "on request"} />)}
+            <Row l="VAT (18%)" v={fmtXOF(calc.vat)} />
             {discActive && <div style={{ display: "flex", padding: "4px 0", color: T.green, fontWeight: 600 }}><span>{discLabel} · −{discPct}%</span><span style={{ marginLeft: "auto" }}>−{fmtXOF(calc.total - payTotal)}</span></div>}
             <div style={{ borderTop: `1px solid ${T.line}`, marginTop: 8, paddingTop: 10, display: "flex", fontSize: 17 }}>
               <strong>Total</strong>
@@ -7162,8 +7171,8 @@ function BookingModal({ tour, user, onClose, onConfirm, onAddToCart }) {
               <input type="date" min={minDate} value={dateFrom} onChange={(e) => setTripDate(e.target.value)} style={input} />
 
               <div style={sect}>Travelers</div>
-              <Counter label="Adults" sub={`${fmtXOF(tg.a)} each at current basis`} value={adults} set={setAdults} min={1} max={PAX_MAX_BOOK - children} />
-              <Counter label="Children (3–12)" sub={tg.c ? `${fmtXOF(tg.c)} each` : "child rate confirmed at booking"} value={children} set={setChildren} max={PAX_MAX_BOOK - adults} />
+              <Counter label="Adults" sub={`${fmtXOF(tg.a)} each · HT`} value={adults} set={setAdults} min={1} max={PAX_MAX_BOOK - children} />
+              <Counter label="Children (3–12)" sub={tg.c ? `${fmtXOF(tg.c)} each · HT` : "child rate confirmed at booking"} value={children} set={setChildren} max={PAX_MAX_BOOK - adults} />
               <Counter label="Infants (under 3)" sub="Free" value={infants} set={setInfants} />
               <div style={{ marginTop: 10, background: "#f8f8f8", border: "1px solid #ECECEC", borderRadius: 10, padding: "10px 13px", fontSize: 13.5, color: "rgba(0,0,0,.8)" }}>
                 Basis applied: <strong style={{ color: "#1A1A1A" }}>{tierLabel[tier]}</strong> — {tier !== "grp" ? "add travelers to unlock lower per-person rates." : "best per-person rate unlocked."}
