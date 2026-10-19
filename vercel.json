@@ -1,11 +1,50 @@
 {
   "redirects": [
-    { "source": "/en/product/:slug*", "destination": "/tours", "permanent": true },
-    { "source": "/product/:slug*", "destination": "/tours", "permanent": true },
-    { "source": "/en/account", "destination": "/account", "permanent": true },
-    { "source": "/services", "destination": "/", "permanent": true },
-    { "source": "/en/services", "destination": "/", "permanent": true },
-    { "source": "/en/:path*", "destination": "/", "permanent": true }
+    {
+      "source": "/avis",
+      "destination": "https://search.google.com/local/writereview?placeid=ChIJXwRg7DBzwQ4Rn9doWBHa8sc",
+      "permanent": false
+    },
+    {
+      "source": "/review",
+      "destination": "https://search.google.com/local/writereview?placeid=ChIJXwRg7DBzwQ4Rn9doWBHa8sc",
+      "permanent": false
+    },
+    {
+      "source": "/en/product/:slug*",
+      "destination": "/tours",
+      "permanent": true
+    },
+    {
+      "source": "/product/:slug*",
+      "destination": "/tours",
+      "permanent": true
+    },
+    {
+      "source": "/en/account",
+      "destination": "/account",
+      "permanent": true
+    },
+    {
+      "source": "/services",
+      "destination": "/",
+      "permanent": true
+    },
+    {
+      "source": "/en/services",
+      "destination": "/",
+      "permanent": true
+    },
+    {
+      "source": "/en/:path*",
+      "destination": "/",
+      "permanent": true
+    }
   ],
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
 }
