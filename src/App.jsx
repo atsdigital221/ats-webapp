@@ -8542,36 +8542,36 @@ function Footer({ go, notify }) {
   const [email, setEmail] = useState("");
   const head = { fontWeight: 700, marginBottom: 10, color: "#fff", fontSize: 13, letterSpacing: ".08em", textTransform: "uppercase" };
   return (
-    <footer style={{ background: T.green, color: "#DCE7DF", padding: "52px 20px 24px", marginTop: 20 }}>
-      <style>{`.foot-link{transition:color .15s ease}.foot-link:hover{color:#fff !important}.foot-social:hover{background:rgba(255,255,255,.20) !important}`}</style>
+    <footer style={{ background: T.green, color: "rgba(255,255,255,.92)", padding: "52px 20px 24px", marginTop: 20 }}>
+      <style>{`.foot-link{transition:color .15s ease}.foot-link:hover{color:#fff !important}.foot-social:hover{background:rgba(255,255,255,.32) !important}`}</style>
       <div style={{ maxWidth: 1200, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px,1fr))", gap: 28, fontSize: 14 }}>
         <div>
           <div className="disp" style={{ fontWeight: 800, fontSize: 19, marginBottom: 10, color: "#fff" }}>Africa Tourism Solutions</div>
-          <p style={{ color: "rgba(255,255,255,.72)", lineHeight: 1.6, marginTop: 0 }}>Tourism · DMC · Events · Logistics · Travel management. Dakar, Senegal. IATA-accredited.</p>
+          <p style={{ color: "rgba(255,255,255,.92)", lineHeight: 1.6, marginTop: 0 }}>Tourism · DMC · Events · Logistics · Travel management. Dakar, Senegal. IATA-accredited.</p>
           <div style={{ display: "flex", gap: 10, marginTop: 12, flexWrap: "wrap" }}>
             {ATS_SOCIALS.map(([s, url]) => (
-              <a key={s} href={url} target="_blank" rel="noopener noreferrer" className="foot-social" style={{ background: "rgba(255,255,255,.10)", color: "#fff", borderRadius: 8, padding: "6px 11px", fontSize: 12.5, fontWeight: 600, textDecoration: "none", transition: "background .15s ease" }}>{s}</a>
+              <a key={s} href={url} target="_blank" rel="noopener noreferrer" className="foot-social" style={{ background: "rgba(255,255,255,.22)", color: "#fff", borderRadius: 8, padding: "6px 11px", fontSize: 12.5, fontWeight: 600, textDecoration: "none", transition: "background .15s ease" }}>{s}</a>
             ))}
           </div>
         </div>
         <div>
           <div style={head}>Explore</div>
           {[["tours", "Activities & experiences"], ["builder", "Trip Builder"], ["transport", "Transfers & car hire"], ["flights", "Flights"], ["events", "Events & MICE"], ["corporate", "Corporate travel"], ["agents", "Agents / B2B"], ["blog", "Blog"], ["about", "About Us"], ["terms", "Terms & cancellation policy"]].map(([k, l]) => (
-            <button key={k} onClick={() => go(k)} className="foot-link" style={{ display: "block", background: "none", border: "none", color: "rgba(255,255,255,.74)", cursor: "pointer", padding: "4px 0", fontSize: 14, fontFamily: "inherit", textAlign: "left" }}>{l}</button>
+            <button key={k} onClick={() => go(k)} className="foot-link" style={{ display: "block", background: "none", border: "none", color: "rgba(255,255,255,.92)", cursor: "pointer", padding: "4px 0", fontSize: 14, fontFamily: "inherit", textAlign: "left" }}>{l}</button>
           ))}
         </div>
         <div>
           <div style={head}>ATS Group</div>
-          <p style={{ color: "rgba(255,255,255,.72)", lineHeight: 1.9, marginTop: 0 }}>ATS Travel · ATS Events · ATS Business · ATS Logistics · ATS Evasion · ATS School</p>
+          <p style={{ color: "rgba(255,255,255,.92)", lineHeight: 1.9, marginTop: 0 }}>ATS Travel · ATS Events · ATS Business · ATS Logistics · ATS Evasion · ATS School</p>
         </div>
         <div>
           <div style={head}>Newsletter</div>
-          <input style={{ ...input, background: "rgba(255,255,255,.08)", border: "1px solid rgba(255,255,255,.20)", color: "#fff" }} placeholder="you@email.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <input style={{ ...input, background: "#fff", color: T.ink }} placeholder="you@email.com" value={email} onChange={(e) => setEmail(e.target.value)} />
           <button style={{ ...btnGold, marginTop: 8, fontSize: 13.5, padding: "9px 18px" }} onClick={() => { notify(email ? "Subscribed — welcome to the ATS newsletter." : "Enter your email first"); setEmail(""); }}>Subscribe</button>
         </div>
       </div>
-      <div style={{ maxWidth: 1200, margin: "34px auto 0", paddingTop: 22, borderTop: "1px solid rgba(255,255,255,.14)", display: "flex", flexWrap: "wrap", gap: "14px 28px", alignItems: "flex-start", justifyContent: "space-between" }}>
-        <div style={{ fontSize: 13.5, lineHeight: 1.8, color: "rgba(255,255,255,.78)" }}>
+      <div style={{ maxWidth: 1200, margin: "34px auto 0", paddingTop: 22, borderTop: "1px solid rgba(255,255,255,.28)", display: "flex", flexWrap: "wrap", gap: "14px 28px", alignItems: "flex-start", justifyContent: "space-between" }}>
+        <div style={{ fontSize: 13.5, lineHeight: 1.8, color: "rgba(255,255,255,.92)" }}>
           <div>
             <span style={{ color: "#fff", fontWeight: 700 }}>Contact:</span>{" "}
             <a href="tel:+221774807878" className="foot-link" style={{ color: T.gold, fontWeight: 600, textDecoration: "none" }}>+221 77 480 78 78</a> ·{" "}
@@ -8580,7 +8580,7 @@ function Footer({ go, notify }) {
           </div>
           <div>Immeuble SICAP, Point E, Lot 8, apt A · Hann Maristes 2, Dakar</div>
         </div>
-        <div style={{ fontSize: 12.5, color: "rgba(255,255,255,.55)", alignSelf: "flex-end" }}>© 2026 Africa Tourism Solutions</div>
+        <div style={{ fontSize: 12.5, color: "rgba(255,255,255,.8)", alignSelf: "flex-end" }}>© 2026 Africa Tourism Solutions</div>
       </div>
     </footer>
   );
