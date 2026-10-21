@@ -1,1 +1,30 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+dist-ssr/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Env
+.env
+.env.*
+!.env.example
+
+# Editor / OS
+.DS_Store
+*.local
+.vscode/
+
+# Autre gestionnaire de paquets (le projet utilise npm + package-lock.json)
+pnpm-lock.yaml
+yarn.lock
+
+# Dossiers de travail (non liés à l'app)
 photos-import/
+Claude outputs/
+photo tours v2/
+photos site (14 tours)/
