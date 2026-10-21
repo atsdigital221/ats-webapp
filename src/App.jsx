@@ -3432,7 +3432,7 @@ function TourDetail({ tourId, go, setBooking, addToCart, removeFromCart, favorit
                   <span style={{ fontSize: 13, opacity: 0.6 }}>/ person</span>
                 </div>
                 <div style={{ fontSize: 12.5, opacity: 0.6 }}>{tierLabel[tier]}{CORP_DISCOUNT > 0 ? ` · corporate rate −${CORP_DISCOUNT}% (paid in full)` : ""}</div>
-                {ppUnit != null && ppUnit > fromPrice(t) && <div style={{ fontSize: 12, color: T.green, fontWeight: 600, marginTop: 3 }}>from {fmtXOF(fromPrice(t))} / person HT at {grpBreak}+ pax</div>}
+                {ppUnit != null && <div style={{ fontSize: 12, color: T.green, fontWeight: 600, marginTop: 3 }}>from {fmtXOF(fromPrice(t))} / person HT at {grpBreak}+ pax</div>}
 
                 <div style={{ marginTop: 18 }}>
                   <div style={{ fontSize: 11.5, fontWeight: 700, letterSpacing: ".07em", textTransform: "uppercase", color: "#8A968E", marginBottom: 2 }}>Travelers</div>
