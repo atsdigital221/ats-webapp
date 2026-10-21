@@ -3438,10 +3438,10 @@ function TourDetail({ tourId, go, setBooking, addToCart, removeFromCart, favorit
                   <div style={{ fontSize: 11.5, fontWeight: 700, letterSpacing: ".07em", textTransform: "uppercase", color: "#8A968E", marginBottom: 2 }}>Travelers</div>
                   <PaxRow label="Adults" note={`${fmtXOF(CORP_DISCOUNT > 0 ? corpPrice(ppUnit) : ppUnit)} each · HT`} value={adults} dec={() => setAdults(Math.max(1, adults - 1))} inc={() => setAdults(adults + 1)} canDec={adults > 1} canInc={pax < paxCeil} />
                   <PaxRow label="Children" note={childUnit != null ? `${fmtXOF(childUnit)} each · HT · ages 3–12` : "Rate at booking · ages 3–12"} value={children} dec={() => setChildren(Math.max(0, children - 1))} inc={() => setChildren(children + 1)} canDec={children > 0} canInc={pax < paxCeil} last />
-                  {isGroup && <div style={{ fontSize: 12, color: "#A9781A", marginTop: 8, lineHeight: 1.5 }}>Group of {pax} — price on request, custom-quoted by our team.</div>}
+                  {isGroup && <div style={{ marginTop: 10, background: "#FFF8E6", border: `1px solid #F1E2A6`, borderRadius: 10, padding: "12px 14px", fontSize: 13, lineHeight: 1.6, color: "rgba(0,0,0,.8)" }}><strong style={{ color: "#1A1A1A" }}>For groups of 10 and more.</strong> Please contact us at <a href="mailto:sales@africatourismsolutions.com" style={{ color: "#A9781A", fontWeight: 700 }}>sales@africatourismsolutions.com</a> for assistance with your reservation.</div>}
                 </div>
 
-                <div style={{ marginTop: 12 }}>
+                {(!isGroup || dateFrom) && (<div style={{ marginTop: 12 }}>
                   <label style={label}>Travel date</label>
                   <RangeDate from={dateFrom} to={dateFrom} onChange={(f) => setTripDate(f)} triggerStyle={input} wide single minDate={minDate} align="right" />
                   {dateOk && (
@@ -3449,14 +3449,14 @@ function TourDetail({ tourId, go, setBooking, addToCart, removeFromCart, favorit
                       <Check size={14} color={T.green} /> {tontinePossible ? "Ma Tontine eligible" : "Available · full payment only (under 15 days)"}
                     </div>
                   )}
-                </div>
+                </div>)}
 
-                {transportIncluded && (
+                {transportIncluded && !isGroup && (
                   <div style={{ marginTop: 12, background: "#fff", border: `1px solid ${T.line}`, borderRadius: 10, padding: "10px 12px", fontSize: 12.5, color: "rgba(0,0,0,.8)" }}>
                     <strong style={{ color: "#1A1A1A" }}>Pick-up & drop-off included</strong> — private vehicle from and to your hotel.
                   </div>
                 )}
-                {rates && !transportIncluded && SHOW_VEHICLE_OPTION && (
+                {rates && !transportIncluded && SHOW_VEHICLE_OPTION && (!isGroup || vehSel.length) && (
                   <div style={{ marginTop: 12 }}>
                     <label style={label}>Transport (optional)</label>
                     <select value={vehicle} onChange={(e) => { const v = +e.target.value; setVehicle(v); if (v < 0) { setVehicle2(-1); setVehicle3(-1); } }} style={{ ...input, fontWeight: 600 }}>
@@ -3479,11 +3479,7 @@ function TourDetail({ tourId, go, setBooking, addToCart, removeFromCart, favorit
                   </div>
                 )}
 
-                {isGroup ? (
-                  <div style={{ borderTop: `1px solid ${T.line}`, marginTop: 14, paddingTop: 12, background: "#FFF8E6", border: `1px solid #F1E2A6`, borderRadius: 10, padding: "12px 14px", fontSize: 13, lineHeight: 1.6, color: "rgba(0,0,0,.8)" }}>
-                    <strong style={{ color: "#1A1A1A" }}>For groups of 10 and more.</strong> Please contact us at <a href="mailto:sales@africatourismsolutions.com" style={{ color: "#A9781A", fontWeight: 700 }}>sales@africatourismsolutions.com</a> for assistance with your reservation.
-                  </div>
-                ) : (
+                {isGroup ? null : (
                 <>
                 <div style={{ display: "flex", alignItems: "baseline", borderTop: `1px solid ${T.line}`, marginTop: 16, paddingTop: 14, fontSize: 13, color: "#8A968E" }}><span>Subtotal (HT)</span><span style={{ marginLeft: "auto" }}>{fmtXOF(estTotal)}</span></div>
                 <div style={{ display: "flex", alignItems: "baseline", marginTop: 6, fontSize: 13, color: "#8A968E" }}><span>VAT (18%)</span><span style={{ marginLeft: "auto" }}>{fmtXOF(vatAmount)}</span></div>
