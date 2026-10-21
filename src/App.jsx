@@ -3481,7 +3481,7 @@ function TourDetail({ tourId, go, setBooking, addToCart, removeFromCart, favorit
 
                 {isGroup ? (
                   <div style={{ borderTop: `1px solid ${T.line}`, marginTop: 14, paddingTop: 12, background: "#FFF8E6", border: `1px solid #F1E2A6`, borderRadius: 10, padding: "12px 14px", fontSize: 13, lineHeight: 1.6, color: "rgba(0,0,0,.8)" }}>
-                    <strong style={{ color: "#1A1A1A" }}>Group of {pax} — price on request.</strong> Bookings of 10+ travelers are custom-priced by our team. Send a request and we'll get back to you with a tailored quote.
+                    <strong style={{ color: "#1A1A1A" }}>For groups of 10 and more.</strong> Please contact us at <a href="mailto:sales@africatourismsolutions.com" style={{ color: "#A9781A", fontWeight: 700 }}>sales@africatourismsolutions.com</a> for assistance with your reservation.
                   </div>
                 ) : (
                 <>
