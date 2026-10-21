@@ -8542,7 +8542,7 @@ function Footer({ go, notify }) {
   const [email, setEmail] = useState("");
   const head = { fontWeight: 700, marginBottom: 10, color: "#fff", fontSize: 13, letterSpacing: ".08em", textTransform: "uppercase" };
   return (
-    <footer style={{ background: T.ink, color: "#DCE7DF", padding: "52px 20px 24px", marginTop: 20 }}>
+    <footer style={{ background: T.green, color: "#DCE7DF", padding: "52px 20px 24px", marginTop: 20 }}>
       <style>{`.foot-link{transition:color .15s ease}.foot-link:hover{color:#fff !important}.foot-social:hover{background:rgba(255,255,255,.20) !important}`}</style>
       <div style={{ maxWidth: 1200, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px,1fr))", gap: 28, fontSize: 14 }}>
         <div>
