@@ -9,7 +9,7 @@ const LAND = feature(landTopo, landTopo.objects.land);
 import {
   Landmark, PawPrint, Leaf, TreePalm, Mountain, Utensils, Palette, Route, Bird, Music,
   Compass, Map as MapIcon, Car, Plane, Bus, Clock, Users, Luggage, Fuel, Settings2, MapPin,
-  Calendar, Check, X, Star, MessageCircle, Bot, ChevronLeft, ChevronRight, ChevronDown, Heart,
+  Calendar, Check, X, Star, MessageCircle, Mail, Bot, ChevronLeft, ChevronRight, ChevronDown, Heart,
   Menu, Search, Shield, ArrowRight, Package, Globe, Sparkles, Hotel, UserRound, Gift, Trophy,
   Mic, Dumbbell, Languages, CircleCheck, Building2, Ship, Waves,
   CalendarCheck, Newspaper, Video, ConciergeBell, PenTool, Info, Play, ShoppingBag, Trash2, Pencil,
@@ -708,6 +708,7 @@ function pageToUrl(page, filters) {
     case "blog": path = "/blog"; break;
     case "article": path = `/blog/${p.slug || ""}`; break;
     case "about": path = "/about"; break;
+    case "contact": path = "/contact"; break;
     case "terms": path = "/terms"; break;
     case "account": path = "/account"; break;
     case "cart": path = "/cart"; break;
@@ -742,6 +743,7 @@ function urlToPage(pathname, search) {
     case "admin": return { name: "admin" };
     case "blog": return b ? { name: "article", slug: b } : { name: "blog" };
     case "about": return { name: "about" };
+    case "contact": return { name: "contact" };
     case "terms": return { name: "terms" };
     case "account": return { name: "account" };
     case "cart": return { name: "cart" };
@@ -1300,6 +1302,7 @@ export default function ATSPlatformPreview() {
           {page.name === "cart" && <CartPage {...ctx} />}
           {page.name === "payment" && <PaymentResult status={page.status} {...ctx} />}
           {page.name === "manage" && <ManageBookingPage token={page.token} {...ctx} />}
+          {page.name === "contact" && <ContactPage {...ctx} />}
           {page.name === "terms" && <TermsPage />}
         </>
       )}
@@ -1465,7 +1468,7 @@ function Nav({ go, page, user, setSignin, bookings, cart = [], currency, setCurr
         { Ico: Users, label: "Agents", sub: "B2B partner access", act: () => goItem("agents") },
       ] },
       { title: "Contact", items: [
-        { Ico: MessageCircle, label: "Contact Us", sub: "We reply quickly", act: openChat },
+        { Ico: MessageCircle, label: "Contact Us", sub: "Email, phone, WhatsApp", act: () => nav("contact") },
       ] },
       { title: "Follow us", social: true, items: [] },
     ] },
@@ -5950,6 +5953,78 @@ function GoogleReviews() {
       </div>
       <Partners />
     </div>
+  );
+}
+
+function ContactPage({ notify }) {
+  const [f, setF] = useState({ name: "", email: "", phone: "", subject: "", message: "" });
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+  const set = (k) => (e) => setF((x) => ({ ...x, [k]: e.target.value }));
+  const valid = f.name.trim() && /\S+@\S+\.\S+/.test(f.email) && f.message.trim();
+  const submit = async () => {
+    if (!valid || sending) return;
+    setSending(true);
+    await sendAgencyEmail({ access_key: WEB3FORMS_KEY, subject: `Contact website — ${f.subject || "demande"} (${f.name})`, from_name: f.name, replyto: f.email, Name: f.name, Email: f.email, Phone: f.phone, Subject: f.subject, Message: f.message });
+    setSending(false); setSent(true);
+    notify && notify("Message sent — we'll get back to you shortly.");
+    setF({ name: "", email: "", phone: "", subject: "", message: "" });
+  };
+  const card = { background: "#fff", border: `1px solid ${T.line}`, borderRadius: 14, padding: "18px 20px" };
+  const linkS = { color: T.green, fontWeight: 600, textDecoration: "none" };
+  const Line = ({ Ico, title, children, last }) => (
+    <div style={{ display: "flex", gap: 13, alignItems: "flex-start", padding: last ? "12px 0 0" : "12px 0", borderBottom: last ? "none" : `1px solid ${T.line}` }}>
+      <span style={{ width: 40, height: 40, borderRadius: 11, background: "#F2F5F3", color: T.green, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Ico size={19} /></span>
+      <div style={{ minWidth: 0 }}>
+        <div style={{ fontSize: 11.5, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase", color: "#8A968E", marginBottom: 3 }}>{title}</div>
+        <div style={{ fontSize: 14.5, color: T.ink, lineHeight: 1.6 }}>{children}</div>
+      </div>
+    </div>
+  );
+  return (
+    <Wrap>
+      <div className="about-script" style={{ fontSize: 28, fontWeight: 600, color: T.green, lineHeight: 1 }}>Get in touch</div>
+      <h1 className="disp" style={{ fontWeight: 800, fontSize: "clamp(28px,4vw,42px)", letterSpacing: "-0.02em", color: T.ink, margin: "4px 0 8px" }}>Contact us</h1>
+      <p style={{ fontSize: 15.5, color: "rgba(0,0,0,.7)", maxWidth: 620, lineHeight: 1.7, margin: "0 0 28px" }}>A question about a tour, a custom trip or a group booking? Our team in Dakar replies quickly — by email, phone or WhatsApp, or through the form below.</p>
+      <div style={{ display: "flex", gap: 28, flexWrap: "wrap", alignItems: "flex-start" }}>
+        <div style={{ flex: "1 1 320px", minWidth: 0 }}>
+          <div style={card}>
+            <Line Ico={MessageCircle} title="WhatsApp / Phone"><a href="https://wa.me/221774807878" target="_blank" rel="noopener noreferrer" style={linkS}>+221 77 480 78 78</a></Line>
+            <Line Ico={Phone} title="Office line"><a href="tel:+221338251279" style={linkS}>+221 33 825 12 79</a></Line>
+            <Line Ico={Mail} title="Email"><a href="mailto:sales@africatourismsolutions.com" style={linkS}>sales@africatourismsolutions.com</a> <span style={{ fontSize: 13, color: "rgba(0,0,0,.55)" }}>· bookings & quotes</span><br /><a href="mailto:infos@africatourismsolutions.com" style={linkS}>infos@africatourismsolutions.com</a> <span style={{ fontSize: 13, color: "rgba(0,0,0,.55)" }}>· general</span></Line>
+            <Line Ico={MapPin} title="Offices"><div>Immeuble SICAP, Point E, Lot 8, apt A — Dakar</div><div style={{ marginTop: 4 }}>Hann Maristes 2 — Dakar</div></Line>
+            <Line Ico={Clock} title="Hours" last>Monday–Friday · 9:00–17:00 (GMT)</Line>
+          </div>
+          <a href="https://wa.me/221774807878" target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 8, marginTop: 14, background: T.green, color: "#fff", borderRadius: 999, padding: "11px 20px", fontWeight: 700, fontSize: 14.5, textDecoration: "none" }}><MessageCircle size={17} /> Chat on WhatsApp</a>
+        </div>
+        <div style={{ flex: "1 1 340px", minWidth: 0 }}>
+          <div style={card}>
+            {sent ? (
+              <div style={{ textAlign: "center", padding: "20px 0" }}>
+                <span style={{ width: 54, height: 54, borderRadius: "50%", background: "#EAF5EE", color: T.green, display: "inline-flex", alignItems: "center", justifyContent: "center" }}><Check size={28} /></span>
+                <div className="disp" style={{ fontWeight: 800, fontSize: 20, color: T.ink, marginTop: 12 }}>Thank you!</div>
+                <div style={{ fontSize: 14.5, color: "rgba(0,0,0,.7)", marginTop: 6 }}>Your message has been sent. We'll reply very soon.</div>
+                <button onClick={() => setSent(false)} style={{ marginTop: 16, background: "none", border: `1.5px solid ${T.line}`, borderRadius: 999, padding: "9px 18px", fontWeight: 700, color: T.ink, cursor: "pointer", fontFamily: "inherit" }}>Send another message</button>
+              </div>
+            ) : (<>
+              <div className="disp" style={{ fontWeight: 800, fontSize: 19, color: T.ink, marginBottom: 2 }}>Send us a message</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <div><label style={label}>Full name *</label><input style={input} value={f.name} onChange={set("name")} placeholder="e.g. Awa Diop" /></div>
+                <div><label style={label}>Email *</label><input type="email" style={input} value={f.email} onChange={set("email")} placeholder="you@example.com" /></div>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <div><label style={label}>Phone / WhatsApp</label><input style={input} value={f.phone} onChange={set("phone")} placeholder="+221 …" /></div>
+                <div><label style={label}>Subject</label><input style={input} value={f.subject} onChange={set("subject")} placeholder="Tour, custom trip, group…" /></div>
+              </div>
+              <label style={label}>Message *</label>
+              <textarea style={{ ...input, minHeight: 120, resize: "vertical" }} value={f.message} onChange={set("message")} placeholder="Tell us about your project, dates, number of travelers…" />
+              <button disabled={!valid || sending} onClick={submit} style={{ ...btnGold, width: "100%", marginTop: 16, borderRadius: 12, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8, opacity: (!valid || sending) ? 0.5 : 1, cursor: (!valid || sending) ? "not-allowed" : "pointer" }}><Send size={17} /> {sending ? "Sending…" : "Send message"}</button>
+              <div style={{ fontSize: 12, color: "#8A968E", marginTop: 10, textAlign: "center" }}>We typically reply within a few hours during office hours.</div>
+            </>)}
+          </div>
+        </div>
+      </div>
+    </Wrap>
   );
 }
 
