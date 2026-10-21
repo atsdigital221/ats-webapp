@@ -105,7 +105,7 @@ const RATES = {"airport": [25000, 35000, 200000, 40000, 55000, 250000, 90000, 13
 const tierOf = (pax) => (pax <= 2 ? "p12" : pax <= 4 ? "p34" : "grp");
 const PAX_GROUP = 10;   // 10+ travelers = group booking, custom-priced on request
 const PAX_MAX_BOOK = 9; // max directly bookable/payable travelers across all packages
-const PAX_MAX_SELECT = 50; // highest traveler count selectable (group quote up to 50)
+const PAX_MAX_SELECT = 10; // highest traveler count selectable (hard cap: 10 = group quote, no 11+)
 const tierLabel = { p12: "Private 1–2 pax", p34: "Private 3–4 pax", grp: "Group (5+ pax)" };
 const fromPrice = (t) => t.grid.grp.a;
 const VAT_RATE = 0.18; // TVA appliquee au-dessus des prix HT
@@ -3260,7 +3260,7 @@ function TourDetail({ tourId, go, setBooking, addToCart, removeFromCart, favorit
   const vatAmount = estTotal != null ? vatOf(estTotal) : null;
   const estTotalTTC = estTotal != null ? estTotal + vatAmount : null;
   useEffect(() => { if (paxMax != null && adults + children > paxMax) setAdults(Math.max(1, paxMax - children)); }, [paxMax]); // keep travelers within chosen vehicles' seats
-  const paxCeil = Math.min(PAX_MAX_SELECT, paxMax != null ? paxMax : PAX_MAX_SELECT); // up to 50 (or chosen vehicles' seats)
+  const paxCeil = Math.min(PAX_MAX_SELECT, paxMax != null ? paxMax : PAX_MAX_SELECT); // up to 10 (or chosen vehicles' seats)
   const isGroup = pax >= PAX_GROUP; // at 10 the order is on request (agent-priced)
   const toggleExtra = (name) => setExtras((x) => x.includes(name) ? x.filter((n) => n !== name) : [...x, name]);
 
@@ -6960,8 +6960,8 @@ function BookingModal({ tour, user, onClose, onConfirm, onAddToCart }) {
           <div style={sect}>Travel date</div>
           <input type="date" min={minDate} value={dateFrom} onChange={(e) => setTripDate(e.target.value)} style={input} />
           <div style={sect}>Travelers</div>
-          <Counter label="Adults" sub="" value={adults} set={setAdults} min={1} max={PAX_MAX_SELECT} />
-          <Counter label="Children (3–12)" sub="" value={children} set={setChildren} max={PAX_MAX_SELECT} />
+          <Counter label="Adults" sub="" value={adults} set={setAdults} min={1} max={PAX_MAX_SELECT - children} />
+          <Counter label="Children (3–12)" sub="" value={children} set={setChildren} max={PAX_MAX_SELECT - adults} />
           <Counter label="Infants (under 3)" sub="Free" value={infants} set={setInfants} />
           {chosenAddons.length > 0 && (<>
             <div style={sect}>Selected add-ons</div>
