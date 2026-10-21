@@ -9,7 +9,7 @@ const LAND = feature(landTopo, landTopo.objects.land);
 import {
   Landmark, PawPrint, Leaf, TreePalm, Mountain, Utensils, Palette, Route, Bird, Music,
   Compass, Map as MapIcon, Car, Plane, Bus, Clock, Users, Luggage, Fuel, Settings2, MapPin,
-  Calendar, Check, X, Star, MessageCircle, Mail, Bot, ChevronLeft, ChevronRight, ChevronDown, Heart,
+  Calendar, Check, X, Star, MessageCircle, Mail, Phone, Send, Bot, ChevronLeft, ChevronRight, ChevronDown, Heart,
   Menu, Search, Shield, ArrowRight, Package, Globe, Sparkles, Hotel, UserRound, Gift, Trophy,
   Mic, Dumbbell, Languages, CircleCheck, Building2, Ship, Waves,
   CalendarCheck, Newspaper, Video, ConciergeBell, PenTool, Info, Play, ShoppingBag, Trash2, Pencil,
@@ -1630,7 +1630,7 @@ function Nav({ go, page, user, setSignin, bookings, cart = [], currency, setCurr
           ["corporate", "Corporate", Building2], ["agents", "Agents", Users],
         ];
         const resources = [
-          ["about", "About Us", Info], ["blog", "Blog", Newspaper], ["terms", "Terms & Cancellation", Shield],
+          ["about", "About Us", Info], ["blog", "Blog", Newspaper], ["contact", "Contact", Mail], ["terms", "Terms & Cancellation", Shield],
         ];
         const secLabel = { fontSize: 10.5, fontWeight: 700, letterSpacing: ".14em", textTransform: "uppercase", color: "rgba(0,0,0,.8)", margin: "0 4px 8px" };
         const Row = ({ k, l, Ico, active, badge, onClick, chevron = true }) => (
