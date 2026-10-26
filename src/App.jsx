@@ -6017,7 +6017,7 @@ function Dakar2026Page({ go, favorites, toggleFavorite, setBooking }) {
           ["Sport", "Dakar 2026 Youth Olympic Games", "For the first time in history, Africa hosts the Youth Olympic Games — in the land of Teranga, a nation passionate about sport. Beyond football, wrestling and basketball, every evening dozens gather to train along the Corniche."],
           ["Art", "Biennale & Parcours", "Between November and December, Dakar is in the spotlight of art: the 16th Dak'art contemporary African art biennale under the theme (Anti)Fragility, followed by Parcours, dedicated to independent art spaces and cultural hubs."],
         ].map(([tag, title, body]) => (
-          <div key={title} style={{ background: T.paperDark, borderRadius: 16, padding: "24px 24px" }}>
+          <div key={title} style={{ background: "#fff", border: "1px solid #F8F8F8", borderRadius: 16, padding: "24px 24px" }}>
             <span style={{ fontSize: 11.5, fontWeight: 800, letterSpacing: ".1em", textTransform: "uppercase", color: T.green }}>{tag}</span>
             <div className="disp" style={{ fontWeight: 800, fontSize: 22, color: T.ink, margin: "6px 0 8px" }}>{title}</div>
             <p style={{ fontSize: 14.5, lineHeight: 1.7, color: "rgba(0,0,0,.72)", margin: 0 }}>{body}</p>
@@ -6029,8 +6029,12 @@ function Dakar2026Page({ go, favorites, toggleFavorite, setBooking }) {
     <section style={{ background: "#fff" }}><Wrap style={{ paddingTop: 36 }}>
       <Eyebrow>While you're in Dakar</Eyebrow><H2>Our excursions & experiences</H2>
       <p style={{ fontSize: 15.5, color: "rgba(0,0,0,.7)", maxWidth: 680, margin: "0 0 24px" }}>Day tours and cultural experiences in Dakar, the Petite Cote and the Saloum Islands.</p>
+      <style>{`
+        .joj-strip .tour-card{width:calc((100% - 54px) / 3.4)}
+        @media(max-width:1000px){.joj-strip .tour-card{width:min(320px,74vw)}}
+      `}</style>
       {[["For solo travelers & groups", soloPicks], ["Funnier for groups of 10 and more", groupPicks], ["Must do", mustdoPicks]].map(([title, list]) => (
-        <div key={title} style={{ marginBottom: 34 }}>
+        <div key={title} className="joj-strip" style={{ marginBottom: 34 }}>
           <div className="disp" style={{ fontWeight: 800, fontSize: 19, color: T.ink, margin: "0 0 14px", display: "flex", alignItems: "center", gap: 10 }}>
             <span style={{ width: 8, height: 8, borderRadius: "50%", background: T.gold, flexShrink: 0 }} />{title}
           </div>
