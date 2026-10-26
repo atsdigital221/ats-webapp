@@ -709,6 +709,7 @@ function pageToUrl(page, filters) {
     case "article": path = `/blog/${p.slug || ""}`; break;
     case "about": path = "/about"; break;
     case "contact": path = "/contact"; break;
+    case "dakar2026": path = "/thingstodoindakar"; break;
     case "terms": path = "/terms"; break;
     case "account": path = "/account"; break;
     case "cart": path = "/cart"; break;
@@ -744,6 +745,7 @@ function urlToPage(pathname, search) {
     case "blog": return b ? { name: "article", slug: b } : { name: "blog" };
     case "about": return { name: "about" };
     case "contact": return { name: "contact" };
+    case "thingstodoindakar": return { name: "dakar2026" };
     case "terms": return { name: "terms" };
     case "account": return { name: "account" };
     case "cart": return { name: "cart" };
@@ -1303,6 +1305,7 @@ export default function ATSPlatformPreview() {
           {page.name === "payment" && <PaymentResult status={page.status} {...ctx} />}
           {page.name === "manage" && <ManageBookingPage token={page.token} {...ctx} />}
           {page.name === "contact" && <ContactPage {...ctx} />}
+          {page.name === "dakar2026" && <Dakar2026Page {...ctx} />}
           {page.name === "terms" && <TermsPage />}
         </>
       )}
@@ -1448,6 +1451,7 @@ function Nav({ go, page, user, setSignin, bookings, cart = [], currency, setCurr
     { key: "destinations", label: "Destinations", title: "Destinations", desc: "Explore destinations across Africa", cols: [
       { title: "Senegal regions", items: REGIONS.map((r) => ({ Ico: MapPin, label: r, act: () => goRegion(r) })) },
       { title: "Explore", items: [
+        { Ico: Sparkles, label: "Dakar 2026 — YOG", sub: "31 Oct–13 Nov · things to do", act: () => goItem("dakar2026") },
         { Ico: Compass, label: "See all activities", sub: "All regions", act: goAllTours },
         { Ico: Globe, label: "Other countries", sub: "Coming soon", soon: true },
       ] },
@@ -1625,7 +1629,7 @@ function Nav({ go, page, user, setSignin, bookings, cart = [], currency, setCurr
       {/* Full-height slide-in drawer */}
       {open && createPortal((() => {
         const mainMenu = [
-          ["home", "Home", Compass], ["tours", "Activities", MapIcon], ["builder", "Trip Builder", Sparkles],
+          ["home", "Home", Compass], ["dakar2026", "Dakar 2026", Sparkles], ["tours", "Activities", MapIcon], ["builder", "Trip Builder", Sparkles],
           ["transport", "Cars", Car], ["flights", "Flights", Plane], ["events", "MICE", Mic],
           ["corporate", "Corporate", Building2], ["agents", "Agents", Users],
         ];
@@ -2713,6 +2717,11 @@ function Home({ go, notify, setBooking, filters, setFilters, setChat, addBooking
 
   return (
     <>
+      <button onClick={() => go("dakar2026")} style={{ width: "100%", border: "none", cursor: "pointer", fontFamily: "inherit", background: `linear-gradient(90deg, ${T.green}, #00A84F)`, color: "#fff", padding: "11px 20px", display: "flex", alignItems: "center", justifyContent: "center", gap: 12, flexWrap: "wrap", fontSize: 14.5 }}>
+        <span style={{ background: T.gold, color: T.ink, fontWeight: 800, fontSize: 11.5, letterSpacing: ".06em", textTransform: "uppercase", borderRadius: 999, padding: "3px 10px" }}>Dakar 2026</span>
+        <span style={{ fontWeight: 600 }}>Youth Olympic Games · 31 Oct – 13 Nov — plan your trip to Senegal</span>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontWeight: 800 }}>Discover <ArrowRight size={16} /></span>
+      </button>
       <header style={{ background: T.ink }}>
         <style>{`
           @media(max-width:760px){
@@ -5956,6 +5965,110 @@ function GoogleReviews() {
   );
 }
 
+function Dakar2026Page({ go, favorites, toggleFavorite, setBooking }) {
+  useEffect(() => {
+    const prevTitle = document.title;
+    document.title = "Dakar 2026 — Youth Olympic Games · Things to do in Dakar | ATS";
+    let m = document.querySelector('meta[name="description"]');
+    const created = !m;
+    const prevDesc = m ? m.getAttribute("content") : null;
+    if (!m) { m = document.createElement("meta"); m.setAttribute("name", "description"); document.head.appendChild(m); }
+    m.setAttribute("content", "Visiting Senegal for the Dakar 2026 Youth Olympic Games (31 Oct–13 Nov)? Curated tours, excursions and cultural experiences in Dakar, the Petite Cote and Sine Saloum with Africa Tourism Solutions.");
+    return () => { document.title = prevTitle; if (created && m.parentNode) m.parentNode.removeChild(m); else if (prevDesc != null) m.setAttribute("content", prevDesc); };
+  }, []);
+  const heroUrl = supabase.storage.from(PHOTO_BUCKET).getPublicUrl("site/Hero.webp").data.publicUrl;
+  const picks = ["goree", "monument", "lacrose", "ngor", "somone", "market", "lions", "boat", "accro", "galleries", "ndangane", "city"].map((id) => TOURS.find((t) => t.id === id)).filter(Boolean);
+  const events = [
+    ["Youth Olympic Games", "31 Oct – 13 Nov"],
+    ["Dakar Night Market", "31 Oct – 13 Nov"],
+    ["House of Afree-ka", "09 Nov – 19 Dec"],
+    ["Dak'art Biennale — (Anti)Fragility", "19 Nov – 19 Dec"],
+    ["Parcours", "23 Nov – 13 Dec"],
+    ["Adioula Festival · Ziguinchor", "18 – 20 Dec"],
+  ];
+  const TICKETS = "https://www.olympics.com/en/olympic-games/dakar-2026";
+  const WA = "https://wa.me/221774807878";
+  return (<>
+    <header style={{ position: "relative", background: `linear-gradient(rgba(6,30,18,.68), rgba(6,30,18,.78)), url("${heroUrl}") center/cover no-repeat, linear-gradient(160deg, #006B33, ${T.green})`, color: "#fff" }}>
+      <Wrap style={{ padding: "clamp(56px,9vw,110px) 20px" }}>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 8, background: T.gold, color: T.ink, fontWeight: 800, fontSize: 12.5, letterSpacing: ".06em", textTransform: "uppercase", borderRadius: 999, padding: "6px 14px" }}>Dakar 2026 · 31 Oct – 13 Nov</span>
+        <h1 className="disp" style={{ fontSize: "clamp(32px,5.5vw,60px)", fontWeight: 800, letterSpacing: "-0.02em", lineHeight: 1.05, margin: "16px 0 10px", maxWidth: 760, textShadow: "0 2px 22px rgba(0,0,0,.35)" }}>Dakar is the place to be.</h1>
+        <p style={{ fontSize: "clamp(16px,1.8vw,19px)", lineHeight: 1.6, maxWidth: 620, color: "rgba(255,255,255,.92)", margin: "0 0 26px" }}>The Youth Olympic Games come to Africa for the first time. Visiting Senegal between October and December? See Senegal through our lenses — curated tours, excursions and exclusive cultural experiences.</p>
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+          <button onClick={() => go("builder")} style={{ ...btnGold, borderRadius: 12, display: "inline-flex", alignItems: "center", gap: 8 }}><Sparkles size={18} /> Plan your trip</button>
+          <a href={WA} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,.15)", border: "1.5px solid rgba(255,255,255,.5)", color: "#fff", borderRadius: 12, padding: "11px 22px", fontWeight: 700, textDecoration: "none" }}><MessageCircle size={18} /> WhatsApp</a>
+          <a href={TICKETS} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "#fff", color: T.ink, borderRadius: 12, padding: "11px 22px", fontWeight: 700, textDecoration: "none" }}>Get YOG tickets <ArrowRight size={16} /></a>
+        </div>
+      </Wrap>
+    </header>
+
+    <section style={{ background: "#fff" }}><Wrap style={{ paddingTop: 48, paddingBottom: 12 }}>
+      <Eyebrow>Land of Teranga</Eyebrow><H2>A glimpse into West Africa</H2>
+      <p style={{ fontSize: 16, lineHeight: 1.75, color: "rgba(0,0,0,.75)", maxWidth: 760 }}>Dakar sits on the westernmost point of Africa, facing the Atlantic. Goree Island, the African Renaissance Monument, the Pink Lake — the capital of Senegal has it all: vibrant, colorful and full of warm people. From late October to the end of December, the city pulses with sport, art and celebration.</p>
+    </Wrap></section>
+
+    <section style={{ background: "#fff" }}><Wrap style={{ paddingTop: 12 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px,1fr))", gap: 20 }}>
+        {[
+          ["Sport", "Dakar 2026 Youth Olympic Games", "For the first time in history, Africa hosts the Youth Olympic Games — in the land of Teranga, a nation passionate about sport. Beyond football, wrestling and basketball, every evening dozens gather to train along the Corniche."],
+          ["Art", "Biennale & Parcours", "Between November and December, Dakar is in the spotlight of art: the 16th Dak'art contemporary African art biennale under the theme (Anti)Fragility, followed by Parcours, dedicated to independent art spaces and cultural hubs."],
+        ].map(([tag, title, body]) => (
+          <div key={title} style={{ background: T.paperDark, borderRadius: 16, padding: "24px 24px" }}>
+            <span style={{ fontSize: 11.5, fontWeight: 800, letterSpacing: ".1em", textTransform: "uppercase", color: T.green }}>{tag}</span>
+            <div className="disp" style={{ fontWeight: 800, fontSize: 22, color: T.ink, margin: "6px 0 8px" }}>{title}</div>
+            <p style={{ fontSize: 14.5, lineHeight: 1.7, color: "rgba(0,0,0,.72)", margin: 0 }}>{body}</p>
+          </div>
+        ))}
+      </div>
+    </Wrap></section>
+
+    <section style={{ background: "#fff" }}><Wrap style={{ paddingTop: 36 }}>
+      <Eyebrow>While you're in Dakar</Eyebrow><H2>Our excursions & experiences</H2>
+      <p style={{ fontSize: 15.5, color: "rgba(0,0,0,.7)", maxWidth: 680, margin: "0 0 20px" }}>Day tours and cultural experiences in Dakar, the Petite Cote and the Saloum Islands — for solo travelers and groups.</p>
+      <TourGrid tours={picks} go={go} setBooking={setBooking} favorites={favorites} toggleFavorite={toggleFavorite} />
+    </Wrap></section>
+
+    <section style={{ background: "#fff" }}><Wrap style={{ paddingTop: 8 }}>
+      <div style={{ background: `linear-gradient(120deg, ${T.green}, ${T.ink})`, color: "#fff", borderRadius: 18, padding: "28px 26px", display: "flex", gap: 18, flexWrap: "wrap", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ maxWidth: 560 }}>
+          <div className="disp" style={{ fontWeight: 800, fontSize: 22 }}>Travelling as a group of 10 or more?</div>
+          <p style={{ margin: "6px 0 0", color: "rgba(255,255,255,.9)", lineHeight: 1.6 }}>Car rapide tours, cruises, Accrobaobab, museums and galleries — even more fun together. We tailor and quote group programs on request.</p>
+        </div>
+        <a href="mailto:sales@africatourismsolutions.com" style={{ ...btnGold, borderRadius: 12, textDecoration: "none", whiteSpace: "nowrap" }}>Ask for a group quote</a>
+      </div>
+    </Wrap></section>
+
+    <section style={{ background: "#fff" }}><Wrap style={{ paddingTop: 36 }}>
+      <div style={{ display: "flex", alignItems: "end", flexWrap: "wrap", gap: 12 }}>
+        <div><Eyebrow>Save the dates</Eyebrow><H2>Events to attend</H2></div>
+        <a href={TICKETS} target="_blank" rel="noopener noreferrer" style={{ ...btnGreen, marginLeft: "auto", borderRadius: 12, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 7 }}>Get tickets <ArrowRight size={16} /></a>
+      </div>
+      <div style={{ border: `1px solid ${T.line}`, borderRadius: 14, overflow: "hidden", marginTop: 8 }}>
+        {events.map(([name, date], i) => (
+          <div key={name} style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 18px", borderTop: i ? `1px solid ${T.line}` : "none" }}>
+            <Calendar size={18} color={T.green} style={{ flexShrink: 0 }} />
+            <span style={{ fontWeight: 700, color: T.ink }}>{name}</span>
+            <span style={{ marginLeft: "auto", fontSize: 14, color: "rgba(0,0,0,.6)", whiteSpace: "nowrap" }}>{date}</span>
+          </div>
+        ))}
+      </div>
+      <p style={{ fontSize: 12.5, color: "#8A968E", marginTop: 10 }}>Event dates are indicative — confirm on the official channels. Ticketing for the Youth Olympic Games is handled by the organisers.</p>
+    </Wrap></section>
+
+    <section style={{ background: "#fff" }}><Wrap style={{ paddingTop: 20, paddingBottom: 56 }}>
+      <div style={{ textAlign: "center", background: T.paperDark, borderRadius: 18, padding: "40px 24px" }}>
+        <div className="about-script" style={{ fontSize: 26, fontWeight: 600, color: T.green }}>Think of ATS as your trusted agency</div>
+        <h2 className="disp" style={{ fontWeight: 800, fontSize: "clamp(24px,3.4vw,34px)", color: T.ink, margin: "4px 0 16px" }}>Ready to make the most of Dakar 2026?</h2>
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap", justifyContent: "center" }}>
+          <button onClick={() => go("builder")} style={{ ...btnGold, borderRadius: 12 }}>Ask for a personalized trip</button>
+          <button onClick={() => go("tours")} style={{ ...btnGreen, borderRadius: 12 }}>Browse all tours</button>
+          <a href={WA} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "#fff", border: `1.5px solid ${T.line}`, color: T.ink, borderRadius: 12, padding: "11px 22px", fontWeight: 700, textDecoration: "none" }}><MessageCircle size={18} color={T.green} /> WhatsApp us</a>
+        </div>
+      </div>
+    </Wrap></section>
+  </>);
+}
+
 function ContactPage({ notify }) {
   const [f, setF] = useState({ name: "", email: "", phone: "", subject: "", message: "" });
   const [sending, setSending] = useState(false);
@@ -8556,7 +8669,7 @@ function Footer({ go, notify }) {
         </div>
         <div>
           <div style={head}>Explore</div>
-          {[["tours", "Activities & experiences"], ["builder", "Trip Builder"], ["transport", "Transfers & car hire"], ["flights", "Flights"], ["events", "Events & MICE"], ["corporate", "Corporate travel"], ["agents", "Agents / B2B"], ["blog", "Blog"], ["about", "About Us"], ["terms", "Terms & cancellation policy"]].map(([k, l]) => (
+          {[["dakar2026", "Dakar 2026 — YOG"], ["tours", "Activities & experiences"], ["builder", "Trip Builder"], ["transport", "Transfers & car hire"], ["flights", "Flights"], ["events", "Events & MICE"], ["corporate", "Corporate travel"], ["agents", "Agents / B2B"], ["blog", "Blog"], ["about", "About Us"], ["terms", "Terms & cancellation policy"]].map(([k, l]) => (
             <button key={k} onClick={() => go(k)} className="foot-link" style={{ display: "block", background: "none", border: "none", color: "rgba(255,255,255,.92)", cursor: "pointer", padding: "4px 0", fontSize: 14, fontFamily: "inherit", textAlign: "left" }}>{l}</button>
           ))}
         </div>
