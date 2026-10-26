@@ -5992,12 +5992,12 @@ function Dakar2026Page({ go, favorites, toggleFavorite, setBooking }) {
   const groupPicks = pick(["city", "monument", "boat", "accro", "galleries", "somone"]);
   const mustdoPicks = pick(["goree", "lacrose", "somone"]);
   const events = [
-    ["Youth Olympic Games", "31 Oct – 13 Nov"],
-    ["Dakar Night Market", "31 Oct – 13 Nov"],
-    ["House of Afree-ka", "09 Nov – 19 Dec"],
-    ["Dak'art Biennale — (Anti)Fragility", "19 Nov – 19 Dec"],
-    ["Parcours", "23 Nov – 13 Dec"],
-    ["Adioula Festival · Ziguinchor", "18 – 20 Dec"],
+    { name: "Youth Olympic Games", date: "31 Oct – 13 Nov", url: "https://tickets.dakar2026.org/en", cta: "tickets" },
+    { name: "Dakar Night Market", date: "31 Oct – 13 Nov", url: "https://cowafweek.com/dakar-night-market/", cta: "info" },
+    { name: "House of Afree-ka", date: "09 Nov – 19 Dec", url: "", cta: "" },
+    { name: "Dak'art Biennale — (Anti)Fragility", date: "19 Nov – 19 Dec", url: "https://biennaledakar.org/", cta: "info" },
+    { name: "Parcours", date: "23 Nov – 13 Dec", url: "https://partcours.art/", cta: "info" },
+    { name: "Adioula Festival · Ziguinchor", date: "18 – 20 Dec", url: "https://adiolafestival.com/", cta: "info" },
   ];
   const TICKETS = "https://www.olympics.com/en/olympic-games/dakar-2026";
   const WA = "https://wa.me/221774807878";
@@ -6043,9 +6043,15 @@ function Dakar2026Page({ go, favorites, toggleFavorite, setBooking }) {
       `}</style>
       {[["For solo travelers & groups", soloPicks], ["Funnier for groups of 10 and more", groupPicks], ["Must do", mustdoPicks]].map(([title, list]) => (
         <div key={title} className="joj-strip" style={{ marginBottom: 34 }}>
-          <div className="disp" style={{ fontWeight: 800, fontSize: 19, color: T.ink, margin: "0 0 14px", display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ width: 8, height: 8, borderRadius: "50%", background: T.gold, flexShrink: 0 }} />{title}
-          </div>
+          {title === "Must do" ? (
+            <div className="disp" style={{ display: "inline-flex", alignItems: "center", gap: 8, fontWeight: 800, fontSize: 18, color: T.ink, background: T.gold, borderRadius: 999, padding: "8px 18px", margin: "0 0 16px", boxShadow: "0 6px 18px rgba(240,180,41,.4)" }}>
+              <Star size={16} fill={T.ink} color={T.ink} /> Must do
+            </div>
+          ) : (
+            <div className="disp" style={{ fontWeight: 800, fontSize: 19, color: T.ink, margin: "0 0 14px", display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ width: 8, height: 8, borderRadius: "50%", background: T.gold, flexShrink: 0 }} />{title}
+            </div>
+          )}
           <TourGrid tours={list} go={go} setBooking={setBooking} favorites={favorites} toggleFavorite={toggleFavorite} slider />
         </div>
       ))}
@@ -6062,20 +6068,20 @@ function Dakar2026Page({ go, favorites, toggleFavorite, setBooking }) {
     </Wrap></section>
 
     <section style={{ background: "#fff" }}><Wrap style={{ paddingTop: 36 }}>
-      <div style={{ display: "flex", alignItems: "end", flexWrap: "wrap", gap: 12 }}>
-        <div><Eyebrow>Save the dates</Eyebrow><H2>Events to attend</H2></div>
-        <a href={TICKETS} target="_blank" rel="noopener noreferrer" style={{ ...btnGreen, marginLeft: "auto", borderRadius: 12, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 7 }}>Get tickets <ArrowRight size={16} /></a>
-      </div>
+      <Eyebrow>Save the dates</Eyebrow><H2>Events to attend</H2>
       <div style={{ border: `1px solid ${T.line}`, borderRadius: 14, overflow: "hidden", marginTop: 8 }}>
-        {events.map(([name, date], i) => (
-          <div key={name} style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 18px", borderTop: i ? `1px solid ${T.line}` : "none" }}>
+        {events.map((ev, i) => (
+          <div key={ev.name} style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 18px", borderTop: i ? `1px solid ${T.line}` : "none", flexWrap: "wrap" }}>
             <Calendar size={18} color={T.green} style={{ flexShrink: 0 }} />
-            <span style={{ fontWeight: 700, color: T.ink }}>{name}</span>
-            <span style={{ marginLeft: "auto", fontSize: 14, color: "rgba(0,0,0,.6)", whiteSpace: "nowrap" }}>{date}</span>
+            <span style={{ fontWeight: 700, color: T.ink }}>{ev.name}</span>
+            <span style={{ marginLeft: "auto", fontSize: 14, color: "rgba(0,0,0,.6)", whiteSpace: "nowrap" }}>{ev.date}</span>
+            {ev.url && (ev.cta === "tickets"
+              ? <a href={ev.url} target="_blank" rel="noopener noreferrer" style={{ ...btnGold, borderRadius: 999, padding: "7px 14px", fontSize: 13, textDecoration: "none", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 6, flexShrink: 0 }}>Get tickets <ArrowRight size={14} /></a>
+              : <a href={ev.url} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 700, color: T.green, textDecoration: "none", whiteSpace: "nowrap", flexShrink: 0 }}>More info <ArrowRight size={14} /></a>)}
           </div>
         ))}
       </div>
-      <p style={{ fontSize: 12.5, color: "#8A968E", marginTop: 10 }}>Event dates are indicative — confirm on the official channels. Ticketing for the Youth Olympic Games is handled by the organisers.</p>
+      <p style={{ fontSize: 12.5, color: "#8A968E", marginTop: 10 }}>Event dates are indicative — confirm on each official site.</p>
     </Wrap></section>
 
     <section style={{ background: "#fff" }}><Wrap style={{ paddingTop: 20, paddingBottom: 56 }}>
