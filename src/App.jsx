@@ -6005,25 +6005,25 @@ function Dakar2026Page({ go, favorites, toggleFavorite, setBooking }) {
     <header style={{ position: "relative", background: `linear-gradient(90deg, rgba(6,30,18,.82) 0%, rgba(6,30,18,.55) 48%, rgba(6,30,18,.18) 100%), url("${heroUrl}") center/cover no-repeat, linear-gradient(160deg, #006B33, ${T.green})`, color: "#fff" }}>
       <Wrap style={{ padding: "clamp(56px,9vw,110px) 20px" }}>
         <span style={{ display: "inline-flex", alignItems: "center", gap: 8, background: T.gold, color: T.ink, fontWeight: 800, fontSize: 12.5, letterSpacing: ".06em", textTransform: "uppercase", borderRadius: 999, padding: "6px 14px" }}>Dakar 2026 · 31 Oct – 13 Nov</span>
-        <h1 className="disp" style={{ fontSize: "clamp(32px,5.5vw,60px)", fontWeight: 800, letterSpacing: "-0.02em", lineHeight: 1.05, margin: "16px 0 10px", maxWidth: 760, textShadow: "0 2px 22px rgba(0,0,0,.35)" }}>Dakar is the place to be.</h1>
-        <p style={{ fontSize: "clamp(16px,1.8vw,19px)", lineHeight: 1.6, maxWidth: 620, color: "rgba(255,255,255,.92)", margin: "0 0 26px" }}>The Youth Olympic Games come to Africa for the first time. Visiting Senegal between October and December? See Senegal through our lenses — curated tours, excursions and exclusive cultural experiences.</p>
+        <h1 className="disp" style={{ fontSize: "clamp(26px,3.6vw,44px)", fontWeight: 800, letterSpacing: "-0.015em", lineHeight: 1.1, margin: "16px 0 12px", maxWidth: 860, textShadow: "0 2px 22px rgba(0,0,0,.4)" }}>Dakar 2026, a glimpse unto west Africa’s beautiful scenery: sports, art and way of life, an unwavering taste of culture in Senegal</h1>
+        <p style={{ fontSize: "clamp(16px,1.8vw,19px)", lineHeight: 1.6, maxWidth: 640, color: "rgba(255,255,255,.92)", margin: "0 0 26px" }}>Are you looking to visit Senegal between October and December? See Senegal through our lenses! We have curated diverse travel packages to ensure you get the most of the city during your stay.</p>
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-          <button onClick={() => go("builder")} style={{ ...btnGold, borderRadius: 12, display: "inline-flex", alignItems: "center", gap: 8 }}><Sparkles size={18} /> Plan your trip</button>
+          <button onClick={() => go("tours")} style={{ ...btnGold, borderRadius: 12, display: "inline-flex", alignItems: "center", gap: 8 }}><Compass size={18} /> Voir toutes nos activités</button>
           <a href={WA} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,.15)", border: "1.5px solid rgba(255,255,255,.5)", color: "#fff", borderRadius: 12, padding: "11px 22px", fontWeight: 700, textDecoration: "none" }}><MessageCircle size={18} /> WhatsApp</a>
         </div>
       </Wrap>
     </header>
 
     <section style={{ background: "#fff" }}><Wrap style={{ paddingTop: 48, paddingBottom: 12 }}>
-      <Eyebrow>Land of Teranga</Eyebrow><H2>A glimpse into West Africa</H2>
-      <p style={{ fontSize: 16, lineHeight: 1.75, color: "rgba(0,0,0,.75)", maxWidth: 760 }}>Dakar sits on the westernmost point of Africa, facing the Atlantic. Goree Island, the African Renaissance Monument, the Pink Lake — the capital of Senegal has it all: vibrant, colorful and full of warm people. From late October to the end of December, the city pulses with sport, art and celebration.</p>
+      <Eyebrow>Land of Teranga</Eyebrow><H2>Welcome to Dakar</H2>
+      <p style={{ fontSize: 16, lineHeight: 1.75, color: "rgba(0,0,0,.75)", maxWidth: 760 }}>Dakar sits on the most western point of Africa, right in front of the Atlantic Ocean. Goree Island, the African Renaissance Monument and the Pink Lake, the capital city of Senegal has it all: vibrant, colorful and full of warm people.</p>
     </Wrap></section>
 
     <section style={{ background: "#fff" }}><Wrap style={{ paddingTop: 12 }}>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px,1fr))", gap: 20 }}>
         {[
-          ["Sport", "Dakar 2026 Youth Olympic Games", "For the first time in history, Africa hosts the Youth Olympic Games — in the land of Teranga, a nation passionate about sport. Beyond football, wrestling and basketball, every evening dozens gather to train along the Corniche."],
-          ["Art", "Biennale & Parcours", "Between November and December, Dakar is in the spotlight of art: the 16th Dak'art contemporary African art biennale under the theme (Anti)Fragility, followed by Parcours, dedicated to independent art spaces and cultural hubs."],
+          ["Sport", "Dakar 2026 Youth Olympic Games", "From 31 October to 13 November 2026, the Youth Olympic Games (YOG), will be happening for the first time in Africa. This is the Olympic event of the year: for the first time in history, Africa is hosting the Youth Olympic Games, which will take place in Senegal, a proud country of West Africa. With a population of 18 million, this major event serves as an international showcase for the \"land of Teranga\": a nation deeply passionate about sport. Beyond football, wrestling and basketball, Senegalese people are fervent athletes. Every evening, dozens of people gather to train along the Corniche Ouest."],
+          ["Art", "Biennale & Parcours", "Between November and December 2026, two major events will also be held around art: the contemporary biennale of African art and the Parcours, which will close a festive year overlaid on sport after winning the African Cup of Nations earlier on January 2026. Dakar will be on the spotlight of art. Every 2 years the biennial happen to showcase African Contemporary Art under the theme (Anti)Fragility: Arts of Repair and Counter-Shock Strategies for its 16th edition. That special event will be followed by Parcours, an annual series dedicated to independent art spaces and cultural hubs around contemporary art."],
         ].map(([tag, title, body]) => (
           <div key={title} style={{ background: "#fff", border: "1px solid #F8F8F8", borderRadius: 16, padding: "24px 24px", boxShadow: "0 10px 30px rgba(11,46,27,.08)" }}>
             <span style={{ fontSize: 11.5, fontWeight: 800, letterSpacing: ".1em", textTransform: "uppercase", color: T.green }}>{tag}</span>
@@ -6035,8 +6035,8 @@ function Dakar2026Page({ go, favorites, toggleFavorite, setBooking }) {
     </Wrap></section>
 
     <section style={{ background: "#fff" }}><Wrap style={{ paddingTop: 36 }}>
-      <Eyebrow>While you're in Dakar</Eyebrow><H2>Our excursions & experiences</H2>
-      <p style={{ fontSize: 15.5, color: "rgba(0,0,0,.7)", maxWidth: 680, margin: "0 0 24px" }}>Day tours and cultural experiences in Dakar, the Petite Cote and the Saloum Islands.</p>
+      <Eyebrow>Tourism activities</Eyebrow><H2>Our excursions & experiences</H2>
+      <p style={{ fontSize: 15.5, color: "rgba(0,0,0,.7)", maxWidth: 780, lineHeight: 1.7, margin: "0 0 24px" }}>As you can see, there will be so many exciting activities for the lucky ones visiting Dakar! On the other side, we will make sure you get the most of your stay with a vivid set of activities! While you chase sunsets and enjoy the land of Teranga, from late October to the end of December, there will be a vibrant atmosphere, plenty of passion, and many happy moments to celebrate. If you are staying in Dakar, our team will be delighted to assist you in organizing your tours, excursions, booking cars or flight tickets and most-importantly getting exclusive cultural experiences. With our bilingual and professional team, we can plan your experience and organize day trips to the major touristic sites or more luxurious places.</p>
       <style>{`
         .joj-strip .tour-card{width:calc((100% - 54px) / 3.4)}
         @media(max-width:1000px){.joj-strip .tour-card{width:min(320px,74vw)}}
