@@ -2717,11 +2717,6 @@ function Home({ go, notify, setBooking, filters, setFilters, setChat, addBooking
 
   return (
     <>
-      <button onClick={() => go("dakar2026")} style={{ width: "100%", border: "none", cursor: "pointer", fontFamily: "inherit", background: `linear-gradient(90deg, ${T.green}, #00A84F)`, color: "#fff", padding: "11px 20px", display: "flex", alignItems: "center", justifyContent: "center", gap: 12, flexWrap: "wrap", fontSize: 14.5 }}>
-        <span style={{ background: T.gold, color: T.ink, fontWeight: 800, fontSize: 11.5, letterSpacing: ".06em", textTransform: "uppercase", borderRadius: 999, padding: "3px 10px" }}>Dakar 2026</span>
-        <span style={{ fontWeight: 600 }}>Youth Olympic Games · 31 Oct – 13 Nov — plan your trip to Senegal</span>
-        <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontWeight: 800 }}>Discover <ArrowRight size={16} /></span>
-      </button>
       <header style={{ background: T.ink }}>
         <style>{`
           @media(max-width:760px){
@@ -2743,6 +2738,12 @@ function Home({ go, notify, setBooking, filters, setFilters, setChat, addBooking
           </div>
         </div>
       </header>
+
+      <button onClick={() => go("dakar2026")} style={{ width: "100%", border: "none", cursor: "pointer", fontFamily: "inherit", background: `linear-gradient(90deg, ${T.green}, #00A84F)`, color: "#fff", padding: "11px 20px", display: "flex", alignItems: "center", justifyContent: "center", gap: 12, flexWrap: "wrap", fontSize: 14.5 }}>
+        <span style={{ background: T.gold, color: T.ink, fontWeight: 800, fontSize: 11.5, letterSpacing: ".06em", textTransform: "uppercase", borderRadius: 999, padding: "3px 10px" }}>Dakar 2026</span>
+        <span style={{ fontWeight: 600 }}>Youth Olympic Games · 31 Oct – 13 Nov — plan your trip to Senegal</span>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontWeight: 800 }}>Discover <ArrowRight size={16} /></span>
+      </button>
 
       {/* PORTALS — right after the hero */}
       <Wrap>
