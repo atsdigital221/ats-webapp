@@ -5978,7 +5978,10 @@ function Dakar2026Page({ go, favorites, toggleFavorite, setBooking }) {
     return () => { document.title = prevTitle; if (created && m.parentNode) m.parentNode.removeChild(m); else if (prevDesc != null) m.setAttribute("content", prevDesc); };
   }, []);
   const heroUrl = supabase.storage.from(PHOTO_BUCKET).getPublicUrl("site/Hero.webp").data.publicUrl;
-  const picks = ["goree", "monument", "lacrose", "ngor", "somone", "market", "lions", "boat", "accro", "galleries", "ndangane", "city"].map((id) => TOURS.find((t) => t.id === id)).filter(Boolean);
+  const pick = (ids) => ids.map((id) => TOURS.find((t) => t.id === id)).filter(Boolean);
+  const soloPicks = pick(["monument", "ndangane", "lions", "lacrose", "ngor", "market"]);
+  const groupPicks = pick(["city", "monument", "boat", "accro", "galleries", "somone"]);
+  const mustdoPicks = pick(["goree", "lacrose", "somone"]);
   const events = [
     ["Youth Olympic Games", "31 Oct – 13 Nov"],
     ["Dakar Night Market", "31 Oct – 13 Nov"],
@@ -6025,8 +6028,15 @@ function Dakar2026Page({ go, favorites, toggleFavorite, setBooking }) {
 
     <section style={{ background: "#fff" }}><Wrap style={{ paddingTop: 36 }}>
       <Eyebrow>While you're in Dakar</Eyebrow><H2>Our excursions & experiences</H2>
-      <p style={{ fontSize: 15.5, color: "rgba(0,0,0,.7)", maxWidth: 680, margin: "0 0 20px" }}>Day tours and cultural experiences in Dakar, the Petite Cote and the Saloum Islands — for solo travelers and groups.</p>
-      <TourGrid tours={picks} go={go} setBooking={setBooking} favorites={favorites} toggleFavorite={toggleFavorite} />
+      <p style={{ fontSize: 15.5, color: "rgba(0,0,0,.7)", maxWidth: 680, margin: "0 0 24px" }}>Day tours and cultural experiences in Dakar, the Petite Cote and the Saloum Islands.</p>
+      {[["For solo travelers & groups", soloPicks], ["Funnier for groups of 10 and more", groupPicks], ["Must do", mustdoPicks]].map(([title, list]) => (
+        <div key={title} style={{ marginBottom: 34 }}>
+          <div className="disp" style={{ fontWeight: 800, fontSize: 19, color: T.ink, margin: "0 0 14px", display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ width: 8, height: 8, borderRadius: "50%", background: T.gold, flexShrink: 0 }} />{title}
+          </div>
+          <TourGrid tours={list} go={go} setBooking={setBooking} favorites={favorites} toggleFavorite={toggleFavorite} />
+        </div>
+      ))}
     </Wrap></section>
 
     <section style={{ background: "#fff" }}><Wrap style={{ paddingTop: 8 }}>
