@@ -5977,7 +5977,7 @@ function Dakar2026Page({ go, favorites, toggleFavorite, setBooking }) {
     m.setAttribute("content", "Visiting Senegal for the Dakar 2026 Youth Olympic Games (31 Oct–13 Nov)? Curated tours, excursions and cultural experiences in Dakar, the Petite Cote and Sine Saloum with Africa Tourism Solutions.");
     return () => { document.title = prevTitle; if (created && m.parentNode) m.parentNode.removeChild(m); else if (prevDesc != null) m.setAttribute("content", prevDesc); };
   }, []);
-  const heroUrl = supabase.storage.from(PHOTO_BUCKET).getPublicUrl("site/Hero.webp").data.publicUrl;
+  const heroUrl = "/dakar2026-hero.webp";
   const pick = (ids) => ids.map((id) => TOURS.find((t) => t.id === id)).filter(Boolean);
   const soloPicks = pick(["monument", "ndangane", "lions", "lacrose", "ngor", "market"]);
   const groupPicks = pick(["city", "monument", "boat", "accro", "galleries", "somone"]);
@@ -5993,7 +5993,7 @@ function Dakar2026Page({ go, favorites, toggleFavorite, setBooking }) {
   const TICKETS = "https://www.olympics.com/en/olympic-games/dakar-2026";
   const WA = "https://wa.me/221774807878";
   return (<>
-    <header style={{ position: "relative", background: `linear-gradient(rgba(6,30,18,.68), rgba(6,30,18,.78)), url("${heroUrl}") center/cover no-repeat, linear-gradient(160deg, #006B33, ${T.green})`, color: "#fff" }}>
+    <header style={{ position: "relative", background: `linear-gradient(90deg, rgba(6,30,18,.82) 0%, rgba(6,30,18,.55) 48%, rgba(6,30,18,.18) 100%), url("${heroUrl}") center/cover no-repeat, linear-gradient(160deg, #006B33, ${T.green})`, color: "#fff" }}>
       <Wrap style={{ padding: "clamp(56px,9vw,110px) 20px" }}>
         <span style={{ display: "inline-flex", alignItems: "center", gap: 8, background: T.gold, color: T.ink, fontWeight: 800, fontSize: 12.5, letterSpacing: ".06em", textTransform: "uppercase", borderRadius: 999, padding: "6px 14px" }}>Dakar 2026 · 31 Oct – 13 Nov</span>
         <h1 className="disp" style={{ fontSize: "clamp(32px,5.5vw,60px)", fontWeight: 800, letterSpacing: "-0.02em", lineHeight: 1.05, margin: "16px 0 10px", maxWidth: 760, textShadow: "0 2px 22px rgba(0,0,0,.35)" }}>Dakar is the place to be.</h1>
@@ -6034,7 +6034,7 @@ function Dakar2026Page({ go, favorites, toggleFavorite, setBooking }) {
           <div className="disp" style={{ fontWeight: 800, fontSize: 19, color: T.ink, margin: "0 0 14px", display: "flex", alignItems: "center", gap: 10 }}>
             <span style={{ width: 8, height: 8, borderRadius: "50%", background: T.gold, flexShrink: 0 }} />{title}
           </div>
-          <TourGrid tours={list} go={go} setBooking={setBooking} favorites={favorites} toggleFavorite={toggleFavorite} />
+          <TourGrid tours={list} go={go} setBooking={setBooking} favorites={favorites} toggleFavorite={toggleFavorite} slider />
         </div>
       ))}
     </Wrap></section>
