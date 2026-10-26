@@ -6049,7 +6049,7 @@ function Dakar2026Page({ go, favorites, toggleFavorite, setBooking }) {
           <div className="disp" style={{ fontWeight: 800, fontSize: 22 }}>Travelling as a group of 10 or more?</div>
           <p style={{ margin: "6px 0 0", color: "rgba(255,255,255,.9)", lineHeight: 1.6 }}>Car rapide tours, cruises, Accrobaobab, museums and galleries — even more fun together. We tailor and quote group programs on request.</p>
         </div>
-        <a href="mailto:sales@africatourismsolutions.com" style={{ ...btnGold, borderRadius: 12, textDecoration: "none", whiteSpace: "nowrap" }}>Ask for a group quote</a>
+        <button onClick={() => go("contact")} style={{ ...btnGold, borderRadius: 12, whiteSpace: "nowrap" }}>Ask for a group quote</button>
       </div>
     </Wrap></section>
 
