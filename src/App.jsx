@@ -1482,10 +1482,11 @@ function Nav({ go, page, user, setSignin, bookings, cart = [], currency, setCurr
     <nav style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 50, background: transparent ? "linear-gradient(to bottom, rgba(0,0,0,.42) 0%, rgba(0,0,0,.12) 65%, rgba(0,0,0,0) 100%)" : "#fff", borderBottom: transparent ? "none" : `1px solid ${T.line}`, boxShadow: transparent ? "none" : "0 4px 18px rgba(11,46,27,.06)", transition: "background .25s ease" }}>
       <style>{`
         .nav-desktop{display:flex}
+        .joj-navbar{display:none}
         .nav-top-link{transition:background .15s ease}
         .nav-top-link:hover{background:rgba(11,46,27,.07) !important}
         .nav-top-link--hero:hover{background:rgba(255,255,255,.20) !important}
-        @media(max-width:980px){ .nav-desktop{display:none !important} .mega-nav{display:none !important} .mega-panel{display:none !important} }
+        @media(max-width:980px){ .nav-desktop{display:none !important} .mega-nav{display:none !important} .mega-panel{display:none !important} .joj-navbar{display:flex !important} }
         @media(min-width:981px){ .nav-burger{display:none !important} }
         @media(max-width:760px){ .nav-hide-sm{display:none !important} }
         .nav-menu-link{position:relative;transition:background .18s ease,transform .18s ease}
@@ -1502,6 +1503,13 @@ function Nav({ go, page, user, setSignin, bookings, cart = [], currency, setCurr
         .ats-row:hover .ats-ico{background:${T.green};color:#fff}
         @media(prefers-reduced-motion:reduce){.ats-drawer,.ats-overlay{animation:none}}
       `}</style>
+      {page && page.name === "home" && (
+        <div className="joj-navbar" onClick={() => nav("dakar2026")} role="button" tabIndex={0} style={{ display: "none", alignItems: "center", justifyContent: "center", gap: 8, background: `linear-gradient(90deg, ${T.green}, #00A84F)`, color: "#fff", padding: "7px 14px", fontSize: 12.5, cursor: "pointer", whiteSpace: "nowrap" }}>
+          <span style={{ background: T.gold, color: T.ink, fontWeight: 800, fontSize: 10, letterSpacing: ".05em", textTransform: "uppercase", borderRadius: 999, padding: "2px 7px", flexShrink: 0 }}>Dakar 2026</span>
+          <span style={{ fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis" }}>YOG · 31 Oct–13 Nov</span>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 3, fontWeight: 800, flexShrink: 0 }}>Discover <ArrowRight size={13} /></span>
+        </div>
+      )}
       <div style={{ padding: "10px 20px" }}>
       <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", alignItems: "center", gap: 12 }}>
         {/* Left: logo */}
@@ -2717,12 +2725,7 @@ function Home({ go, notify, setBooking, filters, setFilters, setChat, addBooking
 
   return (
     <>
-      <style>{`.joj-mid{display:flex}.joj-top{display:none}@media(max-width:980px){.joj-mid{display:none !important}.joj-top{display:flex !important}}`}</style>
-      <button onClick={() => go("dakar2026")} className="joj-top" style={{ width: "100%", border: "none", cursor: "pointer", fontFamily: "inherit", background: `linear-gradient(90deg, ${T.green}, #00A84F)`, color: "#fff", padding: "72px 16px 11px", alignItems: "center", justifyContent: "center", gap: 9, flexWrap: "wrap", fontSize: 13.5 }}>
-        <span style={{ background: T.gold, color: T.ink, fontWeight: 800, fontSize: 11, letterSpacing: ".06em", textTransform: "uppercase", borderRadius: 999, padding: "3px 9px" }}>Dakar 2026</span>
-        <span style={{ fontWeight: 600 }}>Youth Olympic Games · 31 Oct – 13 Nov</span>
-        <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontWeight: 800 }}>Discover <ArrowRight size={15} /></span>
-      </button>
+      <style>{`.joj-mid{display:flex}@media(max-width:980px){.joj-mid{display:none !important}}`}</style>
       <header style={{ background: T.ink }}>
         <style>{`
           @media(max-width:760px){
