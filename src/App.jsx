@@ -2717,6 +2717,12 @@ function Home({ go, notify, setBooking, filters, setFilters, setChat, addBooking
 
   return (
     <>
+      <style>{`.joj-mid{display:flex}.joj-top{display:none}@media(max-width:980px){.joj-mid{display:none !important}.joj-top{display:flex !important}}`}</style>
+      <button onClick={() => go("dakar2026")} className="joj-top" style={{ width: "100%", border: "none", cursor: "pointer", fontFamily: "inherit", background: `linear-gradient(90deg, ${T.green}, #00A84F)`, color: "#fff", padding: "72px 16px 11px", alignItems: "center", justifyContent: "center", gap: 9, flexWrap: "wrap", fontSize: 13.5 }}>
+        <span style={{ background: T.gold, color: T.ink, fontWeight: 800, fontSize: 11, letterSpacing: ".06em", textTransform: "uppercase", borderRadius: 999, padding: "3px 9px" }}>Dakar 2026</span>
+        <span style={{ fontWeight: 600 }}>Youth Olympic Games · 31 Oct – 13 Nov</span>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontWeight: 800 }}>Discover <ArrowRight size={15} /></span>
+      </button>
       <header style={{ background: T.ink }}>
         <style>{`
           @media(max-width:760px){
@@ -2739,7 +2745,7 @@ function Home({ go, notify, setBooking, filters, setFilters, setChat, addBooking
         </div>
       </header>
 
-      <button onClick={() => go("dakar2026")} style={{ width: "100%", border: "none", cursor: "pointer", fontFamily: "inherit", background: `linear-gradient(90deg, ${T.green}, #00A84F)`, color: "#fff", padding: "11px 20px", display: "flex", alignItems: "center", justifyContent: "center", gap: 12, flexWrap: "wrap", fontSize: 14.5 }}>
+      <button onClick={() => go("dakar2026")} className="joj-mid" style={{ width: "100%", border: "none", cursor: "pointer", fontFamily: "inherit", background: `linear-gradient(90deg, ${T.green}, #00A84F)`, color: "#fff", padding: "11px 20px", display: "flex", alignItems: "center", justifyContent: "center", gap: 12, flexWrap: "wrap", fontSize: 14.5 }}>
         <span style={{ background: T.gold, color: T.ink, fontWeight: 800, fontSize: 11.5, letterSpacing: ".06em", textTransform: "uppercase", borderRadius: 999, padding: "3px 10px" }}>Dakar 2026</span>
         <span style={{ fontWeight: 600 }}>Youth Olympic Games · 31 Oct – 13 Nov — plan your trip to Senegal</span>
         <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontWeight: 800 }}>Discover <ArrowRight size={16} /></span>
@@ -6001,7 +6007,6 @@ function Dakar2026Page({ go, favorites, toggleFavorite, setBooking }) {
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
           <button onClick={() => go("builder")} style={{ ...btnGold, borderRadius: 12, display: "inline-flex", alignItems: "center", gap: 8 }}><Sparkles size={18} /> Plan your trip</button>
           <a href={WA} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,.15)", border: "1.5px solid rgba(255,255,255,.5)", color: "#fff", borderRadius: 12, padding: "11px 22px", fontWeight: 700, textDecoration: "none" }}><MessageCircle size={18} /> WhatsApp</a>
-          <a href={TICKETS} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "#fff", color: T.ink, borderRadius: 12, padding: "11px 22px", fontWeight: 700, textDecoration: "none" }}>Get YOG tickets <ArrowRight size={16} /></a>
         </div>
       </Wrap>
     </header>
