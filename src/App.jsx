@@ -6017,7 +6017,7 @@ function Dakar2026Page({ go, favorites, toggleFavorite, setBooking }) {
           ["Sport", "Dakar 2026 Youth Olympic Games", "For the first time in history, Africa hosts the Youth Olympic Games — in the land of Teranga, a nation passionate about sport. Beyond football, wrestling and basketball, every evening dozens gather to train along the Corniche."],
           ["Art", "Biennale & Parcours", "Between November and December, Dakar is in the spotlight of art: the 16th Dak'art contemporary African art biennale under the theme (Anti)Fragility, followed by Parcours, dedicated to independent art spaces and cultural hubs."],
         ].map(([tag, title, body]) => (
-          <div key={title} style={{ background: "#fff", border: "1px solid #F8F8F8", borderRadius: 16, padding: "24px 24px" }}>
+          <div key={title} style={{ background: "#fff", border: "1px solid #F8F8F8", borderRadius: 16, padding: "24px 24px", boxShadow: "0 10px 30px rgba(11,46,27,.08)" }}>
             <span style={{ fontSize: 11.5, fontWeight: 800, letterSpacing: ".1em", textTransform: "uppercase", color: T.green }}>{tag}</span>
             <div className="disp" style={{ fontWeight: 800, fontSize: 22, color: T.ink, margin: "6px 0 8px" }}>{title}</div>
             <p style={{ fontSize: 14.5, lineHeight: 1.7, color: "rgba(0,0,0,.72)", margin: 0 }}>{body}</p>
