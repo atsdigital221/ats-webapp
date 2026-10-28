@@ -6015,15 +6015,15 @@ function Dakar2026Page({ go, favorites, toggleFavorite, setBooking }) {
     </header>
 
     <section style={{ background: "#fff" }}><Wrap style={{ paddingTop: 48, paddingBottom: 12 }}>
-      <Eyebrow>Land of Teranga</Eyebrow><H2>Welcome to Dakar</H2>
+      <Eyebrow>Land of Teranga</Eyebrow><H2>Welcome to Dakar !</H2>
       <p style={{ fontSize: 16, lineHeight: 1.75, color: "rgba(0,0,0,.75)", maxWidth: 760 }}>Dakar sits on the most western point of Africa, right in front of the Atlantic Ocean. Goree Island, the African Renaissance Monument and the Pink Lake, the capital city of Senegal has it all: vibrant, colorful and full of warm people.</p>
     </Wrap></section>
 
     <section style={{ background: "#fff" }}><Wrap style={{ paddingTop: 12 }}>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px,1fr))", gap: 20 }}>
         {[
-          ["Sport", "Dakar 2026 Youth Olympic Games", "From 31 October to 13 November 2026, the Youth Olympic Games (YOG), will be happening for the first time in Africa. This is the Olympic event of the year: for the first time in history, Africa is hosting the Youth Olympic Games, which will take place in Senegal, a proud country of West Africa. With a population of 18 million, this major event serves as an international showcase for the \"land of Teranga\": a nation deeply passionate about sport. Beyond football, wrestling and basketball, Senegalese people are fervent athletes. Every evening, dozens of people gather to train along the Corniche Ouest."],
-          ["Art", "Biennale & Parcours", "Between November and December 2026, two major events will also be held around art: the contemporary biennale of African art and the Parcours, which will close a festive year overlaid on sport after winning the African Cup of Nations earlier on January 2026. Dakar will be on the spotlight of art. Every 2 years the biennial happen to showcase African Contemporary Art under the theme (Anti)Fragility: Arts of Repair and Counter-Shock Strategies for its 16th edition. That special event will be followed by Parcours, an annual series dedicated to independent art spaces and cultural hubs around contemporary art."],
+          ["Sport", "Dakar 2026 Youth Olympic Games", "From 31 October to 13 November 2026, the Youth Olympic Games (YOG), will be happening for the first time in Africa. This is the Olympic event of the year: for the first time in history, Africa is hosting the Youth Olympic Games, which will take place in Senegal. With a population of 18 million, this major event serves as an international showcase for the \"land of Teranga\": a nation deeply passionate about sport."],
+          ["Art", "Biennale & Parcours", "Between November and December 2026, two major events will also be held around art: the contemporary biennale of African art and the Parcours. The biennial highlights African Contemporary Art under the theme (Anti)Fragility: Arts of Repair and Counter-Shock Strategies for its 16th edition and Parcours, will offer an annual series dedicated to independent art spaces and cultural hubs around contemporary art."],
         ].map(([tag, title, body]) => (
           <div key={title} style={{ background: "#fff", border: "1px solid #F8F8F8", borderRadius: 16, padding: "24px 24px", boxShadow: "0 10px 30px rgba(11,46,27,.08)" }}>
             <span style={{ fontSize: 11.5, fontWeight: 800, letterSpacing: ".1em", textTransform: "uppercase", color: T.green }}>{tag}</span>
@@ -6035,8 +6035,8 @@ function Dakar2026Page({ go, favorites, toggleFavorite, setBooking }) {
     </Wrap></section>
 
     <section style={{ background: "#fff" }}><Wrap style={{ paddingTop: 36 }}>
-      <Eyebrow>Tourism activities</Eyebrow><H2>Our excursions & experiences</H2>
-      <p style={{ fontSize: 15.5, color: "rgba(0,0,0,.7)", maxWidth: 780, lineHeight: 1.7, margin: "0 0 24px" }}>As you can see, there will be so many exciting activities for the lucky ones visiting Dakar! On the other side, we will make sure you get the most of your stay with a vivid set of activities! While you chase sunsets and enjoy the land of Teranga, from late October to the end of December, there will be a vibrant atmosphere, plenty of passion, and many happy moments to celebrate. If you are staying in Dakar, our team will be delighted to assist you in organizing your tours, excursions, booking cars or flight tickets and most-importantly getting exclusive cultural experiences. With our bilingual and professional team, we can plan your experience and organize day trips to the major touristic sites or more luxurious places.</p>
+      <Eyebrow>Tourism activities</Eyebrow><H2>Our excursions and experiences</H2>
+      <p style={{ fontSize: 15.5, color: "rgba(0,0,0,.7)", maxWidth: 780, lineHeight: 1.7, margin: "0 0 24px" }}>While you chase sunsets and enjoy the land of Teranga, from late October to the end of December, there will be a vibrant atmosphere, plenty of passion, and many happy moments to celebrate. If you are staying in Dakar, our team will be delighted to assist you in organizing your tours, excursions, booking cars or flight tickets and most-importantly getting exclusive cultural experiences.</p>
       <style>{`
         .joj-strip .tour-card{width:calc((100% - 54px) / 3.4)}
         @media(max-width:1000px){.joj-strip .tour-card{width:min(320px,74vw)}}
