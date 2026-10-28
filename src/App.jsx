@@ -5997,7 +5997,7 @@ function Dakar2026Page({ go, favorites, toggleFavorite, setBooking }) {
     { name: "House of Afree-ka", date: "09 Nov – 19 Dec", url: "", cta: "" },
     { name: "Dak'art Biennale — (Anti)Fragility", date: "19 Nov – 19 Dec", url: "https://biennaledakar.org/", cta: "info" },
     { name: "Parcours", date: "23 Nov – 13 Dec", url: "https://partcours.art/", cta: "info" },
-    { name: "Adioula Festival · Ziguinchor", date: "18 – 20 Dec", url: "https://adiolafestival.com/", cta: "info" },
+    { name: "Adiola Festival · Ziguinchor", date: "18 – 20 Dec", url: "https://adiolafestival.com/", cta: "info" },
   ];
   const TICKETS = "https://www.olympics.com/en/olympic-games/dakar-2026";
   const WA = "https://wa.me/221774807878";
@@ -6081,7 +6081,6 @@ function Dakar2026Page({ go, favorites, toggleFavorite, setBooking }) {
           </div>
         ))}
       </div>
-      <p style={{ fontSize: 12.5, color: "#8A968E", marginTop: 10 }}>Event dates are indicative — confirm on each official site.</p>
     </Wrap></section>
 
     <section style={{ background: "#fff" }}><Wrap style={{ paddingTop: 20, paddingBottom: 56 }}>
