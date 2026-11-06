@@ -3663,7 +3663,7 @@ const WEB3FORMS_KEY_LOGISTICS = import.meta.env.VITE_WEB3FORMS_KEY_LOGISTICS || 
 
 // Fire-and-forget Web3Forms submit (agency notification). Skips placeholder keys.
 // Copie systematique des notifications de reservation a ces boites ATS.
-const AGENCY_CC = ["logistics@africatourismsolutions.com", "travel2@africatourismsolutions.com", "k.mboup@africatourismsolutions.com"];
+const AGENCY_CC = ["logistics@africatourismsolutions.com", "travel2@africatourismsolutions.com", "k.mboup@africatourismsolutions.com", "chaker@africatourismsolutions.com"];
 async function sendAgencyEmail(payload) {
   if (!payload.access_key || String(payload.access_key).startsWith("REPLACE_WITH_")) return;
   try {
