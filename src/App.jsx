@@ -3662,13 +3662,15 @@ const WEB3FORMS_KEY_FLIGHTS = import.meta.env.VITE_WEB3FORMS_KEY_FLIGHTS || WEB3
 const WEB3FORMS_KEY_LOGISTICS = import.meta.env.VITE_WEB3FORMS_KEY_LOGISTICS || WEB3FORMS_KEY;
 
 // Fire-and-forget Web3Forms submit (agency notification). Skips placeholder keys.
+// Copie systematique des notifications de reservation a ces boites ATS.
+const AGENCY_CC = ["logistics@africatourismsolutions.com", "travel2@africatourismsolutions.com", "k.mboup@africatourismsolutions.com"];
 async function sendAgencyEmail(payload) {
   if (!payload.access_key || String(payload.access_key).startsWith("REPLACE_WITH_")) return;
   try {
     await fetch("https://api.web3forms.com/submit", {
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ ...payload, cc: [].concat(payload.cc || [], AGENCY_CC) }),
     });
   } catch { /* ignore */ }
 }
