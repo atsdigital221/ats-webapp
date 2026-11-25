@@ -80,6 +80,8 @@ serve(async (req) => {
         headers: { ...h, Prefer: "return=minimal" },
         body: JSON.stringify(body),
       });
+      // Facture (best-effort) une fois le paiement valide
+      try { await fetch(`${url}/functions/v1/send-invoice`, { method: "POST", headers: { ...h }, body: JSON.stringify({ bookingId: bId }) }); } catch { /* ignore */ }
     }
 
     // Always 200 so PayDunya doesn't keep retrying
